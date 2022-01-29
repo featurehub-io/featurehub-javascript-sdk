@@ -1,0 +1,13 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  right: 100px;
+}
+
+#user-state {
+  position: absolute;
+  right: 0px;
+  top: 20px;
+}
+

@@ -1,0 +1,31 @@
+{
+  "name": "featurehub-react-example-catch-and-release",
+  "version": "2.0.1",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.21.4",
+    "featurehub-javascript-client-sdk": "^1.0.10",
+    "immutability-helper": "^3.1.1",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0"
+  },
+  "scripts": {
+    "start": "react-scripts-ts start",
+    "compile": "react-scripts-ts build",
+    "test": "react-scripts-ts test --env=jsdom",
+    "eject": "react-scripts-ts eject"
+  },
+  "devDependencies": {
+    "@types/node": "^12.20.11",
+    "@types/react": "^16.14.5",
+    "@types/react-dom": "^16.9.12",
+    "react-scripts-ts": "^4.0.8",
+    "typescript": "^3.9.9"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
+}
