@@ -1,4 +1,4 @@
-name: Build typescript-node-server-repository
+name: Build featurehub-javascript-node-sdk
 
 # Controls when the action will run.
 on:

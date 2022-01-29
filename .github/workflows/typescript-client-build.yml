@@ -1,4 +1,4 @@
-name: Build typescript-client-repository
+name: Build featurehub-javascript-client-sdk
 
 # Controls when the action will run.
 on:
