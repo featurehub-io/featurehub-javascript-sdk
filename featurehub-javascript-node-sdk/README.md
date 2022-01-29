@@ -1,1 +1,1 @@
-../featurehub-javascript-client-sdk/README.md
+../README.md

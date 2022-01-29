@@ -38,7 +38,7 @@
     "tsc": "node ./node_modules/typescript/bin/tsc -p",
     "link": "npm link featurehub-javascript-client-sdk",
     "compile": "npm run build && npm link",
-    "release": "rm README.md && cp ../featurehub-javascript-client-sdk/README.md . && npm run build && npm publish",
+    "release": "rm README.md && cp ../README.md . && npm run build && npm publish",
     "prepublishOnly": "npm run build",
     "lint": "./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx --fix"
   },
