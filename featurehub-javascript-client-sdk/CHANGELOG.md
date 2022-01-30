@@ -1,8 +1,6 @@
 #### 1.0.12
 - Reverted the change from 1.0.11 as that forced a new version (4.3+) of Typescript for Typescript users. This version
   remains compatible with Typescript 3.9.x
-#### 1.0.11
-- Provided additional getters to get feature values and properties [GitHub PR](https://github.com/featurehub-io/featurehub/pull/656/)
 #### 1.0.10
 - Fix a bug related to Catch & Release mode [GitHub issue](https://github.com/featurehub-io/featurehub/issues/648)
 #### 1.0.9
