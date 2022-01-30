@@ -1,3 +1,5 @@
+#### 1.1.1
+- Change requires version of Typescript 4.3+ to allow get in interfaces, no other API changes, entirely backwards compatible.
 #### 1.0.12
 - Reverted the change from 1.0.11 as that forced a new version (4.3+) of Typescript for Typescript users. This version
   remains compatible with Typescript 3.9.x
