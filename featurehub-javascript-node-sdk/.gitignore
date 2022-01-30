@@ -23,6 +23,5 @@ models/.openapi-generator-ignore
 models/git_push.sh
 models/.npmignore
 app/*.js*
-package-lock.json
 
 
