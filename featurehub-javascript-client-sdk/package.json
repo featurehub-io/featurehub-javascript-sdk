@@ -1,16 +1,13 @@
 {
 	"name": "featurehub-javascript-client-sdk",
-	"version": "1.0.12",
-	"description": "Core package of API that exposes FeatureHub feature flags, values and configuration to client applications written in Typescript or Javascript.",
+	"version": "1.0.11",
+	"description": "FeatureHub client/browser SDK",
 	"author": "info@featurehub.io",
 	"sideEffects": false,
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"module": "lib/index.js",
-	"repository": {
-		"type": "git",
-		"url": ""
-	},
+	"repository": "github:featurehub-io/featurehub-javascript-sdk",
 	"files": [
 		"dist/**/*",
 		"lib/**/*"
@@ -43,7 +40,7 @@
 		"tsc": "node ./node_modules/typescript/bin/tsc -p",
 		"link": "npm link",
 		"compile": "npm run build && npm link",
-		"release": "npm run build && npm publish",
+		"release": "cp ../README.md . && npm run build && npm publish",
 		"prepublishOnly": "npm run build",
 		"lint": "./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx --fix"
 	},
