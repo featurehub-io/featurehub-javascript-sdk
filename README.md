@@ -190,7 +190,7 @@ async initializeFeatureHub() {
     if (!initialized) {
       if (readyness === Readyness.Ready) {
         initialized = true;
-        const value = fhClient.feature('FEATURE_KEY').str;
+        const value = fhClient.getString('FEATURE_KEY');
         console.log('Value is ', value);
       }
     }
@@ -204,7 +204,7 @@ async initializeFeatureHub() {
   // react to incoming feature changes in real-time. With NodeJS apps it is recommended to 
   // use it as a global variable to avoid a memory leak
   fhClient.feature('FEATURE_KEY').addListener(fs => {
-    console.log('Value is ', fs.str);
+    console.log('Value is ', fs.getString());
   });
 }
  
@@ -218,22 +218,15 @@ this.initializeFeatureHub();
 #### Supported feature state requests
 
 * Get a raw feature value through the following methods:
-  - `getFlag('FEATURE_KEY') | getBoolean('FEATURE_KEY')` returns a boolean feature (by key) or _undefined_ if the feature does not exist. Alternatively use `feature('FEATURE_KEY').flag`
+  - `getFlag('FEATURE_KEY') | getBoolean('FEATURE_KEY')` returns a boolean feature (by key) or _undefined_ if the feature does not exist. 
   
-  - `getNumber('FEATURE_KEY')` | `getString('FEATURE_KEY')` | `getJson('FEATURE_KEY')` returns the value or _undefined_ if the feature is empty or does not exist. Alternatively use `feature('FEATURE_KEY').num`, `feature('FEATURE_KEY').str`, `feature('FEATURE_KEY').rawJson`
+  - `getNumber('FEATURE_KEY')` | `getString('FEATURE_KEY')` | `getJson('FEATURE_KEY')` returns the value or _undefined_ if the feature is empty or does not exist. 
 * Use convenience functions:
   - `isEnabled('FEATURE_KEY')` - always returns a _true_ or _false_, _true_
-    only if the feature is a boolean and is _true_, otherwise _false_. Alternatively use `feature('FEATURE_KEY').enabled`
+    only if the feature is a boolean and is _true_, otherwise _false_.
   - `isSet('FEATURE_KEY')` - in case a feature value is not set (_null_) (this can only happen for strings, numbers and json types), this check returns _false_.
     If a feature doesn't exist - returns _false_. Otherwise, returns _true_.
-
-  - `feature('FEATURE_KEY').exists` - returns _true_ if the flag is represented by a flag from FeatureHub. If a flag is requested that has not been created
-    yet, this will be `false`.
-  - `feature('FEATURE_KEY').locked` - returns _true_ if feature is locked, otherwise _false_
-  - `feature('FEATURE_KEY').version` - returns feature update version number (every change on the feature causes its version to update).
-  - `feature('FEATURE_KEY').type` - returns type of feature (boolean, string, number or json)
-  - `feature('FEATURE_KEY').addListener` - see _Feature updates listener_ below.
-  
+    
 
 ## Rollout Strategies and Client Context
 
@@ -247,7 +240,7 @@ For more details on rollout strategies, targeting rules and feature experiments 
 const fhClient = await fhConfig.newContext().userKey('user.email@host.com').country(StrategyAttributeCountryName.NewZealand)
  	.build();
 
-    if (fhClient.feature('FEATURE_KEY').enabled) {
+    if (fhClient.isEnabled('FEATURE_KEY')) {
         //do something
     };
 ```
@@ -426,7 +419,7 @@ fhConfig.addReadynessListener(async (readyness: Readyness): void => {
     startServer();
     fhInitialized = true;
     const fhClient = await fhConfig.newContext().build();
-    if (fhClient.feature('FEATURE_KEY').flag) {
+    if (fhClient.getFlag('FEATURE_KEY')) {
       // do something
     }
   } else if (readyness === Readyness.Failed && failCounter > 5) {
@@ -454,7 +447,7 @@ fhConfig.addReadynessListener(async (ready) => {
       console.log("Features are available, starting server...");
       initialized = true;
       const fhClient = await fhConfig.newContext().build();
-      if(fhClient.feature('FEATURE_KEY').flag) { 
+      if(fhClient.getFlag('FEATURE_KEY')) { 
           // do something
       }
       else {
@@ -747,7 +740,7 @@ this means when you are processing your request it will attempt to use the bagga
 fall back onto the rules in your featurehub repository. Your code still looks the same inside your nodejs code. 
 
 ```typescript
-if (req.ctx.feature('FEATURE_TITLE_TO_UPPERCASE').flag) {
+if (req.ctx.feature('FEATURE_TITLE_TO_UPPERCASE').getBoolean()) {
 }
 ```
                       
