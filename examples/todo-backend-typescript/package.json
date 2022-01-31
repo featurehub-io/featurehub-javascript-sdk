@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node_modules/.bin/tsc",
+    "link": "npm link featurehub-javascript-node-sdk",
     "start": "npm run build && node --trace-warnings dist/app.js"
   },
   "dependencies": {
@@ -18,7 +19,7 @@
     "@types/restify": "^8.4.2",
     "@types/restify-cors-middleware": "^1.0.1",
     "ts-node": "9.1.1",
-    "typescript": "4.2.3"
+    "typescript": "4.5.4"
   },
   "engines": {
     "node": ">=14.0.0"
