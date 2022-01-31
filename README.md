@@ -202,7 +202,7 @@ this.initializeFeatureHub();
 ```
 
   Note, in a Single Page Application (SPA) situation, you will typically load and configure your FeatureHub configuration, but not discover information about a user until later. This would mean that you could progressively add extra information to the context over time, once the user logs in, etc. There are all sorts of different ways that Web applications find and
-  provide information. In our [React example](https://github.com/featurehub-io/featurehub-examples/tree/master/todo-frontend-react-typescript) we show how once you have your connection you are able to start querying the repository immediately.
+  provide information. In our [React example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript) we show how once you have your connection you are able to start querying the repository immediately.
 
 
 #### Supported feature state requests
@@ -392,11 +392,11 @@ fhClient.logAnalyticsEvent('todo-add', new Map([['gaValue', '10']]));  //indicat
 
 ### NodeJS server usage
 
-For the full example refer to the FeatureHub examples repo [here](https://github.com/featurehub-io/featurehub-examples/tree/master/todo-backend-typescript)
+For the full example see [here](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-backend-typescript)
 
 ### React usage 
 
-For the full example refer to the FeatureHub examples repo [here](https://github.com/featurehub-io/featurehub-examples/tree/master/todo-frontend-react-typescript)
+For the full example see [here](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript)
 
 ##Detailed documentation
 
