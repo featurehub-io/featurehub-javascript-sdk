@@ -1,4 +1,12 @@
-[![Build featurehub-javascript-client-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml) [![Build featurehub-javascript-node-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml) 
+**Client SDK**
+
+[![Build featurehub-javascript-client-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml)
+[![npm version](https://badge.fury.io/js/featurehub-javascript-client-sdk.svg)](https://badge.fury.io/js/featurehub-javascript-client-sdk)
+
+**Node SDK**
+
+[![Build featurehub-javascript-node-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml)
+[![npm version](https://badge.fury.io/js/featurehub-javascript-node-sdk.svg)](https://badge.fury.io/js/featurehub-javascript-node-sdk)
 
 | Documentation | Changelog | Example Quick links |
 |---|---|---|
