@@ -1,18 +1,8 @@
-[![Build featurehub-javascript-client-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml) [![Build featurehub-javascript-node-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml)
+[![Build featurehub-javascript-client-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-client-build.yml) [![Build featurehub-javascript-node-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/typescript-node-build.yml) 
 
-|Examples Quick Links|
-|-----|
-|[React example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript)|
-|[Node example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-backend-typescript)|
-|[Angular example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-angular/angular-featurehub-app)|
-|[Test automation example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-server-tests)|
-|[React Catch & Release mode example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript-catch-and-release)|
-|[React Feature Overrides example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript-feature-override)|
-
-|Changelog|
-|-----|
-|[Changelog Client SDK](https://github.com/featurehub-io/featurehub-javascript-sdk/blob/main/featurehub-javascript-client-sdk/CHANGELOG.md)|
-|[Changelog Node SDK](https://github.com/featurehub-io/featurehub-javascript-sdk/blob/main/featurehub-javascript-node-sdk/CHANGELOG.md)||
+| Documentation | Changelog | Example Quick links |
+|---|---|---|
+| [FeatureHub platform docs](https://docs.featurehub.io) | [Changelog Client SDK](https://github.com/featurehub-io/featurehub-javascript-sdk/blob/main/featurehub-javascript-client-sdk/CHANGELOG.md) <br>  [Changelog Node SDK](https://github.com/featurehub-io/featurehub-javascript-sdk/blob/main/featurehub-javascript-node-sdk/CHANGELOG.md) | [React example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript) <br> [Node example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-backend-typescript) <br> [Angular example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-angular/angular-featurehub-app) <br>  [Test automation example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-server-tests) <br> [React Catch & Release mode example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript-catch-and-release) <br> [React Feature Overrides example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript-feature-override) |
 
 
 # Javascript/Typescript SDK for FeatureHub
@@ -218,15 +208,29 @@ this.initializeFeatureHub();
 #### Supported feature state requests
 
 * Get a raw feature value through the following methods:
-  - `getFlag('FEATURE_KEY') | getBoolean('FEATURE_KEY')` returns a boolean feature (by key) or _undefined_ if the feature does not exist. 
-  
-  - `getNumber('FEATURE_KEY')` | `getString('FEATURE_KEY')` | `getJson('FEATURE_KEY')` returns the value or _undefined_ if the feature is empty or does not exist. 
+  - `getFlag('FEATURE_KEY') | getBoolean('FEATURE_KEY')` returns a _boolean_ type feature value - _true_ or _false_. Returns  _undefined_ if the feature does not exist or not of _boolean_ type. Alternatively use `feature('FEATURE_KEY').flag`
+
+  - `getNumber('FEATURE_KEY')` returns a _number_ type feature value or _undefined_ if the feature does not exist, or its value not of number type, or feature has no default value. Alternatively use `feature('FEATURE_KEY').num`.
+  - `getString('FEATURE_KEY')` returns a _string_ type feature value or _undefined_ if the feature does not exist, or its value not of string type or feature has no default value. Alternatively use `feature('FEATURE_KEY').str`. 
+  - `getRawJson('FEATURE_KEY')` returns a raw json feature value represented as _string_ or _undefined_ if the feature does not exist, or its value not of JSON type or feature has no default value. Alternatively use  `feature('FEATURE_KEY').rawJson`.
 * Use convenience functions:
-  - `isEnabled('FEATURE_KEY')` - always returns a _true_ or _false_, _true_
-    only if the feature is a boolean and is _true_, otherwise _false_.
+  - `isEnabled('FEATURE_KEY')` - returns _true_
+    only if the feature is a boolean and is _true_, otherwise _false_. Alternatively use `feature('FEATURE_KEY').enabled`
   - `isSet('FEATURE_KEY')` - in case a feature value is not set (_null_) (this can only happen for strings, numbers and json types), this check returns _false_.
     If a feature doesn't exist - returns _false_. Otherwise, returns _true_.
-    
+  - `getKey()`: returns feature key if feature exists
+  - `feature('FEATURE_KEY').exists` - return _true_ if feature exists, otherwise return _false_
+  - `feature('FEATURE_KEY').locked` - returns _true_ if feature is locked, otherwise _false_
+  - `feature('FEATURE_KEY').version` - returns feature update version number (every change on the feature causes its version to update).
+  - `feature('FEATURE_KEY').type` - returns type of feature (boolean, string, number or json)
+  - `feature('FEATURE_KEY').addListener` - see _Feature updates listener_ below.
+
+* Get a list of all feature keys from the feature repository
+  ```
+  const fhClient = await fhConfig.newContext().build();
+  console.log("List all feature keys: ", client.repository().simpleFeatures().keys());
+  ```
+  
 
 ## Rollout Strategies and Client Context
 
