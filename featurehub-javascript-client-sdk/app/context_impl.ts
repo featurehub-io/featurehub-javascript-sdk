@@ -151,25 +151,31 @@ export class ServerEvalFeatureContext extends BaseClientContext {
   }
 
   async build(): Promise<ClientContext> {
-    const newHeader = Array.from(this._attributes.entries()).map((key,
-    ) =>
-      key[0] + '=' + encodeURIComponent(key[1].join(','))).sort().join(',');
+    try {
+      const newHeader = Array.from(this._attributes.entries()).map((key,
+      ) =>
+        key[0] + '=' + encodeURIComponent(key[1].join(','))).sort().join(',');
 
-    if (newHeader !== this._xHeader) {
-      this._xHeader = newHeader;
-      this._repository.notReady();
+      if (newHeader !== this._xHeader) {
+        this._xHeader = newHeader;
+        this._repository.notReady();
 
-      if (this._currentEdge != null && this._currentEdge.requiresReplacementOnHeaderChange()) {
-        this._currentEdge.close();
-        this._currentEdge = null;
+        if (this._currentEdge != null && this._currentEdge.requiresReplacementOnHeaderChange()) {
+          this._currentEdge.close();
+          this._currentEdge = null;
+        }
+      }
+
+      if (this._currentEdge == null) {
+        this._currentEdge = this._edgeServiceSupplier();
+      }
+
+      await this._currentEdge.contextChange(this._xHeader);
+    } catch (e) {
+      if (e)  {
+        fhLog.error('Failed to connect to FeatureHHub Edge to refresh context', e);
       }
     }
-
-    if (this._currentEdge == null) {
-      this._currentEdge = this._edgeServiceSupplier();
-    }
-
-    await this._currentEdge.contextChange(this._xHeader).catch((e) => fhLog.error(`Failed to connect to FeatureHub Edge to refresh context ${e}`));
 
     return this;
   }
