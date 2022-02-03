@@ -3,6 +3,32 @@ import { expect } from 'chai';
 import { InternalFeatureRepository } from '../app/internal_feature_repository';
 
 describe('Catch and release should hold and then release feature changes', () => {
+
+  it('should trigger when a new feature arrives', async() => {
+    const repo: FeatureHubRepository = new ClientFeatureRepository();
+    const internalRepo: InternalFeatureRepository = repo as InternalFeatureRepository;
+    repo.catchAndReleaseMode = true;
+
+    let counter = 0;
+    repo.feature('orange').addListener(() => counter++ );
+
+    const features = [
+      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+    ];
+    internalRepo.notify(SSEResultState.Features, features);
+
+    internalRepo.notify(SSEResultState.Feature,
+      new FeatureState({ id: '1', key: 'orange', version: 1, type: FeatureValueType.String })
+      );
+    internalRepo.notify(SSEResultState.Feature,
+      new FeatureState({ id: '1', key: 'orange', version: 2, type: FeatureValueType.String, value: 'lemon' })
+      );
+
+    await repo.release(false);
+    expect(repo.getString('orange')).to.eq('lemon');
+    expect(counter).to.eq(1);
+  });
+
   it('should enable me to turn on catch and no changes should flow and then i can release', async () => {
     const repo: FeatureHubRepository = new ClientFeatureRepository();
     const internalRepo: InternalFeatureRepository = repo as InternalFeatureRepository;

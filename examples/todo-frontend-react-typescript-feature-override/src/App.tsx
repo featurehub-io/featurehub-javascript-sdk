@@ -39,6 +39,7 @@ class ConfigData {
 
 globalAxios.interceptors.request.use(function (config: AxiosRequestConfig) {
   if (fhConfig !== undefined) {
+    // this requires  a  server evaluation key
     const baggage = w3cBaggageHeader({ repo: fhConfig.repository(), header: config.headers.Baggage });
     // const baggage = w3cBaggageHeader({});
     if (baggage) {
@@ -70,9 +71,12 @@ class App extends React.Component<{}, { todos: TodoData }> {
 
         const config = (await globalAxios.request({url: 'featurehub-config.json'})).data as ConfigData;
         fhConfig = new EdgeFeatureHubConfig(config.fhEdgeUrl, config.fhApiKey);
+        window['fhConfig'] = fhConfig;
+       window['repository'] = fhConfig.repository();
 
         // change to the polling client so there is a difference in the keys seen by the UI vs the backend
-        fhConfig.edgeServiceProvider( (repo, cfg) => new FeatureHubPollingClient(repo, cfg, 300000));
+        fhConfig.edgeServiceProvider( (repo, cfg) =>
+          new FeatureHubPollingClient(repo, cfg, 10000));
         // if we were using the featurehub-baggage-userstate dependency, we would add this to allow overrides via GUI
 
         // const ls = new LocalSessionInterceptor();
@@ -82,6 +86,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
         // fhConfig.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));
 
         fhClient = await fhConfig.newContext().userKey(userName).build();
+
         fhConfig.addReadynessListener((readyness) => {
             if (!initialized) {
                 if (readyness === Readyness.Ready) {

@@ -2,11 +2,13 @@ import * as React from 'react';
 import { Configuration, Todo, TodoServiceApi } from './api';
 import './App.css';
 import globalAxios from 'axios';
-import { ClientContext,
-    EdgeFeatureHubConfig,
-    Readyness,
-    StrategyAttributeCountryName,
-    GoogleAnalyticsCollector } from 'featurehub-javascript-client-sdk';
+import {
+  ClientContext,
+  EdgeFeatureHubConfig,
+  Readyness,
+  StrategyAttributeCountryName,
+  GoogleAnalyticsCollector
+} from 'featurehub-javascript-client-sdk';
 
 let todoApi: TodoServiceApi;
 let initialized = false;

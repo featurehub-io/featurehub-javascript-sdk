@@ -3,24 +3,29 @@
   "version": "2.0.1",
   "private": true,
   "dependencies": {
-    "axios": "^0.21.1",
-    "featurehub-javascript-client-sdk": "^1.0.10",
+    "axios": "^0.21.4",
+    "featurehub-javascript-client-sdk": "^1.1.1",
     "immutability-helper": "^3.1.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "postcss": "^8.4.5",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-scripts": "5.0.0",
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts-ts start",
-    "compile": "react-scripts-ts build",
-    "test": "react-scripts-ts test --env=jsdom",
-    "eject": "react-scripts-ts eject"
+    "start": "react-scripts start",
+    "compile": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
   },
   "devDependencies": {
-    "@types/node": "^12.12.0",
-    "@types/react": "^16.9.42",
-    "@types/react-dom": "^16.9.8",
-    "react-scripts-ts": "^4.0.8",
-    "typescript": "^3.9.7"
+    "@babel/core": "^7.2.0",
+    "@babel/eslint-parser": "^7.2.0",
+    "@types/node": "^14.0.0",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "eslint": "^8.8.0",
+    "typescript": "4.5.4"
   },
   "browserslist": [
     ">0.2%",

@@ -84,7 +84,9 @@ export class FeatureHubEventSourceClient implements EdgeService {
             const data = JSON.parse((e as any).data);
             fhLog.trace(`received ${fName}`, data);
             this._repository.notify(name, data);
-          } catch (e) { fhLog.error(JSON.stringify(e)); }
+          } catch (e) {
+            fhLog.error('SSE: Failed to understand result', e);
+          }
         });
     });
 

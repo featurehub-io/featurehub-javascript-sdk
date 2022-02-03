@@ -246,8 +246,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     if (features && features.length > 0) {
       features.forEach((f) => {
         const existingFeature = this.features.get(f.key);
-        if (!existingFeature || (existingFeature.getKey()
-          && f.version > existingFeature.getFeatureState().version)) {
+        if (!existingFeature || !existingFeature.exists || (existingFeature.getKey()
+          && f.version > existingFeature.getFeatureState()?.version)) {
           const fs = this._catchReleaseStates.get(f.id);
           if (fs == null) {
             this._catchReleaseStates.set(f.id, f);
