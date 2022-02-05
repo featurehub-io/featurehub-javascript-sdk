@@ -1,3 +1,5 @@
+#### 1.1.2
+- Fix a bug related to Catch & Release mode [GitHub issue](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/9)
 #### 1.1.1
 - Provided additional getters to get feature values and properties [GitHub issue](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/4). If using Typescript, please upgrade your project to typescript v4.3+
 - Updated links to examples and documentation as the SDK has been split into a separate repository
