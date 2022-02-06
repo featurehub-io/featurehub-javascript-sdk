@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-node-sdk",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "FeatureHub NodeJS SDK",
   "author": "info@featurehub.io",
   "main": "dist/index.js",
@@ -10,8 +10,8 @@
   "files": [
     "dist/**/*",
     "lib/**/*",
-		"app/**/*"
-	],
+    "app/**/*"
+  ],
   "homepage": "https://featurehub.io",
   "keywords": [
     "feature-flag-api",
@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "eventsource": "^1.1.0",
-    "featurehub-javascript-client-sdk": "^1.1.1"
+    "featurehub-javascript-client-sdk": "^1.1.2"
   },
   "engines": {
     "node": ">=12.12.0"
