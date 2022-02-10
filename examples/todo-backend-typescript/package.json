@@ -9,7 +9,7 @@
     "start": "npm run build && node --trace-warnings dist/app.js"
   },
   "dependencies": {
-    "featurehub-javascript-node-sdk": "^1.0.10",
+    "featurehub-javascript-node-sdk": "^1.1.1",
     "restify": "^8.5.1",
     "restify-cors-middleware": "^1.1.1"
   },
@@ -18,7 +18,7 @@
     "@types/restify": "^8.4.2",
     "@types/restify-cors-middleware": "^1.0.1",
     "ts-node": "9.1.1",
-    "typescript": "4.2.3"
+    "typescript": "4.5.4"
   },
   "engines": {
     "node": ">=14.0.0"

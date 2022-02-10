@@ -25,6 +25,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _newFeatureStateAvailableListeners: Array<PostLoadNewFeatureStateAvailableListener> = [];
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
+  private _catchReleaseCheckForDeletesOnRelease: boolean;
 
   constructor(applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
@@ -58,7 +59,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           const fs = data instanceof FeatureState ? data : new FeatureState(data);
 
           if (this._catchAndReleaseMode) {
-            this._catchUpdatedFeatures([fs]);
+            this._catchUpdatedFeatures([fs], false);
           } else {
             if (this.featureUpdate(fs)) {
               this.triggerNewStateAvailable();
@@ -70,10 +71,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           const features = (data as []).map((f : any) => f instanceof FeatureState ? f : new FeatureState(f));
           if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
 
-            this._catchUpdatedFeatures(features);
+            this._catchUpdatedFeatures(features, true);
           } else {
             let updated = false;
             features.forEach((f) => updated = this.featureUpdate(f) || updated);
+            this._checkForDeletedFeatures(features);
             this.readynessState = Readyness.Ready;
             if (!this.hasReceivedInitialState) {
               this.hasReceivedInitialState = true;
@@ -86,6 +88,26 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           break;
         default:
           break;
+      }
+    }
+  }
+
+  /**
+   * We have a whole list of all the features come in, we need to make sure that none of the
+   * features we have have been deleted. If they have, we need to remove them like we received
+   * a delete.
+   *
+   * @param features
+   * @private
+   */
+  private _checkForDeletedFeatures(features: FeatureState[]) {
+    const featureMatch = new Map(this.features);
+
+    features.forEach(f => featureMatch.delete(f.key));
+    
+    if (featureMatch.size > 0) {
+      for(const k of featureMatch.keys()) {
+        this.deleteFeature({ key: k })
       }
     }
   }
@@ -210,10 +232,14 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   // eslint-disable-next-line require-await
   public async release(disableCatchAndRelease?: boolean): Promise<void> {
-    while (this._catchReleaseStates.size > 0) {
+    while (this._catchReleaseStates.size > 0 || this._catchReleaseCheckForDeletesOnRelease) {
       const states = [...this._catchReleaseStates.values()];
       this._catchReleaseStates.clear(); // remove all existing items
       states.forEach((fs) => this.featureUpdate(fs));
+      if (this._catchReleaseCheckForDeletesOnRelease) {
+        this._checkForDeletedFeatures(states);
+        this._catchReleaseCheckForDeletesOnRelease = false;
+      }
     }
 
     if (disableCatchAndRelease === true) {
@@ -241,8 +267,13 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.feature(key).isSet();
   }
 
-  private _catchUpdatedFeatures(features: FeatureState[]) {
+  private _catchUpdatedFeatures(features: FeatureState[], isFullList: boolean) {
     let updatedValues = false;
+
+    if (isFullList) {
+      this._catchReleaseCheckForDeletesOnRelease = true;
+    }
+
     if (features && features.length > 0) {
       features.forEach((f) => {
         const existingFeature = this.features.get(f.key);
