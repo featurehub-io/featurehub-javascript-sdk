@@ -50,19 +50,19 @@ class NodejsPollingService extends PollingBase implements PollingService {
         headers: headers,
         timeout: this._options.timeout || 8000
       };
+
       const req = http.request(reqOptions, (res) => {
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
+          this.parseCacheControl(res.headers['cache-control']);
           if (res.statusCode === 200) {
             this._etag = res.headers.etag;
             this._callback(ObjectSerializer.deserialize(JSON.parse(data), 'Array<Environment>'));
             resolve();
           } else if (res.statusCode == 304) {
             resolve();
-          } else if (res.statusCode >= 400 && res.statusCode < 500) {
-            reject(`Failed to connect to ${this.url} with ${res.statusCode}`);
           } else {
-            this.delayTimer().then(resolve).catch(reject);
+            reject(res.statusCode);
           }
         });
       });
@@ -129,3 +129,4 @@ class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
 }
 
 GoogleAnalyticsCollector.googleAnalyticsClientProvider = () => new NodejsGoogleAnalyticsApiClient();
+
