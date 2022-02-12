@@ -8,6 +8,8 @@ import { InternalFeatureRepository } from './internal_feature_repository';
 
 export interface PollingService {
 
+  get frequency(): number;
+
   poll(): Promise<void>;
 
   stop(): void;
@@ -19,7 +21,7 @@ export type FeaturesFunction = (environments: Array<Environment>) => void;
 
 export abstract class PollingBase implements PollingService {
   protected url: string;
-  protected frequency: number;
+  protected _frequency: number;
   protected _callback: FeaturesFunction;
   protected stopped = false;
   protected _header: string;
@@ -27,7 +29,7 @@ export abstract class PollingBase implements PollingService {
 
   constructor(url: string, frequency: number, callback: FeaturesFunction) {
     this.url = url;
-    this.frequency = frequency;
+    this._frequency = frequency;
     this._callback = callback;
   }
 
@@ -40,17 +42,24 @@ export abstract class PollingBase implements PollingService {
     this.stopped = true;
   }
 
+  public get frequency(): number {
+    return this._frequency;
+  }
+
   public abstract poll(): Promise<void>;
 
-  // eslint-disable-next-line require-await
-  protected async delayTimer(): Promise<void> {
-    return new Promise(((resolve, reject) => {
-      if (!this.stopped && this.frequency > 0) {
-        setTimeout(() => this.poll().then(resolve).catch(reject), this.frequency);
-      } else {
-        resolve();
+  /**
+   * Allow the cache control settings on the server override this polling _frequency
+   * @param cacheHeader
+   */
+  public parseCacheControl(cacheHeader: string | undefined) {
+    const maxAge = cacheHeader?.match(/max-age=(\d+)/);
+    if (maxAge) {
+      const newFrequency = parseInt(maxAge[1], 10) * 1000;
+      if (newFrequency > this._frequency) {
+        this._frequency = newFrequency;
       }
-    }));
+    }
   }
 }
 
@@ -91,14 +100,14 @@ class BrowserPollingService extends PollingBase implements PollingService {
         if (req.readyState === 4) {
           if (req.status === 200) {
             this._etag = req.getResponseHeader('etag');
+            this.parseCacheControl(req.getResponseHeader('cache-control'));
+
             this._callback(ObjectSerializer.deserialize(JSON.parse(req.responseText), 'Array<Environment>'));
             resolve();
           } else if (req.status == 304) { // no change
             resolve();
-          } else if (req.status >= 400 && req.status < 500) {
-            reject(`Failed to connect to ${this.url} with ${req.status}`);
           } else {
-            this.delayTimer().then(resolve).catch(reject);
+            reject(req.status);
           }
         }
       };
@@ -203,26 +212,55 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _restartTimer() {
+    if (this._pollingService === undefined || this._pollingStarted) {
+      return;
+    }
+
     this._pollingStarted = true;
-    setTimeout(() => this._pollingService.poll()
+
+    this._pollFunc();
+  }
+
+  private _pollFunc() {
+    this._pollingService.poll()
       .then(() => {
         if (this._pollPromiseResolve !== undefined) {
-          this._pollPromiseResolve();
+          try {
+            this._pollPromiseResolve();
+          } catch (e) {
+            fhLog.error('Failed to process resolve', e);
+          }
         }
-      })
-      .catch((e) => {
-        // we only get here if we failed once, so lets assume it is transient and keep going
-        // console.error(e);
-        fhLog.error(`Failed to poll, restarting in ${this._frequency}ms: ${e}`);
-        this._repository.notify(SSEResultState.Failure, null);
-        if (this._pollPromiseReject !== undefined) {
-          this._pollPromiseReject();
-        }
-      }).finally(() => {
+
         this._pollPromiseReject = undefined;
         this._pollPromiseResolve = undefined;
-        this._restartTimer();
-      }),        this._frequency);
+      })
+      .catch((status) => {
+        if (status === 404) {
+          fhLog.error('The API Key provided does not exist, stopping polling.');
+          this._repository.notify(SSEResultState.Failure, null);
+          this.stop();
+
+          if (this._pollPromiseReject) {
+            try {
+              this._pollPromiseReject(status);
+            } catch (e) {
+              fhLog.error('Failed to process reject', e);
+            }
+          }
+
+          this._pollPromiseReject = undefined;
+          this._pollPromiseResolve = undefined;
+        } else if (status == 503) {
+          fhLog.log('The backend is not ready, waiting for the next poll.');
+        }
+      }).finally(() => {
+        // ready to poll again at the right interval
+        this._pollingStarted = false;
+        if (this._pollingService) { // in case we got a 404 and it was shut down
+          setTimeout(() => this._restartTimer(),  this._pollingService.frequency);
+        }
+      });
   }
 
   private response(environments: Array<Environment>): void {

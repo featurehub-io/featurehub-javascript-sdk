@@ -70,8 +70,8 @@ class App extends React.Component<{}, { todos: TodoData }> {
         //   example here:
         //   https://github.com/featurehub-io/featurehub-install
         //   /blob/master/docker-compose-options/all-in-one-h2/app-config/application.properties
-        fhConfig.edgeServiceProvider((repo, c) =>
-          new FeatureHubPollingClient(repo, c, 10000));
+        // fhConfig.edgeServiceProvider((repo, c) =>
+        //   new FeatureHubPollingClient(repo, c, 10000));
 
         // connect to Google Analytics
         // fhConfig.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));

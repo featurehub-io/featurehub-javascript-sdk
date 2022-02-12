@@ -94,6 +94,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
       if (this._repository.readyness !== Readyness.Ready) {
         fhLog.error('Connection failed and repository not in ready state indicating persistent failure', e);
         this._repository.notify (SSEResultState.Failure, null);
+        this.close();
       } else {
         fhLog.trace('refreshing connection in case of staleness');
       }
