@@ -104,10 +104,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     const featureMatch = new Map(this.features);
 
     features.forEach(f => featureMatch.delete(f.key));
-    
+
     if (featureMatch.size > 0) {
-      for(const k of featureMatch.keys()) {
-        this.deleteFeature({ key: k })
+      for (const k of featureMatch.keys()) {
+        this.deleteFeature({ key: k });
       }
     }
   }

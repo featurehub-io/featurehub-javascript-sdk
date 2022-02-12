@@ -206,7 +206,7 @@ export class ClientEvalFeatureContext extends BaseClientContext {
 
   // eslint-disable-next-line require-await
   async build(): Promise<ClientContext> {
-    this._edgeService.poll(); // in case it hasn't already been initialized
+    this._edgeService.poll()?.then(() => {}).catch(() => {}); // in case it hasn't already been initialized
 
     return this;
   }

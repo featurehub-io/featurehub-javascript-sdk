@@ -19,6 +19,7 @@ describe('Client context should be able to encode as expected', () => {
   beforeEach(() => {
     repo = Substitute.for<InternalFeatureRepository>();
     edge = Substitute.for<EdgeService>();
+    edge.poll().returns(new Promise<void>(() => {}));
   });
 
   it('the server context should trigger a header change update', async () => {
