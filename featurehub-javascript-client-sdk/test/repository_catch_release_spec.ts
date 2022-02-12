@@ -89,4 +89,19 @@ describe('Catch and release should hold and then release feature changes', () =>
     expect(repo.getFeatureState('banana').getVersion()).to.eq(5);
 
   });
+
+  it ('i have a features list, i delete in catch & release mode and it still exists until it is released', async () => {
+    const repo: FeatureHubRepository = new ClientFeatureRepository();
+    const internalRepo: InternalFeatureRepository = repo as InternalFeatureRepository;
+    const features = [
+      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+    ];
+    repo.catchAndReleaseMode = true;
+    internalRepo.notify(SSEResultState.Features, features);
+    expect(repo.feature('banana').exists).to.be.true;
+    internalRepo.notify(SSEResultState.Features, []);
+    expect(repo.feature('banana').exists).to.be.true;
+    await repo.release();
+    expect(repo.feature('banana').exists).to.be.false;
+  });
 });

@@ -34,6 +34,17 @@ describe('if a feature is deleted it becomes undefined', () => {
     expect(repo.feature('banana').isSet()).to.be.false;
   });
 
+  it("if features are deleted from FH, on the next poll they won't turn up, so we should indicate they don't exist", () => {
+    const features = [
+      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+    ];
+
+    repo.notify(SSEResultState.Features, features);
+    expect(repo.feature('banana').exists).to.be.true;
+    repo.notify(SSEResultState.Features, []);
+    expect(repo.feature('banana').exists).to.be.false;
+  });
+
   it('should ignore deleting a feature that doesnt exist', () => {
     repo.notify(SSEResultState.DeleteFeature,
       new FeatureState(
