@@ -61,6 +61,15 @@ export abstract class PollingBase implements PollingService {
       }
     }
   }
+
+  // this is a dead  function but if we don't include it
+  // then node will fail
+  // eslint-disable-next-line require-await
+  protected async delayTimer(): Promise<void> {
+    return new Promise(((resolve) => {
+      resolve();
+    }));
+  }
 }
 
 export interface NodejsOptions {
