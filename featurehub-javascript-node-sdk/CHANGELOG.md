@@ -1,3 +1,7 @@
+#### 1.1.3
+- Fix a bug when deleted features are not picked up on polling SDK requests [GitHub issue](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/20)
+
+- Fix to allow Cache Control headers to be set on Edge and be honoured by a client (only relevant for FeatureHub versions >= 1.5.7) [GitHub issue](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/17)
 #### 1.1.2
 - Bump dependency version
 #### 1.1.1
