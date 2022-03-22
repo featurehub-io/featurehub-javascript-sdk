@@ -7,6 +7,8 @@ import {
   FeatureHubEventSourceClient,
   PollingService, FeaturesFunction
 } from 'featurehub-javascript-client-sdk';
+import { URL } from 'url';
+import { RequestOptions } from 'https';
 
 const ES = require('eventsource');
 
@@ -16,9 +18,12 @@ FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
   return new ES(url, dict);
 };
 
-class NodejsPollingService extends PollingBase implements PollingService {
+export type ModifyRequestFunction = (options: RequestOptions) => void;
+
+export class NodejsPollingService extends PollingBase implements PollingService {
   private readonly uri: URL;
   private readonly _options: NodejsOptions;
+  public modifyRequestFunction: ModifyRequestFunction | undefined;
 
   constructor(options: NodejsOptions, url: string, frequency: number, _callback: FeaturesFunction) {
     super(url, frequency, _callback);
@@ -40,7 +45,7 @@ class NodejsPollingService extends PollingBase implements PollingService {
       }
 
       // we are not specifying the type as it forces us to bring in one of http or https
-      const reqOptions = {
+      const reqOptions: RequestOptions = {
         protocol: this.uri.protocol,
         host: this.uri.host,
         hostname: this.uri.hostname,
@@ -50,6 +55,10 @@ class NodejsPollingService extends PollingBase implements PollingService {
         headers: headers,
         timeout: this._options.timeout || 8000
       };
+
+      if (this.modifyRequestFunction) {
+        this.modifyRequestFunction(reqOptions);
+      }
 
       const req = http.request(reqOptions, (res) => {
         res.on('data', (chunk) => data += chunk);
