@@ -124,6 +124,18 @@ describe('apply feature works as expected', () => {
     expect(found.value).to.be.null;
   });
 
+  it('should extract the values out of the context when determining the value for percentage', () => {
+    const ctx = Substitute.for<ClientContext>();
+    ctx.defaultPercentageKey().returns('user@email');
+
+    expect(ApplyFeature.determinePercentageKey(ctx, [])).to.eq('user@email');
+
+    ctx.getAttr('a', Arg.any()).returns('one-thing')
+    ctx.getAttr('b', Arg.any()).returns('two-thing')
+
+    expect(ApplyFeature.determinePercentageKey(ctx, ['a', 'b'])).to.eq('one-thing$two-thing');
+  });
+
   it('should process basic percentages properly', () => {
     const ctx = Substitute.for<ClientContext>();
 

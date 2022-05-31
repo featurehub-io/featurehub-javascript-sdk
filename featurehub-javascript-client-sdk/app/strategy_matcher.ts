@@ -285,7 +285,7 @@ export class ApplyFeature {
       for (const rsi of strategies) {
         if (rsi.percentage !== 0 && (defaultPercentageKey != null ||
           (rsi.percentageAttributes !== undefined && rsi.percentageAttributes.length > 0))) {
-          const newPercentageKey = this.determinePercentageKey(context, rsi.percentageAttributes);
+          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes);
 
           if (!basePercentage.has(newPercentageKey)) {
             basePercentage.set(newPercentageKey, 0);
@@ -331,12 +331,12 @@ export class ApplyFeature {
     return new Applied(false, null);
   }
 
-  private determinePercentageKey(context: ClientContext, percentageAttributes: Array<string>): string {
+  public static determinePercentageKey(context: ClientContext, percentageAttributes: Array<string>): string {
     if (percentageAttributes == null || percentageAttributes.length === 0) {
       return context.defaultPercentageKey();
     }
 
-    return percentageAttributes.filter((pa) => context.getAttr(pa, '<none>')).join('$');
+    return percentageAttributes.map((pa) => context.getAttr(pa, '<none>')).join('$');
   }
 
   private matchAttribute(context: ClientContext, rsi: RolloutStrategy): boolean {

@@ -1,3 +1,5 @@
+#### 1.1.4
+- security update to mumurhash library, bug in percentage calculation where it did not use value from context if specifying your own percentage attributes
 #### 1.1.3
 - Fix a bug when deleted features are not picked up on polling SDK requests [GitHub issue](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/20)
 
