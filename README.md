@@ -21,7 +21,7 @@ Welcome to the Javascript/Typescript SDK implementation for [FeatureHub.io](http
 This documentation covers both [featurehub-javascript-node-sdk](https://www.npmjs.com/featurehub-javascript-node-sdk) and [featurehub-javascript-client-sdk](https://www.npmjs.com/featurehub-javascript-client-sdk) and explains how you can use the FeatureHub SDK in Javascript or Typescript for applications like Node.js
 backend server, Web front-end (e.g. React, Angular) or Mobile apps (React Native, Ionic, etc.). 
 
-To control the feature flags from the FeatureHub Admin console, either use our [demo](https://demo.featurehub.io) version for evaluation or install the app using our guide [here](http://docs.featurehub.io/#_installation)
+To control the feature flags from the FeatureHub Admin console, either use our [demo](https://demo.featurehub.io) version for evaluation or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
 
 ### **Important note:**
 
@@ -68,7 +68,7 @@ There are 3 steps to connecting:
 Find and copy your API Key from the FeatureHub Admin Console on the API Keys page - 
 you will use this in your code to configure feature updates for your environments. 
 It should look similar to this: ```default/71ed3c04-122b-4312-9ea8-06b2b8d6ceac/fsTmCrcZZoGyl56kPHxfKAkbHrJ7xZMKO3dlBiab5IqUXjgKvqpjxYdI8zdXiJqYCpv92Jrki0jY5taE```.
-There are two options - a Server Evaluated API Key and a Client Evaluated API Key. More on this [here](https://docs.featurehub.io/#_client_and_server_api_keys) 
+There are two options - a Server Evaluated API Key and a Client Evaluated API Key. More on this [here](https://docs.featurehub.io/featurehub/latest/sdks.html#_client_and_server_api_keys) 
 
 Client Side evaluation is intended for use in secure environments (such as microservices, e.g Node JS) and is intended for rapid client side evaluation, per request for example.
 
@@ -246,7 +246,7 @@ FeatureHub supports client and server side evaluation of complex rollout strateg
 that are applied to individual feature values in a specific environment. This includes support of preset rules, e.g. per **_user key_**, **_country_**, **_device type_**, **_platform type_** as well as **_percentage splits_** rules and custom rules that you can create according to your application needs.
 
 
-For more details on rollout strategies, targeting rules and feature experiments see the [core documentation](https://docs.featurehub.io/#_rollout_strategies_and_targeting_rules).
+For more details on rollout strategies, targeting rules and feature experiments see the [core documentation](https://docs.featurehub.io/featurehub/latest/index.html#_rollout_strategies_and_targeting_rules).
 
 ```typescript
 const fhClient = await fhConfig.newContext().userKey('user.email@host.com').country(StrategyAttributeCountryName.NewZealand)
@@ -340,7 +340,7 @@ or
     await fhConfig.newContext().sessionKey('session-id').build();
 ```
 
-For more details on percentage splits and feature experiments see [Percentage Split Rule](https://docs.featurehub.io/#_percentage_split_rule).
+For more details on percentage splits and feature experiments see [Percentage Split Rule](https://docs.featurehub.io/featurehub/latest/index.html#_percentage_split_rule).
 
 
 
@@ -631,7 +631,7 @@ As you can see from above (in option 3), to log an event, you simply tell the re
 log an analytics event. It will take care of bundling everything up, passing it off to the
 Google Analytics collector which will post it off.
 
-Read more on how to interpret events in Google Analytics [here](https://docs.featurehub.io/analytics.html)
+Read more on how to interpret events in Google Analytics [here](https://docs.featurehub.io/featurehub/latest/analytics.html)
 
 ## Feature consistency between client and server
 
