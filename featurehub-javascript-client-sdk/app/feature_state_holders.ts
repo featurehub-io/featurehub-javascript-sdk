@@ -9,6 +9,7 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
   protected listeners: Array<FeatureListener> = [];
   protected _repo: InternalFeatureRepository;
   protected _ctx: ClientContext;
+  // eslint-disable-next-line no-use-before-define
   protected parentHolder: FeatureStateBaseHolder;
 
   constructor(repository: InternalFeatureRepository, key: string, existingHolder?: FeatureStateBaseHolder) {

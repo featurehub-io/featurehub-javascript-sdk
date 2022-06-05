@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "Integration tests for FeatureHub SDKs (server-side)",
   "scripts": {
+		"build": "node ./node_modules/typescript/bin/tsc",
     "test": "cucumber-js --require-module ts-node/register --require 'features/support/*.ts' --publish",
     "generate:specs": "openapi-generator-cli generate -g typescript-axios -i ../todo-api/todo-api.yaml -o ./src/client-axios"
   },
@@ -16,6 +17,6 @@
     "wait-for-expect": "^3.0.2"
   },
   "devDependencies": {
-    "typescript": "^4.1.5"
+    "typescript": "^4.5.7"
   }
 }

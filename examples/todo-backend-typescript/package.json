@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node_modules/.bin/tsc",
-    "start": "npm run build && node --trace-warnings dist/app.js"
+    "start": "npm run build && node --trace-deprecation --trace-warnings dist/app.js"
 	},
   "dependencies": {
     "featurehub-javascript-node-sdk": "^1.1.1",
