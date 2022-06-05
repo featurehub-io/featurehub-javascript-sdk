@@ -7,9 +7,9 @@
   "scripts": {
     "build": "node_modules/.bin/tsc",
     "start": "npm run build && node --trace-deprecation --trace-warnings dist/app.js"
-	},
+  },
   "dependencies": {
-    "featurehub-javascript-node-sdk": "^1.1.1",
+    "featurehub-javascript-node-sdk": "^1.1.4",
     "restify": "^8.5.1",
     "restify-cors-middleware": "^1.1.1"
   },
