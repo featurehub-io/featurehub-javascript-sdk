@@ -96,7 +96,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
         this._repository.notify (SSEResultState.Failure, null);
         this.close();
       } else {
-        fhLog.trace('refreshing connection in case of staleness');
+        fhLog.trace('refreshing connection in case of staleness', e);
       }
     };
   }
