@@ -839,3 +839,76 @@ it simply hasn't been granted access. The API does not leak information on valid
 
 This library uses semver, which is a commonjs library. You will need to follow the recommended Angular documentation
 on how to suppress the warning. 
+
+
+## Advanced Usage
+
+### Overriding Client creation
+
+The method to create the EventSource request is defined globally and is intended to be overridden. The nodejs library
+for example uses the clientjs library and just replaces its "factory" method for creating eventsource clients or polling
+clients. You can use this method if you wish to replace the method to create eventsource or polling client creation
+requests. 
+
+Why would you want to do this? The underlying _nodejs_ libraries allow you more leeway than the browser libraries, for
+example in NodeJS you can add extra headers to outgoing requests, or do hand-crafted proxy modification and so forth.
+Here we include two examples, one for event sourcing and one for polling under nodejs. You can do the same for the browser
+client but there is limited value in doing so..
+
+#### Replacing eventsource clients under nodejs
+
+The constructor for an eventsource client is the same as the standard EventSource constructor - by making it your
+own you can add anything you like to the dictionary passed to the standard eventsource library. Below is an example
+of passing an extra header:
+
+```typescript
+const ES = require('eventsource');
+
+FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
+  if (!dict) {
+    dict = {headers: {}};
+  }
+  if (!dict.headers) {
+    dict.headers = {};
+  }
+  dict.headers['simple-header'] = 'hello';
+  return new ES(url, dict);
+};
+```
+
+This turns up such as: 
+
+```http request
+> GET http://localhost:8085/features/default/6cd5017f-9803-4c45-a5ed-586041750c27/9NeB8UBVfjbgXdIXVVaHmH3VNapJ1k*jXHKXlZ3vwlkBHmWI8Yn
+> accept: text/event-stream
+> cache-control: no-cache
+> connection: close
+> host: localhost:8085
+> simple-header: hello
+```
+
+#### Replacing the polling client under nodejs
+
+The construction of the polling client request for nodejs is a little more complicated, but there is a callback which passes back
+the full request of a poll to your code if you wish. To use it, you again need to intercept the creation mechanism and then you
+will get the full set of request options.
+
+```typescript
+FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) => {
+  const nodeClient = new NodejsPollingService(opt, url, freq, callback);
+  nodeClient.modifyRequestFunction = (options: RequestOptions) => {
+    options.headers['simple-header'] = 'hello'
+  }
+  return nodeClient;
+}
+```
+
+This kind of http request turns up as:
+
+```http request
+> GET http://localhost:8085/features?sdkUrl=default%2F6cd5017f-9803-4c45-a5ed-586041750c27%2F9NeB8UBVfjbgXdIXVVaHmH3VNapJ1k*jXHKXlZ3vwlkBHmWI8Yn
+> connection: close
+> host: localhost:8085
+> if-none-match: "79f8dcb4"
+> simple-header: hello
+```
