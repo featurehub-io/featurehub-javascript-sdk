@@ -90,13 +90,14 @@ export class FeatureHubEventSourceClient implements EdgeService {
         });
     });
 
-    this.eventSource.onerror = (e) => {
-      if (this._repository.readyness !== Readyness.Ready) {
+    this.eventSource.onerror = (e: any) => {
+      // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
+      if (this._repository.readyness !== Readyness.Ready || (e.status && (e.status > 504 || (e.status >=400 && e.status < 500) ))) {
         fhLog.error('Connection failed and repository not in ready state indicating persistent failure', e);
         this._repository.notify (SSEResultState.Failure, null);
         this.close();
       } else {
-        fhLog.trace('refreshing connection in case of staleness');
+        fhLog.trace('refreshing connection in case of staleness', e);
       }
     };
   }

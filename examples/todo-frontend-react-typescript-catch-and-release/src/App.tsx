@@ -7,7 +7,7 @@ import {
   EdgeFeatureHubConfig,
   Readyness,
   StrategyAttributeCountryName,
-  GoogleAnalyticsCollector
+  GoogleAnalyticsCollector, fhLog
 } from 'featurehub-javascript-client-sdk';
 
 let todoApi: TodoServiceApi;
@@ -63,7 +63,9 @@ class App extends React.Component<{}, { todos: TodoData }> {
     }
 
     async initializeFeatureHub() {
-
+      fhLog.trace = (...args: any[]) => {
+        console.log(args);
+      };
         const config = (await globalAxios.request({url: 'featurehub-config.json'})).data as ConfigData;
         fhConfig = new EdgeFeatureHubConfig(config.fhEdgeUrl, config.fhApiKey);
 

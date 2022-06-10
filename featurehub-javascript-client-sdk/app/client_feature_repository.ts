@@ -25,7 +25,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _newFeatureStateAvailableListeners: Array<PostLoadNewFeatureStateAvailableListener> = [];
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
-  private _catchReleaseCheckForDeletesOnRelease: boolean;
+  private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
 
   constructor(applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
@@ -94,7 +94,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   /**
    * We have a whole list of all the features come in, we need to make sure that none of the
-   * features we have have been deleted. If they have, we need to remove them like we received
+   * features we have been deleted. If they have, we need to remove them like we received
    * a delete.
    *
    * @param features
@@ -232,13 +232,13 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   // eslint-disable-next-line require-await
   public async release(disableCatchAndRelease?: boolean): Promise<void> {
-    while (this._catchReleaseStates.size > 0 || this._catchReleaseCheckForDeletesOnRelease) {
+    while (this._catchReleaseStates.size > 0 || this._catchReleaseCheckForDeletesOnRelease !== undefined) {
       const states = [...this._catchReleaseStates.values()];
       this._catchReleaseStates.clear(); // remove all existing items
       states.forEach((fs) => this.featureUpdate(fs));
       if (this._catchReleaseCheckForDeletesOnRelease) {
-        this._checkForDeletedFeatures(states);
-        this._catchReleaseCheckForDeletesOnRelease = false;
+        this._checkForDeletedFeatures(this._catchReleaseCheckForDeletesOnRelease);
+        this._catchReleaseCheckForDeletesOnRelease = undefined;
       }
     }
 
@@ -271,7 +271,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     let updatedValues = false;
 
     if (isFullList) {
-      this._catchReleaseCheckForDeletesOnRelease = true;
+      // we have to keep track of all of them because we need to know which ones to delete
+      // and the catch release state needs to keep track of only the latest version and make sure
+      // it updates the right data
+      this._catchReleaseCheckForDeletesOnRelease = features;
     }
 
     if (features && features.length > 0) {

@@ -4,6 +4,30 @@ import { InternalFeatureRepository } from '../app/internal_feature_repository';
 
 describe('Catch and release should hold and then release feature changes', () => {
 
+  it('should not get confused when a feature update has arrived alone', async () => {
+    const repo: FeatureHubRepository = new ClientFeatureRepository();
+    const internalRepo: InternalFeatureRepository = repo as InternalFeatureRepository;
+    repo.catchAndReleaseMode = true;
+    const features = [
+      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.String, value: 'yellow' }),
+    ];
+    internalRepo.notify(SSEResultState.Features, features);
+    const feat = internalRepo.feature('banana');
+    await repo.release(false);
+    expect(feat.getString()).to.eq('yellow');
+    const featuresNext = [
+      new FeatureState({ id: '1', key: 'banana', version: 2, type: FeatureValueType.String, value: 'orange' }),
+    ];
+    internalRepo.notify(SSEResultState.Feature, featuresNext[0]);
+    expect(feat.getString()).to.eq('yellow');
+    await repo.release(false);
+    expect(feat.getString()).to.eq('orange');
+    internalRepo.notify(SSEResultState.Features, featuresNext);
+    expect(feat.getString()).to.eq('orange');
+    await repo.release(false);
+    expect(feat.getString()).to.eq('orange');
+  });
+
   it('should trigger when a new feature arrives', async () => {
     const repo: FeatureHubRepository = new ClientFeatureRepository();
     const internalRepo: InternalFeatureRepository = repo as InternalFeatureRepository;
