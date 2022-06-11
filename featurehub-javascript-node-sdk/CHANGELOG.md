@@ -1,3 +1,6 @@
+#### 1.1.5
+- Support for adding custom headers [GitHub issues](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/32), [GitHub PR](https://github.com/featurehub-io/featurehub-javascript-sdk/pull/44)
+- Fix bug in catch and release mode when feature value would not update if another feature state was changed [GitHub PR](https://github.com/featurehub-io/featurehub-javascript-sdk/pull/70)
 #### 1.1.4
 - Bump eventsource dependency (critical security alert)
 #### 1.1.3
