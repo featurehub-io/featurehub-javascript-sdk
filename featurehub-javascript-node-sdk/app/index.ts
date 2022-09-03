@@ -2,10 +2,9 @@ import {
   FeatureHubPollingClient,
   FeatureStateUpdate, FeatureUpdatePostManager, FeatureUpdater, GoogleAnalyticsApiClient, GoogleAnalyticsCollector,
   NodejsOptions,
-  ObjectSerializer,
   PollingBase,
   FeatureHubEventSourceClient,
-  PollingService, FeaturesFunction
+  PollingService, FeaturesFunction, FeatureEnvironmentCollection
 } from 'featurehub-javascript-client-sdk';
 import { URL } from 'url';
 import { RequestOptions } from 'https';
@@ -33,6 +32,10 @@ export class NodejsPollingService extends PollingBase implements PollingService 
   }
 
   public poll(): Promise<void> {
+    if (this._stopped) {
+      return new Promise((resolve) => resolve());
+    }
+
     return new Promise(((resolve, reject) => {
       const http = this.uri.protocol === 'http:' ? require('http') : require('https');
       let data = '';
@@ -64,9 +67,10 @@ export class NodejsPollingService extends PollingBase implements PollingService 
         res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
           this.parseCacheControl(res.headers['cache-control']);
-          if (res.statusCode === 200) {
+          if (res.statusCode === 200 || res.statusCode === 236) {
             this._etag = res.headers.etag;
-            this._callback(ObjectSerializer.deserialize(JSON.parse(data), 'Array<Environment>'));
+            this._callback(JSON.parse(data) as Array<FeatureEnvironmentCollection>);
+            this._stopped = (res.statusCode === 236);
             resolve();
           } else if (res.statusCode == 304) {
             resolve();
@@ -109,8 +113,7 @@ class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
           resolve(false);
         });
 
-        const data = ObjectSerializer.serialize(update, 'FeatureStateUpdate');
-        req.write(JSON.stringify(data));
+        req.write(JSON.stringify(update));
         req.end();
       } catch (e) {
         resolve(false);
