@@ -13,21 +13,15 @@
  */
 
 
+import { BaseRolloutStrategyAttribute } from './base-rollout-strategy-attribute';
+import { RolloutStrategyAttributeConditional } from './rollout-strategy-attribute-conditional';
+import { RolloutStrategyFieldType } from './rollout-strategy-field-type';
 
 /**
- * 
+ * @type FeatureRolloutStrategyAttribute
  * @export
- * @enum {string}
  */
-export enum RolloutStrategyFieldType {
-    String = 'STRING',
-    SemanticVersion = 'SEMANTIC_VERSION',
-    Number = 'NUMBER',
-    Date = 'DATE',
-    Datetime = 'DATETIME',
-    Boolean = 'BOOLEAN',
-    IpAddress = 'IP_ADDRESS'
-}
+export type FeatureRolloutStrategyAttribute = BaseRolloutStrategyAttribute;
 
 
 

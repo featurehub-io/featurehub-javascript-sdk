@@ -45,8 +45,12 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     this._url = this._host + 'features/' + this._apiKey;
   }
 
-  public addReadynessListener(listener: ReadynessListener): void {
-    this.repository().addReadynessListener(listener);
+  /**
+   * @deprecated use addReadinessListener
+   * @param listener
+   */
+  public addReadynessListener(listener: ReadynessListener): number {
+    return this.addReadinessListener(listener);
   }
 
   public addAnalyticCollector(collector: AnalyticsCollector): void {
@@ -58,6 +62,10 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   public get readyness(): Readyness {
+    return this.repository().readyness;
+  }
+
+  public get readiness(): Readyness {
     return this.repository().readyness;
   }
 
@@ -139,5 +147,13 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   url(): string {
     return this._url;
+  }
+
+  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
+    return this.repository().addReadinessListener(listener);
+  }
+
+  removeReadinessListener(listener: ReadynessListener | number) {
+    this.repository().removeReadinessListener(listener);
   }
 }

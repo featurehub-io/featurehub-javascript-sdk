@@ -3,6 +3,7 @@ import { FeatureStateHolder } from './feature_state';
 import { FeatureStateValueInterceptor } from './interceptors';
 import { AnalyticsCollector } from './analytics';
 import { InternalFeatureRepository } from './internal_feature_repository';
+import { CatchReleaseListenerHandler, ReadinessListenerHandle } from './feature_hub_config';
 
 export enum Readyness {
   NotReady = 'NotReady',
@@ -51,12 +52,56 @@ export interface FeatureHubRepository {
 
   isSet(key: string): boolean;
 
+  /**
+   * Allows a feature to call out and determine if there is a contextual override for this feature before
+   * returning it. Can be used for example to load values off disk instead of elsewhere.
+   *
+   * @param interceptor
+   */
   addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
 
-  addReadynessListener(listener: ReadynessListener): void;
+  /**
+   * @deprecated - since version 1.1.6 - use addReadinessListener
+   * @param listener
+   */
+  addReadynessListener(listener: ReadynessListener): number;
 
+  /**
+   * Adds a listener and returns a new handle to allow us to remove the listener. This will always trigger the
+   * registered listener with the current state unless ignoreNotReadyOnRegister is set to true.
+   *
+   * @param listener - the listener to trigger when readiness changes
+   * @param ignoreNotReadyOnRegister - if true and the readyness state is NotReady, will not fire. You would use this
+   * if you register your readiness listener before initialising the repository so you don't get an immediate NotReady
+   * trigger.
+   */
+  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle;
+
+  /**
+   * Removes an identified readiness listener or does nothing if it doesn't exist.
+   *
+   * @param listener
+   */
+  removeReadinessListener(listener: ReadynessListener|ReadinessListenerHandle);
+
+  /**
+   * Adds an analytics collector so that requests to record the feature state will be sent there.
+   *
+   * @param collector
+   */
   addAnalyticCollector(collector: AnalyticsCollector): void;
 
-  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener);
+  /**
+   * Used by catch/release to indicate that new updates are available to release into the repository. You would generally
+   * attach a single handler to this to update your UI recommending a refresh in a single page application.
+   *
+   * @param listener
+   */
+  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener) : CatchReleaseListenerHandler;
 
+  /**
+   * Remove the catch/release handler.
+   * @param listener
+   */
+  removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler);
 }

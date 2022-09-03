@@ -1,6 +1,6 @@
 import { MatcherRegistry } from '../app/strategy_matcher';
 import {
-  RolloutStrategyAttribute,
+  FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType
 } from '../app';
@@ -16,10 +16,11 @@ describe('test the strategy matchers', () => {
 
   function equals(condition: RolloutStrategyAttributeConditional, vals: any[],
     suppliedVal: string, matches: boolean): void {
-    const rsa = new RolloutStrategyAttribute();
-    rsa.conditional = condition;
-    rsa.type = type;
-    rsa.values = vals;
+    const rsa =  {
+      conditional: condition,
+      type: type,
+      values: vals
+    } as FeatureRolloutStrategyAttribute;
 
     expect(matcher.findMatcher(rsa).match(suppliedVal, rsa)).to.eq(matches);
   }

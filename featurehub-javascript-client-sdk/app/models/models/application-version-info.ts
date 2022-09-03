@@ -17,17 +17,21 @@
 /**
  * 
  * @export
- * @enum {string}
+ * @interface ApplicationVersionInfo
  */
-export enum RolloutStrategyFieldType {
-    String = 'STRING',
-    SemanticVersion = 'SEMANTIC_VERSION',
-    Number = 'NUMBER',
-    Date = 'DATE',
-    Datetime = 'DATETIME',
-    Boolean = 'BOOLEAN',
-    IpAddress = 'IP_ADDRESS'
+export interface ApplicationVersionInfo {
+    /**
+     * 
+     * @type {string}
+     * @memberof ApplicationVersionInfo
+     */
+    name: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApplicationVersionInfo
+     */
+    version: string;
 }
-
 
 

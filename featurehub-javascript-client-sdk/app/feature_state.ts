@@ -8,6 +8,8 @@ export interface FeatureListener {
   (featureChanged: FeatureStateHolder): void;
 }
 
+export type FeatureListenerHandle = number;
+
 export interface FeatureStateHolder {
   /**
    * getKey: returns feature key if feature exists
@@ -82,7 +84,17 @@ export interface FeatureStateHolder {
 
   get enabled(): boolean;
 
-  addListener(listener: FeatureListener): void;
+  /**
+   * Adds a new listener and returns a handle so that the listener can be removed.
+   * @param listener
+   */
+  addListener(listener: FeatureListener): FeatureListenerHandle;
+
+  /**
+   * Allows the SDK client to remove the listener as part of a teardown
+   * @param handle - removes it from the trigger list if it exists, otherwise ignored
+   */
+  removeListener(handle: FeatureListener | FeatureListenerHandle);
 
   // this is intended for override repositories (such as the UserFeatureRepository)
   // to force the listeners to trigger if they detect an actual state change in their layer

@@ -14,18 +14,18 @@ describe('When any feature changes, post new feature update should trigger', () 
       repo.addPostLoadNewFeatureStateAvailableListener(() => postNewTrigger++);
       expect(postNewTrigger).to.eq(0);
       const features = [
-        new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+        { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
       ];
 
       repo.notify(SSEResultState.Features, features);
       expect(postNewTrigger).to.eq(0);
 
-      repo.notify(SSEResultState.Feature, new FeatureState({ id: '1', key: 'banana', version: 2,
-        type: FeatureValueType.Boolean, value: true }));
+      repo.notify(SSEResultState.Feature, { id: '1', key: 'banana', version: 2,
+        type: FeatureValueType.Boolean, value: true } as FeatureState);
 
       expect(postNewTrigger).to.eq(0);
-      repo.notify(SSEResultState.Feature, new FeatureState({ id: '1', key: 'banana', version: 3,
-        type: FeatureValueType.Boolean, value: false }));
+      repo.notify(SSEResultState.Feature, { id: '1', key: 'banana', version: 3,
+        type: FeatureValueType.Boolean, value: false } as FeatureState);
 
       expect(postNewTrigger).to.eq(1);
     });

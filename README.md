@@ -110,11 +110,9 @@ Feature flag rollout strategies and user targeting are all determined by the act
 **Client Side evaluation** 
 
 ```typescript
-fhConfig.init();
-
 let initialized = false;
 console.log("Waiting for features...");
-fhConfig.addReadynessListener(async (ready) => {
+fhConfig.addReadinessListener(async (ready) => {
   if (!initialized) {
     if (ready == Readyness.Ready) {
       console.log("Features are available, starting server...");
@@ -128,7 +126,9 @@ fhConfig.addReadynessListener(async (ready) => {
       }
     }
   }
-});
+}, true);
+
+fhConfig.init();
 ```
 
 This is a simple scenario where you request for default context without passing information for each user. In production, you would normally create new context per each user and if you are applying flag variations, you would pass information about user context. If you are using percentage rollout, for example, you would set a `sessionId`, or some other identifier that you can set through `userKey`). 
@@ -184,9 +184,9 @@ const fhConfig = new EdgeFeatureHubConfig(edgeUrl, apiKey);
 
 async initializeFeatureHub() {
   fhClient = await fhConfig.newContext().build();
-  fhConfig.addReadynessListener((readyness) => {
+  fhConfig.addReadinessListener((readiness) => {
     if (!initialized) {
-      if (readyness === Readyness.Ready) {
+      if (readiness === Readyness.Ready) {
         initialized = true;
         const value = fhClient.getString('FEATURE_KEY');
         console.log('Value is ', value);
@@ -425,7 +425,7 @@ fhConfig.init();
 let failCounter = 0;
 let fhInitialized = false;
 
-fhConfig.addReadynessListener(async (readyness: Readyness): void => {
+fhConfig.addReadinessListener(async (readyness: Readyness): void => {
   if (!fhInitialized && readyness === Readyness.Ready) {
     logger.event('started_featurehub_event', Level.Info, 'Connected to FeatureHub');
     startServer();
@@ -442,18 +442,16 @@ fhConfig.addReadynessListener(async (readyness: Readyness): void => {
   } else {
     failCounter = 0;
   }
-});
+}, true);
 ```
 
  If it is important to your server instances that the connection to the feature server exists as a critical service, then the snippet above will ensure it will try and connect (say five times) and then kill the server process alerting you to a failure. If connection to the feature service is only important for initial starting of your server, then you can simply listen for the first readiness and start your server and ignore all subsequent notifications:
 
 
 ```typescript
-fhConfig.init();
-
 let initialized = false;
 console.log("Waiting for features...");
-fhConfig.addReadynessListener(async (ready) => {
+fhConfig.addReadinessListener(async (ready) => {
   if (!initialized) {
     if (ready == Readyness.Ready) {
       console.log("Features are available, starting server...");
@@ -467,7 +465,10 @@ fhConfig.addReadynessListener(async (ready) => {
       }
     }
   }
-});
+}, true);
+
+fhConfig.init();
+
 ```
 
 
@@ -482,7 +483,7 @@ UI application this would indicate that you had all the state necessary to show 
 this would indicate when you could start serving requests.
 
 ````typescript
-fhConfig.addReadynessListener((readyness) => {
+fhConfig.addReadinessListener((readyness) => {
   if (readyness === Readyness.Ready) {
        console.log("Features are available, starting server...");
    

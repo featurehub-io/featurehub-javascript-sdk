@@ -1,10 +1,10 @@
 // prevents circular deps
-import { ObjectSerializer } from './models/models/model_serializer';
-
-import { Environment, FeatureState, SSEResultState } from './models';
+import { FeatureEnvironmentCollection, FeatureState, SSEResultState } from './models';
 import { EdgeService } from './edge_service';
 import { FeatureHubConfig, fhLog } from './feature_hub_config';
 import { InternalFeatureRepository } from './internal_feature_repository';
+import { sha256 } from 'cross-sha256';
+import * as base64 from '@juanelas/base64';
 
 export interface PollingService {
 
@@ -17,17 +17,18 @@ export interface PollingService {
   attributeHeader(header: string): Promise<void>;
 }
 
-export type FeaturesFunction = (environments: Array<Environment>) => void;
+export type FeaturesFunction = (environments: Array<FeatureEnvironmentCollection>) => void;
 
 export abstract class PollingBase implements PollingService {
   protected url: string;
   protected _frequency: number;
   protected _callback: FeaturesFunction;
-  protected stopped = false;
-  protected _header: string;
+  protected _stopped = false;
+  protected _header?: string;
+  protected _shaHeader?: string;
   protected _etag: string;
 
-  constructor(url: string, frequency: number, callback: FeaturesFunction) {
+  protected constructor(url: string, frequency: number, callback: FeaturesFunction) {
     this.url = url;
     this._frequency = frequency;
     this._callback = callback;
@@ -35,11 +36,12 @@ export abstract class PollingBase implements PollingService {
 
   attributeHeader(header: string): Promise<void> {
     this._header = header;
+    this._shaHeader = base64.encode(new sha256().update(header).digest(), true, false);
     return this.poll();
   }
 
   public stop(): void {
-    this.stopped = true;
+    this._stopped = true;
   }
 
   public get frequency(): number {
@@ -55,9 +57,9 @@ export abstract class PollingBase implements PollingService {
   public parseCacheControl(cacheHeader: string | undefined) {
     const maxAge = cacheHeader?.match(/max-age=(\d+)/);
     if (maxAge) {
-      const newFrequency = parseInt(maxAge[1], 10) * 1000;
-      if (newFrequency > this._frequency) {
-        this._frequency = newFrequency;
+      let newFreq = parseInt(maxAge[1], 10);
+      if (newFreq > 0) {
+        this._frequency = newFreq * 1000;
       }
     }
   }
@@ -89,10 +91,18 @@ class BrowserPollingService extends PollingBase implements PollingService {
     this._options = options;
   }
 
+
+
   public poll(): Promise<void> {
+    if (this._stopped) {
+      return new Promise((resolve) => {
+        resolve();
+      });
+    }
     return new Promise((resolve, reject) => {
       const req = new XMLHttpRequest();
-      req.open('GET', this.url);
+      const calculatedUrl = this._shaHeader ? `${this.url}&contextSha=${this._shaHeader}` : this.url;
+      req.open('GET', calculatedUrl);
       req.setRequestHeader('Content-type', 'application/json');
 
       if (this._etag) {
@@ -107,11 +117,13 @@ class BrowserPollingService extends PollingBase implements PollingService {
 
       req.onreadystatechange = () => {
         if (req.readyState === 4) {
-          if (req.status === 200) {
+          if (req.status === 200 || req.status == 236) {
             this._etag = req.getResponseHeader('etag');
             this.parseCacheControl(req.getResponseHeader('cache-control'));
 
-            this._callback(ObjectSerializer.deserialize(JSON.parse(req.responseText), 'Array<Environment>'));
+            this._callback(JSON.parse(req.responseText) as Array<FeatureEnvironmentCollection>);
+
+            this._stopped = (req.status === 236);
             resolve();
           } else if (req.status == 304) { // no change
             resolve();
@@ -128,11 +140,11 @@ export type PollingClientProvider = (options: BrowserOptions, url: string,
                                      frequency: number, callback: FeaturesFunction) => PollingBase;
 
 export class FeatureHubPollingClient implements EdgeService {
-  private _frequency: number;
-  private _url: string;
+  private readonly _frequency: number;
+  private readonly _url: string;
   private _repository: InternalFeatureRepository;
   private _pollingService: PollingService | undefined;
-  private _options: BrowserOptions | NodejsOptions;
+  private readonly _options: BrowserOptions | NodejsOptions;
   private _startable: boolean;
   private readonly _config: FeatureHubConfig;
   private _xHeader: string;
@@ -151,7 +163,7 @@ export class FeatureHubPollingClient implements EdgeService {
     this._repository = repository;
     this._options = options;
     this._config = config;
-    this._url = config.getHost() + 'features?' + config.getApiKeys().map(e => 'sdkUrl=' + encodeURIComponent(e)).join('&');
+    this._url = config.getHost() + 'features?' + config.getApiKeys().map(e => 'apiKey=' + encodeURIComponent(e)).join('&');
   }
 
   private _initService(): void {
@@ -266,13 +278,13 @@ export class FeatureHubPollingClient implements EdgeService {
       }).finally(() => {
         // ready to poll again at the right interval
         this._pollingStarted = false;
-        if (this._pollingService) { // in case we got a 404 and it was shut down
+        if (this._pollingService) { // in case we got a 404, and it was shut down
           setTimeout(() => this._restartTimer(),  this._pollingService.frequency);
         }
       });
   }
 
-  private response(environments: Array<Environment>): void {
+  private response(environments: Array<FeatureEnvironmentCollection>): void {
     if (environments.length === 0) {
       this._startable = false;
       this.stop();

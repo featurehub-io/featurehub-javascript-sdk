@@ -1,5 +1,5 @@
 import * as restify from 'restify';
-import * as corsMiddleware from 'restify-cors-middleware';
+import * as corsMiddleware from 'restify-cors-middleware2';
 import { ITodoApiController, Todo, TodoApiRouter } from "./generated-interface";
 import {
   EdgeFeatureHubConfig,

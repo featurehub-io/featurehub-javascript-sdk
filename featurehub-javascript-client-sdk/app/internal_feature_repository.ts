@@ -1,5 +1,5 @@
 import { FeatureHubRepository } from './featurehub_repository';
-import { RolloutStrategy, SSEResultState } from './models';
+import { FeatureRolloutStrategy, SSEResultState } from './models';
 import { InterceptorValueMatch } from './interceptors';
 import { ClientContext } from './client_context';
 import { Applied } from './strategy_matcher';
@@ -14,6 +14,6 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
 
   valueInterceptorMatched(key: string): InterceptorValueMatch;
 
-  apply(strategies: Array<RolloutStrategy>, key: string, featureValueId: string,
+  apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
         context: ClientContext): Applied;
 }

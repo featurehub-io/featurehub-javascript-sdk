@@ -14,6 +14,5 @@ export * from './internal_feature_repository';
 export * from './context_impl';
 export * from './featurehub_repository';
 export * from './edge_featurehub_config';
-export * from './models/models/model_serializer';
 export * from './featurehub_eventsource';
 export * from './local_context';

@@ -51,6 +51,8 @@ export class FeatureHubEventSourceClient implements EdgeService {
   private readonly _config: FeatureHubConfig;
   private readonly _repository: InternalFeatureRepository;
   private _header: string;
+  private _staleEnvironmentTimeoutId: any;
+  private _stopped: boolean;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
     const realUrl = dict.headers && dict.headers['x-featurehub'] ?
@@ -58,12 +60,22 @@ export class FeatureHubEventSourceClient implements EdgeService {
     return new EventSource(realUrl, dict);
   };
 
+
   constructor(config: FeatureHubConfig, repository: InternalFeatureRepository) {
     this._config = config;
     this._repository = repository;
   }
 
+  public get stopped(): boolean {
+    return this._stopped;
+  }
+
   init() {
+    // if this environment is stale, we reject any requests to connect again
+    if (this._staleEnvironmentTimeoutId) {
+      return;
+    }
+
     const options: any = {};
     if (this._header) {
       options.headers = {
@@ -76,14 +88,19 @@ export class FeatureHubEventSourceClient implements EdgeService {
     this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(this._config.url(), options);
 
     [SSEResultState.Features, SSEResultState.Feature, SSEResultState.DeleteFeature,
-      SSEResultState.Bye, SSEResultState.Failure, SSEResultState.Ack].forEach((name) => {
+      SSEResultState.Bye, SSEResultState.Failure, SSEResultState.Ack,
+      SSEResultState.Config].forEach((name) => {
       const fName = name.toString();
       this.eventSource.addEventListener(fName,
         e => {
           try {
             const data = JSON.parse((e as any).data);
             fhLog.trace(`received ${fName}`, data);
-            this._repository.notify(name, data);
+            if (fName === SSEResultState.Config) {
+              this.processConfig(data);
+            } else {
+              this._repository.notify(name, data);
+            }
           } catch (e) {
             fhLog.error('SSE: Failed to understand result', e);
           }
@@ -91,13 +108,15 @@ export class FeatureHubEventSourceClient implements EdgeService {
     });
 
     this.eventSource.onerror = (e: any) => {
-      // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
-      if (this._repository.readyness !== Readyness.Ready || (e.status && (e.status > 504 || (e.status >=400 && e.status < 500) ))) {
-        fhLog.error('Connection failed and repository not in ready state indicating persistent failure', e);
-        this._repository.notify (SSEResultState.Failure, null);
-        this.close();
-      } else {
-        fhLog.trace('refreshing connection in case of staleness', e);
+      if (!this._stopped) {
+        // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
+        if (this._repository.readyness !== Readyness.Ready || (e.status && (e.status > 504 || (e.status >= 400 && e.status < 500) ))) {
+          fhLog.error('Connection failed and repository not in ready state indicating persistent failure', e);
+          this._repository.notify (SSEResultState.Failure, null);
+          this.close();
+        } else {
+          fhLog.trace('refreshing connection in case of staleness', e);
+        }
       }
     };
   }
@@ -136,5 +155,19 @@ export class FeatureHubEventSourceClient implements EdgeService {
 
   requiresReplacementOnHeaderChange(): boolean {
     return true;
+  }
+
+  private processConfig(data: any) {
+    if (data['edge.stale']) {
+      this._stopped = true;
+      this.close();
+
+      this._staleEnvironmentTimeoutId = setTimeout(() => {
+        clearTimeout(this._staleEnvironmentTimeoutId);
+        this._staleEnvironmentTimeoutId = undefined;
+        this._stopped = false;
+        this.init();
+      }, data['edge.stale'] * 1000);
+    }
   }
 }
