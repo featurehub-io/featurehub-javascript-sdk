@@ -79,6 +79,10 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     }
   }
 
+  public removeListener(listenerToRemove: FeatureListener): void {
+    this.listeners = this.listeners.filter((listener) => listener !== listenerToRemove);
+  }
+
   public getBoolean(): boolean | undefined {
     return this._getValue(FeatureValueType.Boolean) as boolean | undefined;
   }

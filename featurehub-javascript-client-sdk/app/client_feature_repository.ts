@@ -144,6 +144,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     listener(this.readynessState);
   }
 
+  public removeReadynessListener(listenerToRemove: ReadynessListener): void {
+    this.readynessListeners = this.readynessListeners.filter((listener) => listener !== listenerToRemove);
+  }
+
   notReady(): void {
     this.readynessState = Readyness.NotReady;
     this.broadcastReadynessState();

@@ -63,6 +63,9 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     listener(Readyness.Ready);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public removeReadynessListener(listener: ReadynessListener): void {}
+
   notReady(): void {
   }
 

@@ -30,8 +30,10 @@ class BaggageHolder implements FeatureStateHolder {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  addListener(listener: FeatureListener): void {
-  }
+  addListener(listener: FeatureListener): void {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  removeListener(listener: FeatureListener): void {}
 
   getBoolean(): boolean | undefined {
     if (this.existing.isLocked()) {
@@ -245,6 +247,10 @@ class BaggageRepository implements InternalFeatureRepository {
 
   addReadynessListener(listener: ReadynessListener) {
     this.repo.addReadynessListener(listener);
+  }
+
+  removeReadynessListener(listener: ReadynessListener): void {
+    this.repo.removeReadynessListener(listener);
   }
 
   addAnalyticCollector(collector: AnalyticsCollector): void {

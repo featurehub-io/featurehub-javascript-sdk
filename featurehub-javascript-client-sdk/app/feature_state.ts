@@ -82,7 +82,11 @@ export interface FeatureStateHolder {
 
   get enabled(): boolean;
 
+  /** Adds listener to the subscription list */
   addListener(listener: FeatureListener): void;
+
+  /** Removes the listener from the subscription list */
+  removeListener(listener: FeatureListener): void;
 
   // this is intended for override repositories (such as the UserFeatureRepository)
   // to force the listeners to trigger if they detect an actual state change in their layer

@@ -54,6 +54,8 @@ export interface FeatureHubRepository {
   addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
 
   addReadynessListener(listener: ReadynessListener): void;
+  
+  removeReadynessListener(listener: ReadynessListener): void;
 
   addAnalyticCollector(collector: AnalyticsCollector): void;
 
