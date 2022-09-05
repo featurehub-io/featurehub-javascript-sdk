@@ -15,7 +15,7 @@ describe('if a feature is deleted it becomes undefined', () => {
 
   it('should allow us to delete a feature', () => {
     const features = [
-      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -36,7 +36,7 @@ describe('if a feature is deleted it becomes undefined', () => {
 
   it("if features are deleted from FH, on the next poll they won't turn up, so we should indicate they don't exist", () => {
     const features = [
-      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true }),
+      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -47,8 +47,8 @@ describe('if a feature is deleted it becomes undefined', () => {
 
   it('should ignore deleting a feature that doesnt exist', () => {
     repo.notify(SSEResultState.DeleteFeature,
-      new FeatureState(
-        { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true })
+
+        { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState
     );
 
     // tslint:disable-next-line:no-unused-expression

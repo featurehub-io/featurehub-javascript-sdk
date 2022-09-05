@@ -6,8 +6,9 @@ import { FeatureStateHolder } from './feature_state';
 import { FeatureStateBaseHolder } from './feature_state_holders';
 import { FeatureStateValueInterceptor, InterceptorValueMatch } from './interceptors';
 import { InternalFeatureRepository } from './internal_feature_repository';
-import { Environment, FeatureValueType, RolloutStrategy, SSEResultState } from './models';
+import { FeatureEnvironmentCollection, FeatureValueType, FeatureRolloutStrategy, SSEResultState } from './models';
 import { Applied, ApplyFeature } from './strategy_matcher';
+import { CatchReleaseListenerHandler } from './feature_hub_config';
 
 class LocalFeatureRepository implements InternalFeatureRepository {
   // indexed by key as that what the user cares about
@@ -16,7 +17,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
 
-  constructor(environment: Environment, applyFeature?: ApplyFeature) {
+  constructor(environment: FeatureEnvironmentCollection, applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
 
     environment.features.forEach((fs) => {
@@ -26,7 +27,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     });
   }
 
-  public apply(strategies: Array<RolloutStrategy>, key: string, featureValueId: string,
+  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
     context: ClientContext): Applied {
     return this._applyFeature.apply(strategies, key, featureValueId, context);
   }
@@ -56,11 +57,24 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener) {
+  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+    return 0;
   }
 
-  public addReadynessListener(listener: ReadynessListener) {
+  public removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+  }
+
+  public addReadynessListener(listener: ReadynessListener): number {
+    return this.addReadinessListener(listener);
+  }
+
+  public addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
     listener(Readyness.Ready);
+
+    return 0;
+  }
+
+  public removeReadinessListener(listener: ReadynessListener | number) {
   }
 
   notReady(): void {
@@ -166,7 +180,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
 }
 
 export class LocalClientContext extends BaseClientContext {
-  constructor(environment: Environment) {
+  constructor(environment: FeatureEnvironmentCollection) {
     super(new LocalFeatureRepository(environment));
   }
 

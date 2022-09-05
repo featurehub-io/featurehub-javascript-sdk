@@ -11,7 +11,7 @@
   "dependencies": {
     "featurehub-javascript-node-sdk": "^1.1.4",
     "restify": "^8.5.1",
-    "restify-cors-middleware": "^1.1.1"
+    "restify-cors-middleware2": "^2.1.2"
   },
   "devDependencies": {
     "@types/node": "^14.14.43",

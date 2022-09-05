@@ -5,12 +5,13 @@ import { FeatureStateHolder } from './feature_state';
 
 import { AnalyticsCollector } from './analytics';
 // leave this here, prevents circular deps
-import { FeatureState, FeatureValueType, RolloutStrategy, SSEResultState } from './models';
+import { FeatureRolloutStrategy, FeatureState, FeatureValueType, SSEResultState } from './models';
 import { ClientContext } from './client_context';
 import { Applied, ApplyFeature } from './strategy_matcher';
 import { InternalFeatureRepository } from './internal_feature_repository';
-import { fhLog } from './feature_hub_config';
+import { CatchReleaseListenerHandler, fhLog, ReadinessListenerHandle } from './feature_hub_config';
 import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener } from './featurehub_repository';
+import { ListenerUtils } from './listener_utils';
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState: boolean;
@@ -18,11 +19,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private features = new Map<string, FeatureStateBaseHolder>();
   private analyticsCollectors = new Array<AnalyticsCollector>();
   private readynessState: Readyness = Readyness.NotReady;
-  private readynessListeners: Array<ReadynessListener> = [];
+  private _readinessListeners: Map<Number, ReadynessListener> = new Map<Number, ReadynessListener>();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
-  private _newFeatureStateAvailableListeners: Array<PostLoadNewFeatureStateAvailableListener> = [];
+  private _newFeatureStateAvailableListeners: Map<Number, PostLoadNewFeatureStateAvailableListener> = new Map<Number, PostLoadNewFeatureStateAvailableListener>();
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
@@ -31,7 +32,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._applyFeature = applyFeature || new ApplyFeature();
   }
 
-  public apply(strategies: Array<RolloutStrategy>, key: string, featureValueId: string,
+  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
     context: ClientContext): Applied {
     return this._applyFeature.apply(strategies, key, featureValueId, context);
   }
@@ -56,7 +57,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           }
           break;
         case SSEResultState.Feature: {
-          const fs = data instanceof FeatureState ? data : new FeatureState(data);
+          const fs = data as FeatureState;
 
           if (this._catchAndReleaseMode) {
             this._catchUpdatedFeatures([fs], false);
@@ -68,9 +69,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
         }
           break;
         case SSEResultState.Features: {
-          const features = (data as []).map((f : any) => f instanceof FeatureState ? f : new FeatureState(f));
+          const features = (data as []).filter((f:any) => f?.key !== undefined ).map((f : any) => f as FeatureState);
           if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
-
             this._catchUpdatedFeatures(features, true);
           } else {
             let updated = false;
@@ -107,7 +107,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
     if (featureMatch.size > 0) {
       for (const k of featureMatch.keys()) {
-        this.deleteFeature({ key: k });
+        this.deleteFeature({ key: k } as FeatureState);
       }
     }
   }
@@ -129,19 +129,41 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return null;
   }
 
-  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): void {
-    this._newFeatureStateAvailableListeners.push(listener);
+  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+    const pos = ListenerUtils.newListenerKey(this._newFeatureStateAvailableListeners);
+
+    this._newFeatureStateAvailableListeners.set(pos, listener);
 
     if (this._catchReleaseStates.size > 0) {
       listener(this);
     }
+
+    return pos;
   }
 
-  public addReadynessListener(listener: ReadynessListener): void {
-    this.readynessListeners.push(listener);
+  public removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+    ListenerUtils.removeListener(this._newFeatureStateAvailableListeners, listener);
+  }
 
-    // always let them know what it is in case its already ready
-    listener(this.readynessState);
+  public addReadynessListener(listener: ReadynessListener): ReadinessListenerHandle {
+    return this.addReadinessListener(listener);
+  }
+
+  public addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle {
+    const pos = ListenerUtils.newListenerKey(this._readinessListeners);
+
+    this._readinessListeners.set(pos, listener);
+
+    if (!ignoreNotReadyOnRegister || (ignoreNotReadyOnRegister && this.readynessState != Readyness.NotReady)) {
+      // always let them know what it is in case its already ready
+      listener(this.readynessState);
+    }
+
+    return pos;
+  }
+
+  removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle) {
+    ListenerUtils.removeListener(this._readinessListeners, listener);
   }
 
   notReady(): void {
@@ -150,7 +172,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   public broadcastReadynessState(): void {
-    this.readynessListeners.forEach((l) => l(this.readynessState));
+    this._readinessListeners.forEach((l) => l(this.readynessState));
   }
 
   public addAnalyticCollector(collector: AnalyticsCollector): void {
@@ -302,7 +324,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   private triggerNewStateAvailable(): void {
-    if (this.hasReceivedInitialState && this._newFeatureStateAvailableListeners.length > 0) {
+    if (this.hasReceivedInitialState && this._newFeatureStateAvailableListeners.size > 0) {
       if (!this._catchAndReleaseMode || (this._catchReleaseStates.size > 0)) {
         this._newFeatureStateAvailableListeners.forEach((l) => {
           try {

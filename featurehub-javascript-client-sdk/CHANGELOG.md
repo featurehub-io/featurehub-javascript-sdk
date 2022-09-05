@@ -1,3 +1,9 @@
+#### 1.1.6
+- Resolve issue with cache control header [Github issues](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/23)
+- Change to interfaces instead of classes for models, and match the OpenAPI current definition
+- Add support for deregistering feature and readiness listeners (ready for React SDK)
+- Deprecate the readyness listener for a readiness listener
+- Add support for stale environments [GitHub PR](https://github.com/featurehub-io/featurehub-javascript-sdk/pull/78)
 #### 1.1.5
 - Support for adding custom headers [GitHub issues](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/32), [GitHub PR](https://github.com/featurehub-io/featurehub-javascript-sdk/pull/44)
 - Fix bug in catch and release mode when feature value would not update if another feature state was changed [GitHub PR](https://github.com/featurehub-io/featurehub-javascript-sdk/pull/70)

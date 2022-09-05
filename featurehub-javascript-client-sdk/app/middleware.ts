@@ -4,13 +4,14 @@
 /// For this we are using the W3C Baggage standard for future supportability
 
 import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener } from './featurehub_repository';
-import { FeatureListener, FeatureStateHolder } from './feature_state';
-import { FeatureValueType, RolloutStrategy, SSEResultState } from './models';
+import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from './feature_state';
+import { FeatureValueType, FeatureRolloutStrategy, SSEResultState } from './models';
 import { FeatureStateValueInterceptor, InterceptorValueMatch } from './interceptors';
 import { ClientContext } from './client_context';
 import { InternalFeatureRepository } from './internal_feature_repository';
 import { Applied } from './strategy_matcher';
 import { AnalyticsCollector } from './analytics';
+import { CatchReleaseListenerHandler, ReadinessListenerHandle } from './feature_hub_config';
 
 class BaggageHolder implements FeatureStateHolder {
   protected readonly existing: FeatureStateHolder;
@@ -30,7 +31,11 @@ class BaggageHolder implements FeatureStateHolder {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  addListener(listener: FeatureListener): void {
+  addListener(listener: FeatureListener): FeatureListenerHandle {
+    return 0;
+  }
+
+  removeListener(handle:FeatureListener | FeatureListenerHandle) {
   }
 
   getBoolean(): boolean | undefined {
@@ -153,7 +158,7 @@ class BaggageRepository implements InternalFeatureRepository {
     this.baggage = baggage;
   }
 
-  public apply(strategies: RolloutStrategy[], key: string, featureValueId: string, context: ClientContext): Applied {
+  public apply(strategies: FeatureRolloutStrategy[], key: string, featureValueId: string, context: ClientContext): Applied {
     return this.repo.apply(strategies, key, featureValueId, context);
   }
 
@@ -243,8 +248,16 @@ class BaggageRepository implements InternalFeatureRepository {
     return this.repo.valueInterceptorMatched(key);
   }
 
-  addReadynessListener(listener: ReadynessListener) {
-    this.repo.addReadynessListener(listener);
+  addReadynessListener(listener: ReadynessListener): ReadinessListenerHandle {
+    return this.repo.addReadinessListener(listener);
+  }
+
+  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle {
+    return this.repo.addReadinessListener(listener, ignoreNotReadyOnRegister);
+  }
+
+  removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle) {
+    this.repo.removeReadinessListener(listener);
   }
 
   addAnalyticCollector(collector: AnalyticsCollector): void {
@@ -259,8 +272,12 @@ class BaggageRepository implements InternalFeatureRepository {
     this.repo.catchAndReleaseMode = value;
   }
 
-  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener) {
-    this.repo.addPostLoadNewFeatureStateAvailableListener(listener);
+  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+    return this.repo.addPostLoadNewFeatureStateAvailableListener(listener);
+  }
+
+  removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+    this.repo.removePostLoadNewFeatureStateAvailableListener(listener);
   }
 
   getFeatureState(key: string): FeatureStateHolder {

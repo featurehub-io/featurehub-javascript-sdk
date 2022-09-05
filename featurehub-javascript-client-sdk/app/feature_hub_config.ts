@@ -11,6 +11,9 @@ export type EdgeServiceSupplier = () => EdgeService;
 
 export type FHLogMethod = (...args: any[]) => void;
 
+export type ReadinessListenerHandle = number;
+export type CatchReleaseListenerHandler = number;
+
 export class FHLog {
   public static fhLog = new FHLog();
 
@@ -46,7 +49,13 @@ export class FHLog {
 export const fhLog = FHLog.fhLog;
 
 export interface FeatureHubConfig {
+  /**
+   * indicates the system is ready
+   * @deprecated used readiness
+   */
   readyness: Readyness;
+
+  readiness: Readyness;
 
   url(): string;
 
@@ -77,8 +86,24 @@ export interface FeatureHubConfig {
   // close any server connections
   close(): void;
 
-  // add a callback for when the system is ready
-  addReadynessListener(listener: ReadynessListener): void;
+  /**
+   * add a callback for when the system is ready
+   * @deprecated - use addReadinessListener
+   * @param listener
+   */
+  addReadynessListener(listener: ReadynessListener): ReadinessListenerHandle;
+
+  /**
+   * Adds a listener and returns a new handle to allow us to remove the listener. This will always trigger the
+   * registered listener with the current state unless ignoreNotReadyOnRegister is set to true.
+   *
+   * @param listener - the listener to trigger when readiness changes
+   * @param ignoreNotReadyOnRegister - if true and the readyness state is NotReady, will not fire. You would use this
+   * if you register your readiness listener before initialising the repository so you don't get an immediate NotReady
+   * trigger.
+   */
+  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle;
+  removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle);
 
   // add an analytics collector
   addAnalyticCollector(collector: AnalyticsCollector): void;

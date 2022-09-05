@@ -1,12 +1,13 @@
-import { FeatureListener, FeatureStateHolder } from './feature_state';
+import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from './feature_state';
 import { FeatureState, FeatureValueType } from './models';
 import { ClientContext } from './client_context';
 import { InternalFeatureRepository } from './internal_feature_repository';
+import { ListenerUtils } from './listener_utils';
 
 export class FeatureStateBaseHolder implements FeatureStateHolder {
   protected internalFeatureState: FeatureState | undefined;
   protected _key: string;
-  protected listeners: Array<FeatureListener> = [];
+  protected listeners: Map<Number, FeatureListener> = new Map<Number, FeatureListener>();
   protected _repo: InternalFeatureRepository;
   protected _ctx: ClientContext;
   // eslint-disable-next-line no-use-before-define
@@ -71,12 +72,20 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     return this.getBoolean() === true;
   }
 
-  public addListener(listener: FeatureListener): void {
+  public addListener(listener: FeatureListener): FeatureListenerHandle {
+    const pos = ListenerUtils.newListenerKey(this.listeners);
+
     if (this._ctx !== undefined) {
-      this.listeners.push(() => listener(this));
+      this.listeners.set(pos, () => listener(this));
     } else {
-      this.listeners.push(listener);
+      this.listeners.set(pos, listener);
     }
+
+    return pos;
+  }
+
+  public removeListener(handle: FeatureListener | FeatureListenerHandle) {
+    ListenerUtils.removeListener(this.listeners, handle);
   }
 
   public getBoolean(): boolean | undefined {

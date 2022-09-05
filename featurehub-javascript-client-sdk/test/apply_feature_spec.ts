@@ -6,11 +6,11 @@ import {
   StrategyMatcher
 } from '../app/strategy_matcher';
 import { Arg, Substitute, SubstituteOf } from '@fluffy-spoon/substitute';
-import { ClientContext } from '../app/client_context';
+import { ClientContext } from '../app';
 import { expect } from 'chai';
 import {
-  RolloutStrategy,
-  RolloutStrategyAttribute,
+  FeatureRolloutStrategy,
+  FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType
 } from '../app';
@@ -28,7 +28,7 @@ describe('apply feature works as expected', () => {
   });
 
   it('should always return false when there is an undefined context', () => {
-    const found = app.apply([new RolloutStrategy()], 'key', 'fid', undefined);
+    const found = app.apply([{} as FeatureRolloutStrategy], 'key', 'fid', undefined);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -60,15 +60,15 @@ describe('apply feature works as expected', () => {
     const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttr('warehouseId', null).returns(null);
-    const found = app.apply([new RolloutStrategy({
+    const found = app.apply([{
       attributes: [
-        new RolloutStrategyAttribute({
+        {
           fieldName: 'warehouseId',
           conditional: RolloutStrategyAttributeConditional.Includes,
           values: ['ponsonby'],
           type: RolloutStrategyFieldType.String
-        })]
-    })], 'FEATURE_NAME', 'fid', ctx);
+        } as FeatureRolloutStrategyAttribute ]
+    } as FeatureRolloutStrategy], 'FEATURE_NAME', 'fid', ctx);
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
     // tslint:disable-next-line:no-unused-expression
@@ -79,16 +79,16 @@ describe('apply feature works as expected', () => {
     const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttr('warehouseId', null).returns('ponsonby');
-    const found = app.apply([new RolloutStrategy({
+    const found = app.apply([{
       value: 'sausage',
       attributes: [
-        new RolloutStrategyAttribute({
+        {
           fieldName: 'warehouseId',
           conditional: RolloutStrategyAttributeConditional.Includes,
           values: ['ponsonby'],
           type: RolloutStrategyFieldType.String
-        })]
-    })], 'FEATURE_NAME', 'fid', ctx);
+        } as FeatureRolloutStrategyAttribute]
+    } as FeatureRolloutStrategy], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.true;
@@ -107,16 +107,16 @@ describe('apply feature works as expected', () => {
 
     matcher.findMatcher(Arg.any()).returns(sMatcher);
 
-    const found = app.apply([new RolloutStrategy({
+    const found = app.apply([{
       value: 'sausage',
       attributes: [
-        new RolloutStrategyAttribute({
+        {
           fieldName: 'warehouseId',
           conditional: RolloutStrategyAttributeConditional.Includes,
           values: ['ponsonby'],
           type: RolloutStrategyFieldType.String
-        })]
-    })], 'FEATURE_NAME', 'fid', ctx);
+        }]
+    }], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -144,10 +144,10 @@ describe('apply feature works as expected', () => {
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
-    const found = sApp.apply([new RolloutStrategy({
+    const found = sApp.apply([{
       value: 'sausage',
       percentage: 20,
-    })], 'FEATURE_NAME', 'fid', ctx);
+    } as FeatureRolloutStrategy], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.true;
@@ -163,10 +163,10 @@ describe('apply feature works as expected', () => {
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
-    const found = sApp.apply([new RolloutStrategy({
+    const found = sApp.apply([{
       value: 'sausage',
       percentage: 20,
-    })], 'FEATURE_NAME', 'fid', ctx);
+    } as FeatureRolloutStrategy], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -182,17 +182,17 @@ describe('apply feature works as expected', () => {
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
-    const found = sApp.apply([new RolloutStrategy({
+    const found = sApp.apply([{
       value: 'sausage',
       percentage: 20,
       attributes: [
-        new RolloutStrategyAttribute({
+        {
           fieldName: 'warehouseId',
           conditional: RolloutStrategyAttributeConditional.Includes,
           values: ['ponsonby'],
           type: RolloutStrategyFieldType.String
-        })]
-    })], 'FEATURE_NAME', 'fid', ctx);
+        }]
+    }], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.true;
@@ -209,17 +209,17 @@ describe('apply feature works as expected', () => {
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
-    const found = sApp.apply([new RolloutStrategy({
+    const found = sApp.apply([{
       value: 'sausage',
       percentage: 20,
       attributes: [
-        new RolloutStrategyAttribute({
+        {
           fieldName: 'warehouseId',
           conditional: RolloutStrategyAttributeConditional.Includes,
           values: ['ponsonby'],
           type: RolloutStrategyFieldType.String
-        })]
-    })], 'FEATURE_NAME', 'fid', ctx);
+        }]
+    }], 'FEATURE_NAME', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;

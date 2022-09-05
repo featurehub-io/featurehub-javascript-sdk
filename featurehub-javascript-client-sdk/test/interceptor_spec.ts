@@ -36,14 +36,14 @@ describe('Interceptor functionality works as expected', () => {
   });
 
   it('should allow us to override unlocked values', () => {
-    const features = [
-      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: false }),
-      new FeatureState({ id: '1', key: 'apricot', version: 1, type: FeatureValueType.Number, value: 16.2 }),
-      new FeatureState({ id: '1', key: 'nashi', version: 1, type: FeatureValueType.String, value: 'oook' }),
-      new FeatureState({
+    const features: Array<FeatureState> = [
+      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: false },
+      { id: '1', key: 'apricot', version: 1, type: FeatureValueType.Number, value: 16.2 },
+      { id: '1', key: 'nashi', version: 1, type: FeatureValueType.String, value: 'oook' },
+      {
         id: '3', key: 'peach', version: 1, type: FeatureValueType.Json,
         value: '{"variety": "golden queen"}'
-      }),
+      },
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -66,14 +66,14 @@ describe('Interceptor functionality works as expected', () => {
     edgeService.poll().returns(new Promise<void>(() => {}));
     fhConfig.edgeServiceProvider(() => edgeService);
 
-    const features = [
-      new FeatureState({ id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, l: true, value: false }),
-      new FeatureState({ id: '1', key: 'apricot', version: 1, type: FeatureValueType.Number, l: true, value: 16.2 }),
-      new FeatureState({ id: '1', key: 'nashi', version: 1, type: FeatureValueType.String, l: true, value: 'oook' }),
-      new FeatureState({
+    const features: Array<FeatureState> = [
+      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, l: true, value: false },
+      { id: '1', key: 'apricot', version: 1, type: FeatureValueType.Number, l: true, value: 16.2 },
+      { id: '1', key: 'nashi', version: 1, type: FeatureValueType.String, l: true, value: 'oook' },
+      {
         id: '3', key: 'peach', version: 1, type: FeatureValueType.Json, l: true,
         value: '{"variety": "golden queen"}'
-      }),
+      },
     ];
 
     repo.notify(SSEResultState.Features, features);

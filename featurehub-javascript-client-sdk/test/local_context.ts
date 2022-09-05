@@ -1,26 +1,26 @@
 import { expect } from 'chai';
-import { Environment, FeatureState, FeatureValueType, LocalClientContext } from '../app';
+import { FeatureEnvironmentCollection, FeatureState, FeatureValueType, LocalClientContext } from '../app';
 
 describe('Local context should be able to evaluate', () => {
   it('the ', () => {
-    const context = new LocalClientContext(new Environment({
+    const context = new LocalClientContext({
       features: [
-        new FeatureState({
+        {
           id: '1',
           key: 'banana',
           version: 1,
           type: FeatureValueType.Boolean,
           value: true,
-        }),
-        new FeatureState({
+        } as FeatureState,
+        {
           id: '2',
           key: 'organge',
           version: 1,
           type: FeatureValueType.Boolean,
           value: false,
-        }),
+        } as FeatureState,
       ],
-    }));
+    } as FeatureEnvironmentCollection);
 
     expect(context.getBoolean('banana')).to.be.true;
     expect(context.getBoolean('organge')).to.be.false;

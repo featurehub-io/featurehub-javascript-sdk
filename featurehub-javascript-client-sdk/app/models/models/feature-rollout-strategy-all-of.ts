@@ -13,21 +13,20 @@
  */
 
 
+import { FeatureRolloutStrategyAttribute } from './feature-rollout-strategy-attribute';
 
 /**
  * 
  * @export
- * @enum {string}
+ * @interface FeatureRolloutStrategyAllOf
  */
-export enum RolloutStrategyFieldType {
-    String = 'STRING',
-    SemanticVersion = 'SEMANTIC_VERSION',
-    Number = 'NUMBER',
-    Date = 'DATE',
-    Datetime = 'DATETIME',
-    Boolean = 'BOOLEAN',
-    IpAddress = 'IP_ADDRESS'
+export interface FeatureRolloutStrategyAllOf {
+    /**
+     * 
+     * @type {Array<FeatureRolloutStrategyAttribute>}
+     * @memberof FeatureRolloutStrategyAllOf
+     */
+    attributes: Array<FeatureRolloutStrategyAttribute>;
 }
-
 
 

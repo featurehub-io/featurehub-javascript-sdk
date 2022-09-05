@@ -1,6 +1,6 @@
 import {
   EdgeService,
-  Environment,
+  FeatureEnvironmentCollection,
   FeatureState,
   FeatureValueType,
   LocalClientContext,
@@ -69,13 +69,13 @@ describe('Client context should be able to encode as expected', () => {
   });
 
   it('the static client context should just work', async () => {
-    const environment = new Environment({
+    const environment = {
       features: [
-        new FeatureState({
+        {
           id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true,
-        }),
+        } as FeatureState,
       ],
-    });
+    } as FeatureEnvironmentCollection;
     const context = await new LocalClientContext(environment)
       .userKey('DJElif')
       .sessionKey('VirtualBurningMan')

@@ -1,6 +1,6 @@
 import {
-  RolloutStrategy,
-  RolloutStrategyAttribute,
+  FeatureRolloutStrategy,
+  FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType
 } from './models';
@@ -37,22 +37,22 @@ export class Applied {
 }
 
 export interface StrategyMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean;
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean;
 }
 
 export interface MatcherRepository {
-  findMatcher(attr: RolloutStrategyAttribute): StrategyMatcher;
+  findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher;
 }
 
 class FallthroughMatcher implements StrategyMatcher {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     return false;
   }
 }
 
 class BooleanMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const val = 'true' === suppliedValue;
 
     if (attr.conditional === RolloutStrategyAttributeConditional.Equals) {
@@ -69,7 +69,7 @@ class BooleanMatcher implements StrategyMatcher {
 
 class StringMatcher implements StrategyMatcher {
 
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = this.attrToStringValues(attr);
 
     // tslint:disable-next-line:switch-default
@@ -101,13 +101,13 @@ class StringMatcher implements StrategyMatcher {
     return false;
   }
 
-  protected attrToStringValues(attr: RolloutStrategyAttribute): Array<string> {
+  protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return attr.values.filter((v) => v != null).map((v) => v.toString());
   }
 }
 
 class DateMatcher extends StringMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
       const parsedDate = new Date(suppliedValue);
 
@@ -121,14 +121,14 @@ class DateMatcher extends StringMatcher {
     }
   }
 
-  protected attrToStringValues(attr: RolloutStrategyAttribute): Array<string> {
+  protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return attr.values.filter((v) => v != null)
       .map((v) => (v instanceof Date) ? v.toISOString().substring(0, 10) : v.toString());
   }
 }
 
 class DateTimeMatcher extends StringMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
       const parsedDate = new Date(suppliedValue);
 
@@ -136,20 +136,20 @@ class DateTimeMatcher extends StringMatcher {
         return false;
       }
 
-      return super.match(parsedDate.toISOString().substr(0, 19) + 'Z', attr);
+      return super.match(parsedDate.toISOString().substring(0, 19) + 'Z', attr);
     } catch (e) {
       return false;
     }
   }
 
-  protected attrToStringValues(attr: RolloutStrategyAttribute): Array<string> {
+  protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return attr.values.filter((v) => v != null)
-      .map((v) => (v instanceof Date) ? (v.toISOString().substr(0, 19) + 'Z') : v.toString());
+      .map((v) => (v instanceof Date) ? (v.toISOString().substring(0, 19) + 'Z') : v.toString());
   }
 }
 
 class NumberMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
       const isFloat = suppliedValue.indexOf('.') >= 0;
       const num = isFloat ? parseFloat(suppliedValue) : parseInt(suppliedValue, 10);
@@ -191,7 +191,7 @@ class NumberMatcher implements StrategyMatcher {
 }
 
 class SemanticVersionMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: RolloutStrategyAttribute): boolean {
+  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = attr.values.filter((v) => v != null).map((v) => v.toString());
 
     // tslint:disable-next-line:switch-default
@@ -223,7 +223,7 @@ class SemanticVersionMatcher implements StrategyMatcher {
 }
 
 class IPNetworkMatcher implements StrategyMatcher {
-  match(ip: string, attr: RolloutStrategyAttribute): boolean {
+  match(ip: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = attr.values.filter((v) => v != null);
 
     // tslint:disable-next-line:switch-default
@@ -241,7 +241,7 @@ class IPNetworkMatcher implements StrategyMatcher {
 }
 
 export class MatcherRegistry implements MatcherRepository {
-  findMatcher(attr: RolloutStrategyAttribute): StrategyMatcher {
+  findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher {
     // tslint:disable-next-line:switch-default
     switch (attr?.type) {
       case RolloutStrategyFieldType.String:
@@ -274,7 +274,7 @@ export class ApplyFeature {
     this._matcherRepository = matcherRepository || new MatcherRegistry();
   }
 
-  public apply(strategies: Array<RolloutStrategy>, key: string, featureValueId: string,
+  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
     context: ClientContext): Applied {
     if (context != null && strategies != null && strategies.length > 0) {
       let percentage: number = null;
@@ -293,7 +293,7 @@ export class ApplyFeature {
 
           const basePercentageVal = basePercentage.get(newPercentageKey);
 
-          // if we have changed the key or we have never calculated it, calculate it and set the
+          // if we have changed the key, or we have never calculated it, calculate it and set the
           // base percentage to null
           if (percentage === null || newPercentageKey !== percentageKey) {
             percentageKey = newPercentageKey;
@@ -339,7 +339,7 @@ export class ApplyFeature {
     return percentageAttributes.map((pa) => context.getAttr(pa, '<none>')).join('$');
   }
 
-  private matchAttribute(context: ClientContext, rsi: RolloutStrategy): boolean {
+  private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
     for (const attr of rsi.attributes) {
       let suppliedValue = context.getAttr(attr.fieldName, null);
       if (suppliedValue === null && attr.fieldName.toLowerCase() === 'now') {

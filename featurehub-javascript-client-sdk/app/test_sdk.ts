@@ -1,6 +1,5 @@
 import { FeatureStateUpdate } from './models';
 // prevents circular deps
-import { ObjectSerializer } from './models/models/model_serializer';
 import { FeatureHubConfig } from './feature_hub_config';
 
 export interface FeatureUpdatePostManager {
@@ -13,7 +12,7 @@ class BrowserFeaturePostUpdater implements FeatureUpdatePostManager {
       const req = new XMLHttpRequest();
       req.open('PUT', url);
       req.setRequestHeader('Content-type', 'application/json');
-      req.send(JSON.stringify(ObjectSerializer.serialize(update, 'FeatureStateUpdate')));
+      req.send(JSON.stringify(update));
       req.onreadystatechange  = function () {
         if (req.readyState === 4) {
           resolve(req.status >= 200 && req.status < 300);
