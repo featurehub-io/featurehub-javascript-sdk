@@ -13,13 +13,13 @@ import { Applied } from './strategy_matcher';
 import { AnalyticsCollector } from './analytics';
 import { CatchReleaseListenerHandler, ReadinessListenerHandle } from './feature_hub_config';
 
-class BaggageHolder implements FeatureStateHolder {
+class BaggageHolder<T = any> implements FeatureStateHolder<T> {
   protected readonly existing: FeatureStateHolder;
-  protected readonly value: string;
+  protected readonly baggageValue: string;
 
   constructor(existing: FeatureStateHolder, value: string) {
     this.existing = existing;
-    this.value = value;
+    this.baggageValue = value;
   }
 
   isEnabled(): boolean {
@@ -27,7 +27,7 @@ class BaggageHolder implements FeatureStateHolder {
   }
 
   withContext(param: ClientContext): FeatureStateHolder {
-    return new BaggageHolder(this.existing.withContext(param), this.value);
+    return new BaggageHolder(this.existing.withContext(param), this.baggageValue);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -35,6 +35,7 @@ class BaggageHolder implements FeatureStateHolder {
     return 0;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   removeListener(handle:FeatureListener | FeatureListenerHandle) {
   }
 
@@ -43,7 +44,7 @@ class BaggageHolder implements FeatureStateHolder {
       return this.existing.getBoolean();
     }
 
-    return this.existing.getType() === FeatureValueType.Boolean ? ('true' === this.value) : undefined;
+    return this.existing.getType() === FeatureValueType.Boolean ? ('true' === this.baggageValue) : undefined;
   }
 
   getFlag(): boolean | undefined {
@@ -59,12 +60,12 @@ class BaggageHolder implements FeatureStateHolder {
       return this.existing.getNumber();
     }
 
-    if (this.existing.getType() === FeatureValueType.Number && this.value !== undefined) {
-      if (this.value.includes('.')) {
-        return parseFloat(this.value);
+    if (this.existing.getType() === FeatureValueType.Number && this.baggageValue !== undefined) {
+      if (this.baggageValue.includes('.')) {
+        return parseFloat(this.baggageValue);
       } else {
         // tslint:disable-next-line:radix
-        return parseInt(this.value);
+        return parseInt(this.baggageValue);
       }
     }
 
@@ -81,7 +82,7 @@ class BaggageHolder implements FeatureStateHolder {
     }
 
     if (this.existing.getType() === FeatureValueType.String) {
-      return this.value;
+      return this.baggageValue;
     }
 
     return undefined;
@@ -141,6 +142,17 @@ class BaggageHolder implements FeatureStateHolder {
 
   get type(): FeatureValueType | undefined {
     return this.getType();
+  }
+
+  get value(): T {
+    const v = {
+      [FeatureValueType.Boolean]: this.getBoolean(),
+      [FeatureValueType.String]: this.getString(),
+      [FeatureValueType.Number]: this.getNumber(),
+      [FeatureValueType.Json]: this.getRawJson() ?? {},
+    }[this.type];
+
+    return v as T;
   }
 
   get version(): number | undefined {

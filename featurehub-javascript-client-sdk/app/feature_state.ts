@@ -10,7 +10,7 @@ export interface FeatureListener {
 
 export type FeatureListenerHandle = number;
 
-export interface FeatureStateHolder {
+export interface FeatureStateHolder<T = any> {
   /**
    * getKey: returns feature key if feature exists
    */
@@ -100,6 +100,9 @@ export interface FeatureStateHolder {
   // to force the listeners to trigger if they detect an actual state change in their layer
   // it passes in the feature state holder to notify with
   triggerListeners(feature?: FeatureStateHolder): void;
+
+  /** the value of the feature flag */
+  get value(): T;
 
   /**
    * getVersion: returns feature update version number (every change on the feature causes its version to update).
