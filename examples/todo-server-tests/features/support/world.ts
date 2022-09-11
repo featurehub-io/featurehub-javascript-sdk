@@ -31,16 +31,16 @@ class CustomWorld {
 
     async updateFeatureOnlyValue(name: string, newValue: any) {
         const featureUpdater = new FeatureUpdater(Config.fhConfig);
-        this.response =  await featureUpdater.updateKey(name, new FeatureStateUpdate({
+        this.response =  await featureUpdater.updateKey(name, {
             value: newValue,
-        }));
+        } as FeatureStateUpdate);
     }
 
     async lockFeature(name: string) {
         const featureUpdater = new FeatureUpdater(Config.fhConfig);
-        await featureUpdater.updateKey(name, new FeatureStateUpdate({
+        await featureUpdater.updateKey(name, {
             lock: true,
-        }));
+        } as FeatureStateUpdate);
 
         await waitForExpect(async () => { const feature: FeatureStateHolder = Config.fhConfig.repository().feature(name);
         expect(feature.isLocked()).to.equal(true);
@@ -49,10 +49,10 @@ class CustomWorld {
 
     async unlockAndUpdateFeature(name: string, newValue: any) {
         const featureUpdater = new FeatureUpdater(Config.fhConfig);
-        this.response =  await featureUpdater.updateKey(name, new FeatureStateUpdate({
+        this.response =  await featureUpdater.updateKey(name, {
             lock: false,
             value: newValue,
-        }));
+        } as FeatureStateUpdate);
     }
 
     getFeatureUpdateResponse() {
