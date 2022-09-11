@@ -71,17 +71,17 @@ Before({tags: "@FEATURE_JSON_NULL"}, async function () {
 
 async function updateFeature(name: string, newValue: any) {
     const featureUpdater = new FeatureUpdater(Config.fhConfig);
-    const response = await featureUpdater.updateKey(name, new FeatureStateUpdate({
+    const response = await featureUpdater.updateKey(name, {
         lock: false,
         value: newValue,
-    }));
+    } as FeatureStateUpdate);
     expect(response).to.equal(true);
 }
 
 async function setFeatureToNotSet(name: string) {
     const featureUpdater = new FeatureUpdater(Config.fhConfig);
-    await featureUpdater.updateKey(name, new FeatureStateUpdate({
+    await featureUpdater.updateKey(name, {
         lock: false,
         updateValue: true
-    }));
+    } as FeatureStateUpdate);
 }
