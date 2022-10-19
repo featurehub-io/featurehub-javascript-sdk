@@ -341,20 +341,20 @@ export class ApplyFeature {
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
     for (const attr of rsi.attributes) {
-      let suppliedValue = context.getAttr(attr.fieldName, null);
-      if (suppliedValue === null && attr.fieldName.toLowerCase() === 'now') {
+      let suppliedValues = context.getAttrs(attr.fieldName);
+      if (suppliedValues.length == 0 && attr.fieldName.toLowerCase() === 'now') {
         // tslint:disable-next-line:switch-default
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
-            suppliedValue = new Date().toISOString().substring(0, 10);
+            suppliedValues = [new Date().toISOString().substring(0, 10)];
             break;
           case RolloutStrategyFieldType.Datetime:
-            suppliedValue = new Date().toISOString();
+            suppliedValues = [new Date().toISOString()];
             break;
         }
       }
 
-      if (attr.values == null && suppliedValue == null) {
+      if (attr.values == null && suppliedValues.length == 0) {
         if (attr.conditional !== RolloutStrategyAttributeConditional.Equals) {
           return false;
         }
@@ -362,11 +362,13 @@ export class ApplyFeature {
         continue; // skip
       }
 
-      if (attr.values == null || suppliedValue == null) {
+      if (attr.values == null || suppliedValues.length == 0) {
         return false;
       }
 
-      if (!this._matcherRepository.findMatcher(attr).match(suppliedValue, attr)) {
+      const match = suppliedValues.find(sv => this._matcherRepository.findMatcher(attr).match(sv, attr));
+
+      if (!match) {
         return false;
       }
     }

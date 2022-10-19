@@ -171,6 +171,7 @@ app.get('/', function (req, res) {
   }
 })
 ```
+     
 
 
 **Server side evaluation**
@@ -216,8 +217,9 @@ this.initializeFeatureHub();
 #### Supported feature state requests
 
 * Get a raw feature value through the following methods:
+  - `feature('FEATURE_KEY').value` returns whatever the value of this type is as an `any` type. This function is generic so you
+can use `const colour = feature<string>('FEATURE_COLOUR').value` for instance and it will support Typescript generic typing.  
   - `getFlag('FEATURE_KEY') | getBoolean('FEATURE_KEY')` returns a _boolean_ type feature value - _true_ or _false_. Returns  _undefined_ if the feature does not exist or not of _boolean_ type. Alternatively use `feature('FEATURE_KEY').flag`
-
   - `getNumber('FEATURE_KEY')` returns a _number_ type feature value or _undefined_ if the feature does not exist, or its value not of number type, or feature has no default value. Alternatively use `feature('FEATURE_KEY').num`.
   - `getString('FEATURE_KEY')` returns a _string_ type feature value or _undefined_ if the feature does not exist, or its value not of string type or feature has no default value. Alternatively use `feature('FEATURE_KEY').str`. 
   - `getRawJson('FEATURE_KEY')` returns a raw json feature value represented as _string_ or _undefined_ if the feature does not exist, or its value not of JSON type or feature has no default value. Alternatively use  `feature('FEATURE_KEY').rawJson`.
@@ -322,6 +324,9 @@ Or with array of values (only applicable to custom rules):
 ```typescript
    const fhClient = await fhConfig.newContext().attribute_value('languages', ['russian', 'english', 'german']).build();
 ```
+
+If you define a strategy using a custom rule, providing an array will make the SDK compare each value in turn against the rule 
+and if *any* matches, the rule will be considered fulfilled.
 
 You can also use `fhClient.clear()` to empty your context.
 

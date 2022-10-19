@@ -20,6 +20,8 @@ describe('repository reacts to single feature changes as expected', () => {
 
     repo.notify(SSEResultState.Feature, { id: '1', key: 'pear', version: 1, type: FeatureValueType.String, value: 'now-set' });
 
+    const str = repo.feature<string>('pear').value;
+    expect(str).to.eq('now-set');
     expect(repo.feature('pear').getVersion()).to.eq(1);
     expect(repo.feature('pear').version).to.eq(1);
     expect(repo.feature('pear').getString()).to.eq('now-set');

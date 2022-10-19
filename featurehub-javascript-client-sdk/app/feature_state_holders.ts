@@ -4,10 +4,10 @@ import { ClientContext } from './client_context';
 import { InternalFeatureRepository } from './internal_feature_repository';
 import { ListenerUtils } from './listener_utils';
 
-export class FeatureStateBaseHolder implements FeatureStateHolder {
+export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   protected internalFeatureState: FeatureState | undefined;
   protected _key: string;
-  protected listeners: Map<Number, FeatureListener> = new Map<Number, FeatureListener>();
+  protected listeners: Map<number, FeatureListener> = new Map<number, FeatureListener>();
   protected _repo: InternalFeatureRepository;
   protected _ctx: ClientContext;
   // eslint-disable-next-line no-use-before-define
@@ -193,12 +193,12 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     return this.internalFeatureState;
   }
 
-  private _getValue(type?: FeatureValueType): any | undefined {
+  private _getValue(type?: FeatureValueType, parseJson: boolean = false): any | undefined {
     if (!this.isLocked()) {
       const intercept = this._repo.valueInterceptorMatched(this._key);
 
       if (intercept?.value) {
-        return this._castType(type, intercept.value);
+        return this._castType(type, intercept.value, parseJson);
       }
     }
 
@@ -211,14 +211,14 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
       const matched = this._repo.apply(featureState.strategies, this._key, featureState.id, this._ctx);
 
       if (matched.matched) {
-        return this._castType(type, matched.value);
+        return this._castType(type, matched.value, parseJson);
       }
     }
 
     return featureState?.value;
   }
 
-  private _castType(type: FeatureValueType, value: any): any | undefined {
+  private _castType(type: FeatureValueType, value: any, parseJson: boolean = false): any | undefined {
     if (value == null) {
       return undefined;
     }
@@ -238,9 +238,21 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
       // tslint:disable-next-line:radix
       return parseInt(value);
     } else if (type === FeatureValueType.Json) {
+      if (parseJson) {
+        try {
+          return JSON.parse(value.toString());
+        } catch {
+          return {}; // default return empty obj
+        }
+      }
+
       return value.toString();
     } else {
       return value.toString();
     }
+  }
+
+  get value(): T {
+    return this._getValue(this.getType(), true);
   }
 }

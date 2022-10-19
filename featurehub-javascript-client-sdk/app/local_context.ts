@@ -133,11 +133,11 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     return this.features.get(key);
   }
 
-  public feature(key: string): FeatureStateHolder {
+  public feature<T = any>(key: string): FeatureStateHolder<T> {
     let holder = this.features.get(key);
 
     if (holder === undefined) {
-      holder = new FeatureStateBaseHolder(this, key);
+      holder = new FeatureStateBaseHolder<T>(this, key);
       this.features.set(key, holder);
     }
 

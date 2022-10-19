@@ -21,6 +21,7 @@ export interface ClientContext {
   build(): Promise<ClientContext>;
 
   getAttr(key: string, defaultValue: string): string;
+  getAttrs(key: string): Array<string>;
   getNumber(name: string): number | undefined;
   getString(name: string): string | undefined;
   getJson(name: string): any | undefined;
@@ -30,7 +31,7 @@ export interface ClientContext {
 
   defaultPercentageKey(): string;
 
-  feature(name: string): FeatureStateHolder;
+  feature<T = any>(name: string): FeatureStateHolder<T>;
   isEnabled(name: string): boolean;
   isSet(name: string): boolean;
   repository(): FeatureHubRepository;
