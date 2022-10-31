@@ -73,6 +73,14 @@ export abstract class BaseClientContext implements ClientContext {
     return defaultValue;
   }
 
+  getAttrs(key: string): Array<string> | undefined {
+    if (this._attributes.has(key)) {
+      return this._attributes.get(key);
+    }
+
+    return [];
+  }
+
   defaultPercentageKey(): string {
     return this._attributes.has('session') ? this.getAttr('session') : this.getAttr('userkey');
   }

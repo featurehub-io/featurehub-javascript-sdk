@@ -59,7 +59,7 @@ describe('apply feature works as expected', () => {
   it('should be false if none of the rollout strategies match the context', () => {
     const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
-    ctx.getAttr('warehouseId', null).returns(null);
+    ctx.getAttrs('warehouseId').returns([]);
     const found = app.apply([{
       attributes: [
         {
@@ -78,7 +78,7 @@ describe('apply feature works as expected', () => {
   it('should not match the percentage but should match the field comparison', () => {
     const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
-    ctx.getAttr('warehouseId', null).returns('ponsonby');
+    ctx.getAttrs('warehouseId').returns(['ponsonby']);
     const found = app.apply([{
       value: 'sausage',
       attributes: [
@@ -100,7 +100,7 @@ describe('apply feature works as expected', () => {
     const ctx = Substitute.for<ClientContext>();
 
     ctx.defaultPercentageKey().returns('userkey');
-    ctx.getAttr('warehouseId', null).returns('ponsonby');
+    ctx.getAttrs('warehouseId').returns(['ponsonby']);
 
     const sMatcher = Substitute.for<StrategyMatcher>();
     sMatcher.match('ponsonby', Arg.any()).returns(false);
@@ -177,7 +177,7 @@ describe('apply feature works as expected', () => {
     const ctx = Substitute.for<ClientContext>();
 
     ctx.defaultPercentageKey().returns('userkey');
-    ctx.getAttr('warehouseId', null).returns('ponsonby');
+    ctx.getAttrs('warehouseId').returns(['ponsonby']);
     pCalc.determineClientPercentage('userkey', 'fid').returns(15);
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
@@ -204,7 +204,7 @@ describe('apply feature works as expected', () => {
     const ctx = Substitute.for<ClientContext>();
 
     ctx.defaultPercentageKey().returns('userkey');
-    ctx.getAttr('warehouseId', null).returns(null);
+    ctx.getAttrs('warehouseId').returns([]);
     pCalc.determineClientPercentage('userkey', 'fid').returns(15);
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());

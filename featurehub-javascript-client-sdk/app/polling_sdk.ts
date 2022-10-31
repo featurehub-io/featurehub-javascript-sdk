@@ -25,18 +25,20 @@ export abstract class PollingBase implements PollingService {
   protected _callback: FeaturesFunction;
   protected _stopped = false;
   protected _header?: string;
-  protected _shaHeader?: string;
+  protected _shaHeader: string;
   protected _etag: string;
 
   protected constructor(url: string, frequency: number, callback: FeaturesFunction) {
     this.url = url;
     this._frequency = frequency;
+    this._shaHeader = '0';
     this._callback = callback;
   }
 
   attributeHeader(header: string): Promise<void> {
     this._header = header;
-    this._shaHeader = base64.encode(new sha256().update(header).digest(), true, false);
+    this._shaHeader = (header === undefined || header.length === 0) ? '0' :
+      base64.encode(new sha256().update(header).digest(), true, false);
     return this.poll();
   }
 
@@ -101,7 +103,7 @@ class BrowserPollingService extends PollingBase implements PollingService {
     }
     return new Promise((resolve, reject) => {
       const req = new XMLHttpRequest();
-      const calculatedUrl = this._shaHeader ? `${this.url}&contextSha=${this._shaHeader}` : this.url;
+      const calculatedUrl = `${this.url}&contextSha=${this._shaHeader}`;
       req.open('GET', calculatedUrl);
       req.setRequestHeader('Content-type', 'application/json');
 

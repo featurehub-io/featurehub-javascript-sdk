@@ -54,7 +54,7 @@ export class NodejsPollingService extends PollingBase implements PollingService 
         hostname: this.uri.hostname,
         port: this.uri.port,
         method: 'GET',
-        path: this.uri.pathname + this.uri.search,
+        path: this.uri.pathname + this.uri.search + `&contextSha=${this._shaHeader}`,
         headers: headers,
         timeout: this._options.timeout || 8000
       };

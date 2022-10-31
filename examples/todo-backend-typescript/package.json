@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "node_modules/.bin/tsc",
+		"link": "npm link featurehub-javascript-client-sdk featurehub-javascript-node-sdk",
     "start": "npm run build && node --trace-deprecation --trace-warnings dist/app.js"
   },
   "dependencies": {

@@ -1,3 +1,7 @@
+#### 1.1.7
+- Support multiple attribute values per custom evaluated key.
+- Support a .value method on all SDKs (contributed by Daniel Sanchez (@thedanchez))
+- fix an issue with Fastly support (contextSha=0 query parameter). This is the minimum SDK version required for Fastly support.
 #### 1.1.6
 - Resolve issue with cache control header [Github issues](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/23)
 - Change to interfaces instead of classes for models, and match the OpenAPI current definition

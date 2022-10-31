@@ -19,11 +19,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private features = new Map<string, FeatureStateBaseHolder>();
   private analyticsCollectors = new Array<AnalyticsCollector>();
   private readynessState: Readyness = Readyness.NotReady;
-  private _readinessListeners: Map<Number, ReadynessListener> = new Map<Number, ReadynessListener>();
+  private _readinessListeners: Map<number, ReadynessListener> = new Map<number, ReadynessListener>();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
-  private _newFeatureStateAvailableListeners: Map<Number, PostLoadNewFeatureStateAvailableListener> = new Map<Number, PostLoadNewFeatureStateAvailableListener>();
+  private _newFeatureStateAvailableListeners: Map<number, PostLoadNewFeatureStateAvailableListener> = new Map<number, PostLoadNewFeatureStateAvailableListener>();
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
@@ -225,11 +225,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.features.get(key);
   }
 
-  public feature(key: string): FeatureStateHolder {
+  public feature<T = any>(key: string): FeatureStateHolder<T> {
     let holder = this.features.get(key);
 
     if (holder === undefined) {
-      holder = new FeatureStateBaseHolder(this, key);
+      holder = new FeatureStateBaseHolder<T>(this, key);
       this.features.set(key, holder);
     }
 
@@ -237,7 +237,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   // deprecated
-  public getFeatureState(key: string): FeatureStateHolder {
+  public getFeatureState<T = any>(key: string): FeatureStateHolder<T> {
     return this.feature(key);
   }
 
