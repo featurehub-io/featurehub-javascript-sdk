@@ -1,5 +1,14 @@
 #!/bin/sh
-export FEATUREHUB_EDGE_URL=http://localhost:8085/
-export FEATUREHUB_CLIENT_API_KEY=default/6a3ec2bc-e061-4d52-a4d2-0f80e1a40543/hnfsr2tGKDXmZx58Y1LIw8MeblAObr*fMFq4YJ3xj9aKVSGEk7h
+export FEATUREHUB_CLIENT_API_KEY=0d348e65-677a-4fe6-85f1-a1ab1581faa1/CGWXaO3Cey6yjSobQMxgjdKdzLdli5*ZqH81DhIYuKyuY1TIsYX
+export FEATUREHUB_EDGE_URL=http://localhost:8064
+export FEATUREHUB_BASE_URL=http://localhost:8903
 export APP_SERVER_URL=http://localhost:8099
-npm run test
+if [ $# -eq 0 ]
+  then
+  echo DEBUG=true npm run test
+  DEBUG=true npm run test
+else
+  echo DEBUG=true npm run test -- --tags $1
+  DEBUG=true npm run test -- --tags $1
+fi
+
