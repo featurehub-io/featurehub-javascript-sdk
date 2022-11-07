@@ -1,4 +1,4 @@
-import globalAxios from "axios";
+import globalAxios, { AxiosResponse } from "axios";
 import { FeatureStateUpdate, FeatureUpdater, FeatureStateHolder } from "featurehub-javascript-node-sdk";
 import { Config } from "./config";
 import { expect } from "chai";
@@ -15,6 +15,24 @@ AfterAll(async function () {
     Config.fhConfig.close();
 });
 
+export const responseToRecord = function (response: AxiosResponse) {
+  const reqConfig = response.config;
+  return {
+    type: 'response',
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+    data: response.data,
+    request: {
+      headers: reqConfig.headers,
+      method: reqConfig.method,
+      data: reqConfig.data,
+      url: reqConfig.url,
+    }
+  };
+};
+
+
 class CustomWorld {
 
     private variable: number;
@@ -22,7 +40,18 @@ class CustomWorld {
     private response: boolean;
     constructor() {
         this.variable = 0;
-        globalAxios.interceptors.request.use(x=> {console.log(x); return x;}); // log axios requests
+        globalAxios.interceptors.response.use((resp: AxiosResponse) => {
+          const responseToLog = responseToRecord(resp);
+          if (responseToLog !== undefined) {
+            console.log(JSON.stringify(responseToLog, undefined, 2));
+          }
+          return resp;
+        }, (error) => {
+          if (error.response) {
+            console.log(JSON.stringify(responseToRecord(error.response), undefined, 2));
+          }
+          return Promise.reject(error);
+        });
     }
 
     setUser(user) {
