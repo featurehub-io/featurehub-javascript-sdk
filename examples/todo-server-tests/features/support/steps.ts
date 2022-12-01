@@ -15,15 +15,17 @@ Then("my list of todos should contain {string}", async function (todoDescription
     async function extracted() {
         const response = await todoApi.listTodos(this.user);
         const responseData: Todo[] = response.data;
-        const todo: Todo = responseData.find((item) => item.title == todoDescription);
+        console.log(`finding ${todoDescription} in`, responseData);
+        const todo: Todo = responseData.find((item) => item.title === todoDescription);
         return {responseData, todo};
     }
 
-    waitForExpect.defaults.timeout = 10000;
+    waitForExpect.defaults.timeout = 20000;
+    waitForExpect.defaults.interval = 1000;
     await waitForExpect(async () => {
         const {responseData, todo} = await extracted.call(this);
+        console.log('compare', todo, responseData);
         expect(todo, `Expected ${todoDescription} but found in the response: ${responseData[0].title}`).to.exist;
-
     });
 });
 

@@ -1,6 +1,6 @@
 Feature: Checks boolean flag
 
-  @FEATURE_TITLE_TO_UPPERCASE @bool
+  @FEATURE_TITLE_TO_UPPERCASE @bool @bool1
   Scenario: Check boolean flag on
     # This hook is called before and after the scenario to tidy up the feature state so it doesn't affect other tests
     Given I have a user called "Wilma"
@@ -8,7 +8,7 @@ Feature: Checks boolean flag
     When I have added a new to-do item "Buy eggs"
     Then my list of todos should contain "BUY EGGS"
 
-  @bool
+  @FEATURE_TITLE_TO_UPPERCASE_OFF @booloff @bool
   Scenario: Check boolean flag off
     Given I have a user called "Wilma"
     And I wipe my list of todos
