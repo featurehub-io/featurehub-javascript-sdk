@@ -1,4 +1,4 @@
-import { MatcherRegistry } from '../app/strategy_matcher';
+import { MatcherRegistry, Murmur3PercentageCalculator } from '../app/strategy_matcher';
 import {
   FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
@@ -24,6 +24,13 @@ describe('test the strategy matchers', () => {
 
     expect(matcher.findMatcher(rsa).match(suppliedVal, rsa)).to.eq(matches);
   }
+
+  it('percentage rollout is consistent', () => {
+    const base = new Murmur3PercentageCalculator().determineClientPercentage('irina', 'one');
+    for(let count = 0; count < 5; count ++) {
+      expect(new Murmur3PercentageCalculator().determineClientPercentage('irina', 'one')).to.eq(base);
+    }
+  });
 
   it('the boolean strategy matcher should work as expected', () => {
     type = RolloutStrategyFieldType.Boolean;
