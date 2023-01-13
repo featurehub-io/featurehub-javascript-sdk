@@ -3,9 +3,9 @@ import { ClientContext } from './client_context';
 
 // these two depend on each other
 
-export interface FeatureListener {
+export interface FeatureListener<T = any> {
   // eslint-disable-next-line no-use-before-define
-  (featureChanged: FeatureStateHolder): void;
+  (featureChanged: FeatureStateHolder<T>): void;
 }
 
 export type FeatureListenerHandle = number;
@@ -88,18 +88,18 @@ export interface FeatureStateHolder<T = any> {
    * Adds a new listener and returns a handle so that the listener can be removed.
    * @param listener
    */
-  addListener(listener: FeatureListener): FeatureListenerHandle;
+  addListener(listener: FeatureListener<T>): FeatureListenerHandle;
 
   /**
    * Allows the SDK client to remove the listener as part of a teardown
    * @param handle - removes it from the trigger list if it exists, otherwise ignored
    */
-  removeListener(handle: FeatureListener | FeatureListenerHandle);
+  removeListener(handle: FeatureListener<T> | FeatureListenerHandle);
 
   // this is intended for override repositories (such as the UserFeatureRepository)
   // to force the listeners to trigger if they detect an actual state change in their layer
   // it passes in the feature state holder to notify with
-  triggerListeners(feature?: FeatureStateHolder): void;
+  triggerListeners(feature?: FeatureStateHolder<T>): void;
 
   /** the value of the feature flag */
   get value(): T;

@@ -72,7 +72,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getBoolean() === true;
   }
 
-  public addListener(listener: FeatureListener): FeatureListenerHandle {
+  public addListener(listener: FeatureListener<T>): FeatureListenerHandle {
     const pos = ListenerUtils.newListenerKey(this.listeners);
 
     if (this._ctx !== undefined) {
@@ -84,7 +84,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return pos;
   }
 
-  public removeListener(handle: FeatureListener | FeatureListenerHandle) {
+  public removeListener(handle: FeatureListener<T> | FeatureListenerHandle) {
     ListenerUtils.removeListener(this.listeners, handle);
   }
 
@@ -193,7 +193,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.internalFeatureState;
   }
 
-  private _getValue(type?: FeatureValueType, parseJson: boolean = false): any | undefined {
+  private _getValue(type?: FeatureValueType, parseJson = false): any | undefined {
     if (!this.isLocked()) {
       const intercept = this._repo.valueInterceptorMatched(this._key);
 
@@ -218,7 +218,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return featureState?.value;
   }
 
-  private _castType(type: FeatureValueType, value: any, parseJson: boolean = false): any | undefined {
+  private _castType(type: FeatureValueType, value: any, parseJson = false): any | undefined {
     if (value == null) {
       return undefined;
     }

@@ -31,11 +31,11 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  addListener(listener: FeatureListener): FeatureListenerHandle {
+  addListener(listener: FeatureListener<T>): FeatureListenerHandle {
     return 0;
   }
 
-  removeListener(handle:FeatureListener | FeatureListenerHandle) {
+  removeListener(handle: FeatureListener<T> | FeatureListenerHandle) {
   }
 
   getBoolean(): boolean | undefined {
