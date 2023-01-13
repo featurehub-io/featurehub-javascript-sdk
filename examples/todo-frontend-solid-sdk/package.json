@@ -1,0 +1,22 @@
+{
+  "name": "vite-template-solid",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "install-sdk": "npm --prefix ../../featurehub-solid-sdk run build && rm -rf node_modules && npm i"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.9.4",
+    "vite": "^4.0.3",
+    "vite-plugin-solid": "^2.5.0"
+  },
+  "dependencies": {
+    "featurehub-solid-sdk": "file:../../featurehub-solid-sdk",
+    "solid-js": "^1.6.8"
+  }
+}
