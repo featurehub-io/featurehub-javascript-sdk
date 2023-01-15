@@ -1,4 +1,4 @@
-name: Publish featurehub-javascript-node-sdk package to NPM registry
+name: Publish featurehub-react-sdk package to NPM registry
 on:
   workflow_dispatch:
 
@@ -14,12 +14,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
         run: npm install
-        working-directory: featurehub-javascript-node-sdk
-      - name: Ensure everything is linted correctly
-        run: npm run lint
-        working-directory: featurehub-javascript-node-sdk
+        working-directory: featurehub-react-sdk
+      - name: Ensure tests are working
+        run: npm run test
+        working-directory: featurehub-react-sdk
       - name: Compile sources and Publish to NPM
         run: npm run release
-        working-directory: featurehub-javascript-node-sdk
+        working-directory: featurehub-react-sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
