@@ -19,7 +19,7 @@
     "@angular/platform-browser": "~13.2.1",
     "@angular/platform-browser-dynamic": "~13.2.1",
     "@angular/router": "~13.2.1",
-    "featurehub-javascript-client-sdk": "^1.1.1",
+    "featurehub-javascript-client-sdk": "^1.1.7",
     "node-polyfill-webpack-plugin": "^1.1.1",
     "rxjs": "~7.5.2",
     "tslib": "^2.0.0",
