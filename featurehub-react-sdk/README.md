@@ -12,14 +12,14 @@ Configuring `FeatureHub` for your React app is very straight forward.
 
 ```typescript
 // App.tsx
-import { FeatureHub } from "featurehub-react-sdk"
+import { FeatureHub } from "featurehub-react-sdk";
 
 function AppContainer() {
   return (
     <FeatureHub url="..." apiKey="...">
       <App />
     </FeatureHub>
-  )
+  );
 }
 ```
 
@@ -31,18 +31,14 @@ The `url` and `apiKey` props are required as per FeatureHub configuration requir
 
 ```typescript
 // Navbar.tsx
-import { useFeatureHubClient } from "featurehub-react-sdk"
+import { useFeatureHubClient } from "featurehub-react-sdk";
 
 // This NavBar component should be within some parent wrapped by the top-level <FeatureHub> component
 function NavBar() {
   // Returns the FeatureHub client context
   const client = useFeatureHubClient();
 
-  return (
-    <nav>
-      ...
-    </nav>
-  )
+  return <nav>...</nav>;
 }
 ```
 
@@ -52,17 +48,13 @@ If for some reason you require access to the underlying FeatureHub client contex
 
 ```typescript
 // Navbar.tsx
-import { useFeature } from "featurehub-react-sdk"
+import { useFeature } from "featurehub-react-sdk";
 
 // This NavBar component should be within some parent wrapped by the top-level <FeatureHub> component
 function NavBar() {
   const showNewNavTab = useFeature("new_nav_tab");
 
-  return (
-    <nav>
-      {showNewNavTab ? <a>New Nav</a> : null}
-    </nav>
-  )
+  return <nav>{showNewNavTab ? <a>New Nav</a> : null}</nav>;
 }
 ```
 

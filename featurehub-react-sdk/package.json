@@ -13,9 +13,11 @@
     "README.md"
   ],
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write ./**/*.{js,ts,tsx,md,json}",
     "build": "tsup --sourcemap",
     "watch": "tsup --watch",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "release": "npm run build && npm publish"
   },
   "dependencies": {
@@ -25,6 +27,11 @@
   "devDependencies": {
     "@types/node": "^18.11.18",
     "@types/react": "18.0.26",
+    "@typescript-eslint/eslint-plugin": "^5.48.2",
+    "@typescript-eslint/parser": "^5.48.2",
+    "eslint": "^8.32.0",
+    "eslint-plugin-react": "^7.32.1",
+    "prettier": "^2.8.3",
     "tsup": "6.5.0",
     "typescript": "^4.9.4"
   },
