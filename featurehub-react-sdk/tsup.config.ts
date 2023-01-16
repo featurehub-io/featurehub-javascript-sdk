@@ -1,6 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig((options) => ({
+  name: "featurehub-react-sdk",
   entry: ['src/index.ts'],
   format: ["esm", "cjs"],
   bundle: true,
