@@ -1,2 +1,10 @@
-/.idea/
+.DS_Store
+
+.vscode
+.idea
+.nyc_output
 *.iml
+dist
+build
+lib
+node_modules
