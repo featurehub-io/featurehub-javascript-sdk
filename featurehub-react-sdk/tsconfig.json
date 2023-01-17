@@ -7,20 +7,14 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "lib": ["dom", "ES2015"],
-    "module": "ESNext",  
+    "module": "ESNext",
     "rootDir": "src",
     "sourceMap": true,
     "outDir": "dist",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": [ "**/*.ts", "**/*.tsx" ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "src/**/*.test.tsx",
-    "src/**/*.stories.tsx",
-    "tsup.config.ts"
-  ],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["dist", "node_modules", "src/**/*.test.tsx", "src/**/*.stories.tsx", "tsup.config.ts"]
 }

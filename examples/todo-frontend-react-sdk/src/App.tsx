@@ -16,12 +16,12 @@ const SAMPLE_TEXT = "This is some random text content which may have its case-se
 */
 
 function App() {
-  const [username, setUsername] = useState("");
+  const [userKey, setUserKey] = useState("");
 
   useEffect(() => {
     setTimeout(() => {
       // Set username after arbitrary delay to make sure FeatureHub component reconfigures its internals properly.
-      setUsername("john.doe")
+      setUserKey("john.doe")
     }, 1000)
   }, [])
 
@@ -37,7 +37,7 @@ function App() {
     <FeatureHub
       url='http://localhost:8085'
       apiKey=''
-      username={username}
+      userKey={userKey}
       pollInterval={5000}
     >
       <Main />
