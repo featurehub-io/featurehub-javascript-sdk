@@ -1,12 +1,24 @@
 # FeatureHub Solid SDK
 
+## Installation
+
+Both `featurehub-javascript-client-sdk` and `solid-js` are peer dependencies of `featurehub-solid-sdk` and need to be installed alongside it.
+
+```code
+npm install featurehub-solid-sdk featurehub-javascript-client-sdk solid-js
+// or
+yarn install featurehub-solid-sdk featurehub-javascript-client-sdk solid-js
+// or
+pnpm install featurehub-solid-sdk featurehub-javascript-client-sdk solid-js
+```
+
+## General Usage
+
 The FeatureHub Solid SDK provides the following:
 
 1. `FeatureHub` Solid top-level component to wrap your application with
 2. `useFeature` Solid hook to subscribe to feature keys within Solid components
 3. `useFeatureHub` Solid hook providing access to the FeatureHub config and client objects
-
-## General Usage
 
 Configuring `FeatureHub` for your Solid app is very straight forward.
 
