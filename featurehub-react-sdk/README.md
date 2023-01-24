@@ -1,12 +1,24 @@
 # FeatureHub React SDK
 
-The FeatureHub React SDK provides three things:
+## Installation
+
+Both `featurehub-javascript-client-sdk` and `react` are peer dependencies of `featurehub-react-sdk` and need to be installed alongside it.
+
+```code
+npm install featurehub-react-sdk featurehub-javascript-client-sdk react
+// or
+yarn install featurehub-react-sdk featurehub-javascript-client-sdk react
+// or
+pnpm install featurehub-react-sdk featurehub-javascript-client-sdk react
+```
+
+## General Usage
+
+The FeatureHub React SDK provides the following:
 
 1. `FeatureHub` React top-level component to wrap your application with
 2. `useFeature` React hook to subscribe to feature keys within React components
 3. `useFeatureHub` React hook providing access to the FeatureHub config and client context objects
-
-## General Usage
 
 Configuring `FeatureHub` for your React app is very straight forward.
 
