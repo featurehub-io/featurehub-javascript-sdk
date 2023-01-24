@@ -1,5 +1,8 @@
 # FeatureHub React SDK
 
+[![Build featurehub-react-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/react-sdk-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/react-sdk-build.yml)
+[![npm version](https://badge.fury.io/js/featurehub-react-sdk.svg)](https://badge.fury.io/js/featurehub-react-sdk)
+
 ## Installation
 
 Both `featurehub-javascript-client-sdk` and `react` are peer dependencies of `featurehub-react-sdk` and need to be installed alongside it.

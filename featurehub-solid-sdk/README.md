@@ -1,5 +1,8 @@
 # FeatureHub Solid SDK
 
+[![Build featurehub-solid-sdk](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/solid-sdk-build.yml/badge.svg)](https://github.com/featurehub-io/featurehub-javascript-sdk/actions/workflows/solid-sdk-build.yml)
+[![npm version](https://badge.fury.io/js/featurehub-solid-sdk.svg)](https://badge.fury.io/js/featurehub-solid-sdk)
+
 ## Installation
 
 Both `featurehub-javascript-client-sdk` and `solid-js` are peer dependencies of `featurehub-solid-sdk` and need to be installed alongside it.
