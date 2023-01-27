@@ -6,15 +6,15 @@ import { FeatureHubContext, UseFeatureHub } from "../components/FeatureHub";
  * @returns {UseFeatureHub} - struct containing both the FeatureHub config and client
  */
 function useFeatureHub(): UseFeatureHub {
-  const { config, client } = useContext(FeatureHubContext);
+  const featureHub = useContext(FeatureHubContext);
 
-  if (!config() || !client()) {
+  if (!featureHub) {
     throw new Error(
       "Error invoking useFeatureHub! Make sure your component is wrapped by the top-level <FeatureHub> component!"
     );
   }
 
-  return { config, client };
+  return featureHub;
 }
 
 export default useFeatureHub;

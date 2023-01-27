@@ -1,35 +1,36 @@
 import {
   ClientContext,
   EdgeFeatureHubConfig,
+  EdgeServiceProvider,
   FeatureHubPollingClient,
   Readyness
 } from "featurehub-javascript-client-sdk";
 import {
-  createSignal,
-  createEffect,
-  createContext,
-  JSXElement,
-  splitProps,
-  onCleanup,
-  Component,
   Accessor,
+  Component,
+  createContext,
+  createEffect,
+  createMemo,
+  createSignal,
+  JSXElement,
   on,
-  onMount
+  onCleanup
 } from "solid-js";
 
+// Global ready signal
+export const [ready, setReady] = createSignal(false);
+
 export type UseFeatureHub = {
+  /** The FeatureHub config object */
   readonly config: Accessor<EdgeFeatureHubConfig>;
+  /** The FeatureHub client context */
   readonly client: Accessor<ClientContext>;
 };
 
-const tempConfig = new EdgeFeatureHubConfig("", "");
-const [config, setConfig] = createSignal(tempConfig);
-
-const tempContext = tempConfig.newContext();
-const [client, setClient] = createSignal(tempContext);
-
 export const FeatureHubContext = createContext<UseFeatureHub>(
-  { config, client },
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  null, // this will be assigned by the FeatureHub component
   {
     name: "FeatureHub"
   }
@@ -54,71 +55,89 @@ type Props = {
  *
  * @param {string} url - the url of the FeatureHub instance (required)
  * @param {string} apiKey - the apiKey key to use. Make sure it is the server-eval key! (required)
- * @param {string} userKey - the optional userKey to add user information to the FeatureHub context (optional)
+ * @param {string} userKey - the userKey to add user information to the FeatureHub context (optional)
  * @param {number} pollInterval - the desired polling interval (ms) to check for value updates (optional -- default 60 seconds)
  * @param {JSX} children - the Solid component tree to inject FeatureHub into (required)
  *
  */
 const FeatureHub: Component<Props> = (props): JSXElement => {
-  const [required, optional] = splitProps(props, ["url", "apiKey", "children"]);
+  let listenerId: number | undefined;
+  const userKey = () => props.userKey ?? "";
+  const provider: EdgeServiceProvider = (repo, c) =>
+    new FeatureHubPollingClient(repo, c, props.pollInterval ?? 60000);
 
-  let activeListenerId: number | undefined;
-  const userKey = () => optional.userKey ?? "";
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const [client, setClient] = createSignal<ClientContext>(null); // this will be assigned in createMemo
+  const [readiness, setReadiness] = createSignal(Readyness.NotReady);
 
-  console.info("FeatureHub Solid SDK: Creating config and context...");
-  // eslint-disable-next-line solid/reactivity
-  const fhConfig = new EdgeFeatureHubConfig(required.url, required.apiKey);
-  fhConfig.edgeServiceProvider(
-    // eslint-disable-next-line solid/reactivity
-    (repo, c) => new FeatureHubPollingClient(repo, c, optional.pollInterval ?? 60000)
-  );
-  setConfig(fhConfig);
+  // SolidJS 'eagerly' creates things wrapped by createMemo
+  const config = createMemo(() => {
+    console.info("FeatureHub Solid SDK: Creating config and context...");
 
-  const listener = async (readyness: Readyness) => {
-    switch (readyness) {
-      case Readyness.Failed:
-        console.error("FeatureHub Solid SDK: Connection failed!");
-        break;
-      case Readyness.NotReady:
-        console.warn("FeatureHub Solid SDK: Connection not ready yet!");
-        break;
-      default: {
-        if (!userKey()) {
-          console.info("FeatureHub Solid SDK: Connection ready! Using anonymous user context.");
-          setClient(fhConfig.newContext());
-          return;
-        }
+    const fhConfig = new EdgeFeatureHubConfig(props.url, props.apiKey);
+    fhConfig.edgeServiceProvider(provider);
 
-        console.info("FeatureHub Solid SDK: Connection ready! Using context with userKey set.");
-        setClient(await fhConfig.newContext().userKey(userKey()).build());
-      }
+    setClient(fhConfig.newContext()); // immediately assign anonymous context
+
+    if (listenerId) {
+      fhConfig.removeReadinessListener(listenerId);
     }
-  };
 
+    listenerId = fhConfig.addReadinessListener(setReadiness, true);
+    fhConfig.init();
+
+    return fhConfig;
+  });
+
+  /*
+    Since we already created the config object above from createMemo, we do not have to do that again.
+    The only thing that should change hereafter is the readiness state of the connection. So we wrap
+    all that deals with readiness in createEffect. The other driver is userKey -- if that value updates,
+    we want to rebuild the context with the userKey information provided.
+  */
   createEffect(
-    on(userKey, () => {
-      if (activeListenerId) {
-        fhConfig.removeReadinessListener(activeListenerId);
-      }
+    on([readiness, userKey], async () => {
+      /*
+        Observed that this switch case gets called again at an unexpected time with a readiness value
+        that is not in sync with the readiness of the config client repository object. To clarify, this
+        unexpected, additional call happens AFTER entering into a Readyness.Ready state. Because of that, 
+        we add ready guards to make sure the console messages get sent when those two values are in sync.
 
-      const listenerId = fhConfig.addReadinessListener(listener, true);
-      activeListenerId = listenerId;
+        To verify this, simply log the current value of readiness along with the FeatureHub config object here, 
+        rebuild the SDK and inspect the readiness value of the underlying _clientRepository object in the browser.
+      */
+      switch (readiness()) {
+        case Readyness.Failed:
+          if (!ready()) console.error("FeatureHub Solid SDK: Connection failed!");
+          break;
+        case Readyness.NotReady:
+          if (!ready()) console.warn("FeatureHub Solid SDK: Connection not ready yet!");
+          break;
+        default: {
+          if (!userKey()) {
+            console.info("FeatureHub Solid SDK: Connection ready! Using anonymous user context.");
+            setReady(true);
+            return;
+          }
+
+          console.info("FeatureHub Solid SDK: Connection ready! Using context with userKey set.");
+          setClient(await client().userKey(userKey()).build());
+          setReady(true);
+        }
+      }
     })
   );
 
-  onMount(() => {
-    fhConfig.init();
-  });
-
   onCleanup(() => {
     console.warn("FeatureHub Solid SDK: Terminating connection!");
-    if (activeListenerId) fhConfig.removeReadinessListener(activeListenerId);
-    fhConfig.close();
+    if (listenerId) config().removeReadinessListener(listenerId);
+    config().close();
   });
 
   return (
     <FeatureHubContext.Provider value={{ config, client }}>
-      {required.children}
+      {props.children}
     </FeatureHubContext.Provider>
   );
 };
