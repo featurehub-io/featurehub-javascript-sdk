@@ -1,6 +1,6 @@
 {
   "name": "featurehub-solid-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The Solid SDK for FeatureHub",
   "private": false,
   "module": "dist/index.jsx",
