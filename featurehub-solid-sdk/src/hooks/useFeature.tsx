@@ -1,4 +1,5 @@
 import { Accessor, createEffect, createSignal, onCleanup, on } from "solid-js";
+import { ready } from "../components/FeatureHub";
 import useFeatureHub from "./useFeatureHub";
 
 /**
@@ -15,8 +16,13 @@ function useFeature<T = boolean>(key: string): Accessor<T> {
   const [value, setValue] = createSignal(client().feature<T>(key).value);
 
   createEffect(
-    on(client, () => {
-      if (listenerId) client().feature<T>(key).removeListener(listenerId);
+    on(ready, () => {
+      // Being proper, we only subscribe to features when FeatureHub is ready
+      if (!ready()) return;
+
+      if (listenerId) {
+        client().feature<T>(key).removeListener(listenerId);
+      }
 
       listenerId = client()
         .feature<T>(key)

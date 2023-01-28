@@ -1,11 +1,11 @@
-import { Component, createSignal, createEffect } from 'solid-js';
+import { Component, createSignal, createEffect } from "solid-js";
 
-import logoSolid from './logo.svg';
-import logoVite from './vite.svg';
-import styles from './App.module.css';
-import { FeatureHub, useFeature } from 'featurehub-solid-sdk'
+import logoSolid from "./logo.svg";
+import logoVite from "./vite.svg";
+import styles from "./App.module.css";
+import { FeatureHub, useFeature } from "featurehub-solid-sdk";
 
-const SAMPLE_TEXT = "This is some random text content which may have its case-sensitivity modified."
+const SAMPLE_TEXT = "This is some random text content which may have its case-sensitivity modified.";
 
 /*
   DEVELOPER NOTE:
@@ -21,12 +21,13 @@ function App() {
   const [userKey, setUserKey] = createSignal("");
 
   setTimeout(() => {
+    console.log("ASSIGNING USER AFTER DELAY!");
     // Set username after arbitrary delay to make sure FeatureHub component reconfigures its internals properly.
-    setUserKey("john.doe")
-  }, 1000)
+    setUserKey("john.doe");
+  }, 1000);
 
   return (
-     /*
+    /*
         To run a local instance of FeatureHub for testing, run either of the following commands:
         - docker run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
         - podman run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
@@ -34,15 +35,10 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions, 
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub
-      url='http://localhost:8085'
-      apiKey=''
-      userKey={userKey()}
-      pollInterval={5000}
-    >
+    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey()} pollInterval={5000}>
       <Main />
     </FeatureHub>
-  )
+  );
 }
 
 function Main() {
@@ -60,11 +56,11 @@ function Main() {
 
   const shouldUpperCaseText = useFeature("uppercase_text");
   const textColour = useFeature<string>("text_colour");
-  const [displayText, setDisplayText] = createSignal(SAMPLE_TEXT)
+  const [displayText, setDisplayText] = createSignal(SAMPLE_TEXT);
 
   createEffect(() => {
     setDisplayText(shouldUpperCaseText() ? SAMPLE_TEXT.toUpperCase() : SAMPLE_TEXT);
-  }, [shouldUpperCaseText])
+  }, [shouldUpperCaseText]);
 
   return (
     <div class={styles.header}>
@@ -78,27 +74,29 @@ function Main() {
       </div>
       <h1>Vite + Solid</h1>
       <div class={styles.content}>
+        <div class={styles.card}>
+          <p>
+            Edit <code>src/App.tsx</code> and save to test HMR
+          </p>
 
-      <div class={styles.card}>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+          <button onClick={() => setCount(count() + 1)}>Count: {count()}</button>
 
-        <button onClick={() => setCount(count() + 1)}>Count: {count()}</button>
+          <p>
+            The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText()}`}</code>
+          </p>
+          <p>
+            The value of <code>text_colour</code> feature is <code>{textColour()}</code>
+          </p>
 
-        <p>The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText()}`}</code></p>
-        <p>The value of <code>text_colour</code> feature is <code>{textColour()}</code></p>
-        
-        <p style={{ color: textColour()} }>This paragraph color should be {textColour()}</p>
-        <p>{displayText()}</p>
-      </div>
-      <div >
-        <p class={styles.readTheDocs}>Click on the Vite and Solid logos to learn more</p>
-      </div>
+          <p style={{ color: textColour() }}>This paragraph color should be {textColour()}</p>
+          <p>{displayText()}</p>
+        </div>
+        <div>
+          <p class={styles.readTheDocs}>Click on the Vite and Solid logos to learn more</p>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
-
+export default App;
