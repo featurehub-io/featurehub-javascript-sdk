@@ -17,6 +17,8 @@ export type UseFeatureHub = {
 export const FeatureHubContext = createContext<UseFeatureHub>(undefined);
 FeatureHubContext.displayName = "FeatureHub";
 
+let config: EdgeFeatureHubConfig;
+
 type Props = {
   /** The url to the running instance of the FeatureHub EDGE API */
   readonly url: string;
@@ -53,10 +55,16 @@ export default function FeatureHub({
   children
 }: Props): JSX.Element {
   const fhConfig = useMemo(() => {
-    const config = new EdgeFeatureHubConfig(url, apiKey);
-    config.edgeServiceProvider((repo, c) => new FeatureHubPollingClient(repo, c, pollInterval));
+    if (!config) {
+      // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
+      // Noticed that React has a tendency to create two with the nature of the render cycles
+      // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
+      console.info("FeatureHub React SDK: Creating config.");
+      config = new EdgeFeatureHubConfig(url, apiKey);
+      config.edgeServiceProvider((repo, c) => new FeatureHubPollingClient(repo, c, pollInterval));
+    }
     return config;
-  }, [apiKey, url]);
+  }, [url, apiKey, pollInterval]);
 
   const [client, setClient] = useState(fhConfig.newContext());
   const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
@@ -80,7 +88,7 @@ export default function FeatureHub({
           }
 
           console.info("FeatureHub React SDK: Connection ready! Using context with userKey set.");
-          setClient(await fhConfig.newContext().userKey(userInfo).build());
+          setClient(await client.userKey(userInfo).build());
         }
       }
     };
