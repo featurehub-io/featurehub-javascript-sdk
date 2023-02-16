@@ -31,13 +31,13 @@ function App() {
         - docker run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
         - podman run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
 
-        Once you go through the intial setup wizard/guide to create a service account + permissions, 
+        Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
     <FeatureHub
-      url='http://localhost:8085'
-      apiKey=''
-      userKey={userKey}
+      url='https://app.test.featurehub.dev/pistachio'
+      apiKey='d534453d-9803-4491-9f8e-b37c2a649603/nW1CDgrUa7j8lKo0Zv5y3sMIWohyh6f3ipuPJa9a'
+      userKey='irina'
       pollInterval={5000}
     >
       <Main />
@@ -86,7 +86,7 @@ function Main() {
 
         <p>The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText}`}</code></p>
         <p>The value of <code>text_colour</code> feature is <code>{textColour}</code></p>
-        
+
         <p style={{ color: textColour} }>This paragraph color should be {textColour}</p>
         <p>{displayText}</p>
       </div>

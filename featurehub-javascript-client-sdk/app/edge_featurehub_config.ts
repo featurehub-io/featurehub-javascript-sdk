@@ -7,24 +7,45 @@ import { ClientContext } from './client_context';
 import { EdgeServiceProvider, FeatureHubConfig, fhLog } from './feature_hub_config';
 import { Readyness, ReadynessListener } from './featurehub_repository';
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from './context_impl';
-import { FeatureHubEventSourceClient } from './featurehub_eventsource';
+import { FeatureHubPollingClient } from './polling_sdk';
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _host: string;
   private _apiKey: string;
   private _apiKeys: Array<string>;
   private _clientEval: boolean;
+  private _originalUrl: string;
   private _url: string;
   private _repository: InternalFeatureRepository;
   private _edgeService: EdgeServiceProvider;
   private _edgeServices: Array<EdgeService> = [];
+  private _clientContext: ServerEvalFeatureContext | undefined;
+  private _initialized: boolean | undefined;
 
   static defaultEdgeServiceSupplier: EdgeServiceProvider = (repository, config) =>
-    new FeatureHubEventSourceClient(config, repository);
+    new FeatureHubPollingClient(repository, config, 30000);
+
+  private static _singleton: EdgeFeatureHubConfig | undefined;
+
+  public static config(url: string, apiKey: string): EdgeFeatureHubConfig {
+    if (EdgeFeatureHubConfig._singleton) {
+      if (EdgeFeatureHubConfig._singleton._originalUrl == url && EdgeFeatureHubConfig._singleton._apiKey == apiKey) {
+        return EdgeFeatureHubConfig._singleton;
+      }
+
+      EdgeFeatureHubConfig._singleton.close();
+    }
+
+    EdgeFeatureHubConfig._singleton = new EdgeFeatureHubConfig(url, apiKey);
+
+    return EdgeFeatureHubConfig._singleton;
+  }
 
   constructor(host: string, apiKey: string) {
     this._apiKey = apiKey;
     this._host = host;
+
+    fhLog.trace('creating new featurehub config.');
 
     if (apiKey == null || host == null) {
       throw new Error('apiKey and host must not be null');
@@ -42,6 +63,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       this._host = this._host.substring(0, this._host.length - ('/features/'.length - 1));
     }
 
+    this._originalUrl = host;
     this._url = this._host + 'features/' + this._apiKey;
   }
 
@@ -90,9 +112,19 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     repository = repository || this.repository();
     edgeService = edgeService || this.edgeServiceProvider();
 
-    return this._clientEval ?
-      new ClientEvalFeatureContext(repository, this.getOrCreateEdgeService(edgeService, repository)) :
-      new ServerEvalFeatureContext(repository, () => this.createEdgeService(edgeService, repository));
+    if (this._clientEval) {
+      return new ClientEvalFeatureContext(repository, this.getOrCreateEdgeService(edgeService, repository));
+    }
+
+    // if they are using a server evaluated key, then we don't change the context, we tell the context about the
+    // updated context and it refreshes the existing connection.
+    if (!this._clientContext) {
+      this._clientContext =
+        new ServerEvalFeatureContext(repository, () =>
+          this.getOrCreateEdgeService(edgeService, repository));
+    }
+
+    return this._clientContext
   }
 
   private getOrCreateEdgeService(edgeServSupplier: EdgeServiceProvider, repository?: InternalFeatureRepository): EdgeService {
@@ -105,6 +137,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   private createEdgeService(edgeServSupplier: EdgeServiceProvider, repository?: InternalFeatureRepository): EdgeService {
     const es = edgeServSupplier(repository || this.repository(), this);
+
+    this._initialized = true;
+
     this._edgeServices.push(es);
     return es;
   }
@@ -113,14 +148,21 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     this._edgeServices.forEach((es) => {
       es.close();
     });
+    this._edgeServices.length = 0;
+    this._initialized = false;
   }
 
-  init(): FeatureHubConfig {
-    // ensure the repository exists
-    this.repository();
+  get closed() : boolean { return !this._initialized; }
+  get initialized(): boolean { return this._initialized; }
 
-    // ensure the edge service provider exists
-    this.createEdgeService(this.edgeServiceProvider()).poll().catch((e) => fhLog.error(`Failed to connect to FeatureHub Edge ${e}`));
+  init(): FeatureHubConfig {
+    if (!this._initialized) {
+      // ensure the repository exists
+      this.repository();
+
+      // ensure the edge service provider exists
+      this.getOrCreateEdgeService(this.edgeServiceProvider()).poll().catch((e) => fhLog.error(`Failed to connect to FeatureHub Edge ${e}`));
+    }
 
     return this;
   }

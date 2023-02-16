@@ -18,15 +18,17 @@ export class FHLog {
   public static fhLog = new FHLog();
 
   public log: FHLogMethod = (...args: any[]) => {
-    console.log(args);
+    console.log('FeatureHub/Log: ', ...args);
   };
 
   public error: FHLogMethod = (...args: any[]) => {
-    console.error(args);
+    console.error('FeatureHub/Error: ', ...args);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public trace: FHLogMethod = (...args: any[]) => {};
+  public trace: FHLogMethod = (...args: any[]) => {
+    // console.log('FeatureHub/Trace: ', ...args);
+  };
 
   public quiet(): void {
     FHLog.fhLog.log = () => {
@@ -85,6 +87,16 @@ export interface FeatureHubConfig {
 
   // close any server connections
   close(): void;
+
+  /**
+   * Is this config open or closed? If closed it has no edge connections
+   */
+  get closed(): boolean;
+
+  /**
+   * if initialized, it means initialize has been called
+   */
+  get initialized(): boolean;
 
   /**
    * add a callback for when the system is ready
