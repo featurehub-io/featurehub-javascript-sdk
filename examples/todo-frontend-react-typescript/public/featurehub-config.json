@@ -1,5 +1,5 @@
 {
   "todoServerBaseUrl": "http://localhost:8099",
-  "fhEdgeUrl": "http://localhost:8064",
-  "fhApiKey": "default/8880f61e-1e43-4924-96c0-1768b9ce76c0/jOj763wwNV4YykOlEs6sTOumwinPXM*vX6bIkqOXrJTGBzqHc8b"
+  "fhEdgeUrl": "http://localhost:8085",
+  "fhApiKey": "5e61fd62-d4ed-40e0-9cc1-cb3d809f6149/YDr1E4uQGA2Li54fQ0HpmSr2LMv9yHhwzxut2DRO"
 }
