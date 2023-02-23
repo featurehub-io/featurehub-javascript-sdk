@@ -100,7 +100,7 @@ export default function FeatureHub({
     return () => {
       console.warn("FeatureHub React SDK: Context unmounting. Terminating connection!");
       fhConfig.removeReadinessListener(listenerId);
-      client.close();
+      fhConfig.close();
     };
   }, [userKey]);
 

@@ -1,5 +1,5 @@
 {
   "todoServerBaseUrl": "http://localhost:8099",
-  "fhEdgeUrl": "http://localhost:8085",
-  "fhApiKey": "5e61fd62-d4ed-40e0-9cc1-cb3d809f6149/YDr1E4uQGA2Li54fQ0HpmSr2LMv9yHhwzxut2DRO"
+  "fhEdgeUrl": "https://app.featurehub.io/vanilla",
+  "fhApiKey": "730dff3b-1113-423a-8129-bec85078c554/ArR4TVJQDpnfXg6G5UhE8TcKQ6NyljzZQcM2b2gg"
 }

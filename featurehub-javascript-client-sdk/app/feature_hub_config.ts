@@ -4,6 +4,7 @@ import { InternalFeatureRepository } from './internal_feature_repository';
 import { AnalyticsCollector } from './analytics';
 import { FeatureStateValueInterceptor } from './interceptors';
 import { FeatureHubRepository, Readyness, ReadynessListener } from './featurehub_repository';
+import { FeatureStateHolder } from './feature_state';
 
 // eslint-disable-next-line no-use-before-define
 export type EdgeServiceProvider = (repository: InternalFeatureRepository, config: FeatureHubConfig) => EdgeService;
@@ -27,7 +28,7 @@ export class FHLog {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public trace: FHLogMethod = (...args: any[]) => {
-    // console.log('FeatureHub/Trace: ', ...args);
+    console.log('FeatureHub/Trace: ', ...args);
   };
 
   public quiet(): void {
@@ -38,13 +39,6 @@ export class FHLog {
 
     FHLog.fhLog.trace = () => {
     };
-  }
-
-  /**
-   * @deprecated The method is deprecated. Use quiet() instead.
-   */
-  public Замолчи(): void {
-    this.quiet();
   }
 }
 
@@ -58,6 +52,13 @@ export interface FeatureHubConfig {
   readyness: Readyness;
 
   readiness: Readyness;
+
+  /**
+   * When using a Server Evaluated key, we only have one context so we can get the features directly from the
+   * config
+   * @param name
+   */
+  feature<T = any>(name: string): FeatureStateHolder<T>;
 
   url(): string;
 

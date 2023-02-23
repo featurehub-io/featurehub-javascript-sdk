@@ -19,13 +19,9 @@
 Welcome to the Javascript/Typescript SDK implementation for [FeatureHub.io](https://featurehub.io) - Open source Feature flags management, A/B testing and remote configuration platform.
 
 This documentation covers both [featurehub-javascript-node-sdk](https://www.npmjs.com/featurehub-javascript-node-sdk) and [featurehub-javascript-client-sdk](https://www.npmjs.com/featurehub-javascript-client-sdk) and explains how you can use the FeatureHub SDK in Javascript or Typescript for applications like Node.js
-backend server, Web front-end (e.g. React, Angular) or Mobile apps (React Native, Ionic, etc.). 
+backend servers, Web front-ends (e.g. Vanilla, React, Angular) or Mobile apps (React Native, Ionic, etc.). 
 
 To control the feature flags from the FeatureHub Admin console, either use our [demo](https://demo.featurehub.io) version for evaluation or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
-
-### **Important note:**
-
-We have deprecated [FeatureHub Eventsource Javascript SDK](https://www.npmjs.com/package/featurehub-eventsource-sdk) which covers both client (browser) and server (node) applications in favor of splitting it into two separate NPM modules to enable support for additional browser frameworks like Angular and Vue. To transition to one of the new NPM modules, follow installation instructions below and change the imports in your code. The FeatureHub SDK API hasn't changed so you don't have to reimplement your SDK code.
 
 ## SDK installation
 
@@ -46,11 +42,10 @@ if you are using NodeJS use
 
 There are 2 ways to request for feature updates via this SDK:
 
-
 - **FeatureHub polling client (GET request updates)** 
   
   In this mode, you make a GET request, which you can choose to either do once, when specific things happen in your application,
-  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and server applications (Node).
+  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The SDK defaults to this behaviour as of 1.2.0. 
 
 - **SSE (Server Sent Events) realtime updates mechanism**
 
@@ -62,21 +57,27 @@ There are 2 ways to request for feature updates via this SDK:
 There are 3 steps to connecting:
 1) Copy FeatureHub API Key from the FeatureHub Admin Console
 2) Create FeatureHub config
-3) Check FeatureHub Repository readiness and request feature state
+3) Request feature state
 
 #### 1. API Key from the FeatureHub Admin Console
 Find and copy your API Key from the FeatureHub Admin Console on the API Keys page - 
 you will use this in your code to configure feature updates for your environments. 
-It should look similar to this: ```default/71ed3c04-122b-4312-9ea8-06b2b8d6ceac/fsTmCrcZZoGyl56kPHxfKAkbHrJ7xZMKO3dlBiab5IqUXjgKvqpjxYdI8zdXiJqYCpv92Jrki0jY5taE```.
-There are two options - a Server Evaluated API Key and a Client Evaluated API Key. More on this [here](https://docs.featurehub.io/featurehub/latest/sdks.html#_client_and_server_api_keys) 
 
-Client Side evaluation is intended for use in secure environments (such as microservices, e.g Node JS) and is intended for rapid client side evaluation, per request for example.
+It should look similar to this: ```5e61fd62-d4ed-40e0-9cc1-cb3d809f6149/YDr1E4uQGA2Li54fQ0HpmSr2LMv9yHhwzxut2DRO```.
 
-Server Side evaluation is more suitable when you are using an _insecure client_. (e.g. Browser or Mobile). This also means you evaluate one user per client.
+If you are using FeatureHub SaaS, you can get your URL from the same page. 
+
+There are two options 
+
+* _Client Side evaluation_ is intended for use in secure environments (such as microservices, e.g Node JS) and is intended for rapid client side evaluation, per request for example.
+
+* _Server Side evaluation_ is more suitable when you are using an _insecure client_. (e.g. Browser or Mobile). This also means you evaluate one user per client.
+
+More on this [here](https://docs.featurehub.io/featurehub/latest/sdks.html#_client_and_server_api_keys)
 
 #### 2. Create FeatureHub config:
 
-Create an instance of `EdgeFeatureHubConfig`. You need to provide the API Key and the URL of the FeatureHub Edge server.
+We will use a Browser example here, so prefer a Server Evaluated Key (it won't have an `*` in it).
 
 ```typescript
 import {
@@ -86,50 +87,58 @@ import {
 } from 'featurehub-javascript-client-sdk';
 
 const edgeUrl = 'http://localhost:8085/';
-const apiKey = 'default/3f7a1a34-642b-4054-a82f-1ca2d14633ed/aH0l9TDXzauYq6rKQzVUPwbzmzGRqe*oPqyYqhUlVC50RxAzSmx';
+const apiKey = '3f7a1a34-642b-4054-a82f-1ca2d14633ed/aH0l9TDXzauYq6rKQzVUPwbzmzGRqe';
 
-const fhConfig = new EdgeFeatureHubConfig(edgeUrl, apiKey);
+const fhConfig = EdgeFeatureHubConfig.config(edgeUrl, apiKey).init();
 ```
 
-By default, this SDK will use SSE client. If you decide to use FeatureHub polling client, you can override it here:
+As we are focused on the most common use case, we will use the defaults here - which will create
+a Polling client with a 30 second delay between polls (see below for alternatives). The above
+code configured a server evaluated connection and immediately requests to connect and get the
+features from the server. See below for why you might delay this.
+
+#### 3. Add listener to feature and react
+
+In a normal browser situation, there is a single active connection to the FeatureHub server,
+and features can be listened to before that connection is even established. 
+
+You can specifically ask for the feature state in your code (we use a flag here):
 
 ```typescript
-import { FeatureHubPollingClient } from 'featurehub-javascript-client-sdk';
-const FREQUENCY = 5000; // 5 seconds
-fhConfig.edgeServiceProvider((repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY));
+if (fhConfig.feature('FEATURE_KEY').flag) {
+  
+}
+```
+ 
+The downside of this is that you have to ensure that the FeatureHub SDK has state. In our _Step 2_ above, we added a `.init()` which
+was designed to tell the repository to asynchronously go and fill itself. It will cache the data in the Browser's `localstorage` if it can
+to ensure speedy startup next time. 
+
+A feature does not have to exist already for your code to function,  the flag evaluation above will simply return falsy
+if there is no value for it yet. But you can _react_ to changes in feature state. If you wish parts of your page to render
+when the feature repository gains state, you can listen for the event:
+
+```typescript
+  fhConfig.addReadynessListener((readyness, firstTimeReady) => {
+      if (firstTimeReady) { // its ready and its the first time it has been ready, so make appropriate screen changes
+        const value = fhConfig.feature('FEATURE_STRING').str;
+        console.log('Value is ', value);
+      }
+  });
 ```
 
-in this case it is configured for requesting an update every 5 seconds.
-
-
-
-#### 3. Check FeatureHub Repository readiness and request feature state
-
-Feature flag rollout strategies and user targeting are all determined by the active _user context_. If you are not intending to use rollout strategies, you can pass empty context to the SDK.
-
-**Client Side evaluation** 
+Alternatively, you can listen for events for changes in specific 
+As such, typically you will write your code to react to changes in the features, such as:
 
 ```typescript
-let initialized = false;
-console.log("Waiting for features...");
-fhConfig.addReadinessListener(async (ready) => {
-  if (!initialized) {
-    if (ready == Readyness.Ready) {
-      console.log("Features are available, starting server...");
-      initialized = true;
-      const fhClient = await fhConfig.newContext().build();
-      if(fhClient.getFlag('FEATURE_KEY')) { 
-          // do something
-      }
-      else {
-          //do something else
-      }
-    }
+fhConfig.feature('FEATURE_KEY').addListener((feature) => {
+  if (feature.flag) {
+    // perform some UI update
   }
-}, true);
-
-fhConfig.init();
+});
 ```
+
+
 
 This is a simple scenario where you request for default context without passing information for each user. In production, you would normally create new context per each user and if you are applying flag variations, you would pass information about user context. If you are using percentage rollout, for example, you would set a `sessionId`, or some other identifier that you can set through `userKey`). 
 
@@ -212,6 +221,110 @@ this.initializeFeatureHub();
 
   Note, in a Single Page Application (SPA) situation, you will typically load and configure your FeatureHub configuration, but not discover information about a user until later. This would mean that you could progressively add extra information to the context over time, once the user logs in, etc. There are all sorts of different ways that Web applications find and
   provide information. In our [React example](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-frontend-react-typescript) we show how once you have your connection you are able to start querying the repository immediately.
+        
+## Beyond the Quick Start: 
+
+In this section we cover a bundle of different variations that crop up, for clients and servers.
+                                         
+### Why delay the init()?
+
+FeatureHub is able to provide targeting - to support progressive rollouts, targetted rollouts and even
+A/B testing. By creating your config and immediately initializing, you miss the first opportunity to
+customise the connection. You can customise this connection at any time however, particularly in
+browser based information you may not know what information you wish to customise with until after you
+have logged in.
+
+In our step 2 from the Quick Start you can see:
+
+```typescript
+const fhConfig = EdgeFeatureHubConfig.config(edgeUrl, apiKey).init();
+```
+
+If you wish for example to specify the languages and user name of the person up front you can do this:
+
+```typescript
+const fhConfig = EdgeFeatureHubConfig.config(edgeUrl, apiKey);
+fhConfig.newContext().userKey('<some-user-key>').attributeValues('languages', navigator.languages).build();
+```
+
+This tells the SDK to hold onto that those pieces of information and provide targeted evaluation
+against them. 
+
+**Important Note** - you can change these at any time, just remember to add `.build()` on the end. You also do not require the `init()` because this process will do it for you.
+
+### What is the deal with readyness?
+
+Readyness indicates to you when the SDK has received state, or failed to receive state. There is an event on the SDK called
+`addReadynessListener` - and that will tell you two things: what is the state of the readyness and is it the first time that
+it has called you back with a 
+
+### Changing the polling interval
+
+If the polling interval is too slow or too fast for you, then you can change it by setting the 
+provider for the "Edge Connector". An example that sets it to five seconds is as follows:
+
+```typescript
+import { FeatureHubPollingClient } from 'featurehub-javascript-client-sdk';
+const FREQUENCY = 5000; // 5 seconds
+EdgeFeatureHubConfig.edgeServiceProvider((repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY));
+```
+
+You can specify however many seconds you want. FeatureHub also has the ability for the server to 
+override the polling interval, either globally or per environment, but that is not covered here. Note,
+NodeJS servers use the SSE real time streaming updater, they can swap to using polling via the same
+mechanism as above.
+
+Please note - you should do this before doing an `EdgeFeatureHubConfig.config()`.
+
+### Changing to SSE - real time streaming updates
+
+If you are keen to see real time updates, then swapping to the Streaming connector is achieved by:
+
+```typescript
+EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) => new FeatureHubEventSourceClient(config, repository);
+```
+
+This is automatically done when you use the node-sdk.
+
+### Knowing when the features are actually ready?
+                                               
+If you are writing a server application, it would be typical to include the features being
+available in a health check. If your server is not able to get its features, it should not
+receive traffic as a general rule.
+
+```typescript
+fhConfig.readiness()
+```
+
+
+### Doing something when the features are ready
+
+In some cases, you may wish to wait for features to become ready. 
+
+
+
+```typescript
+let initialized = false;
+console.log("Waiting for features...");
+fhConfig.addReadinessListener(async (ready) => {
+if (!initialized) {
+if (ready == Readyness.Ready) {
+console.log("Features are available, starting server...");
+initialized = true;
+
+      if(fhClient.getFlag('FEATURE_KEY')) { 
+          // do something
+      }
+      else {
+          //do something else
+      }
+    }
+}
+}, true);
+
+fhConfig.init();
+```
+
 
 
 #### Supported feature state requests
@@ -316,13 +429,13 @@ and your polling interval is set to 0).
 To add a custom key/value pair, use `attribute_value(key, value)`
 
 ```typescript
-    const fhClient = await fhConfig.newContext().attribute_value('first-language', 'russian').build();
+    const fhClient = await fhConfig.newContext().attribute_value('first-language', 'italian').build();
 ```
 
 Or with array of values (only applicable to custom rules):
 
 ```typescript
-   const fhClient = await fhConfig.newContext().attribute_value('languages', ['russian', 'english', 'german']).build();
+   const fhClient = await fhConfig.newContext().attribute_value('languages', ['italian', 'english', 'german']).build();
 ```
 
 If you define a strategy using a custom rule, providing an array will make the SDK compare each value in turn against the rule 
@@ -576,8 +689,6 @@ export enum Readyness {
   Failed = 'Failed'
 }
 ```
-
-
 
 ## Analytics
 
@@ -846,6 +957,9 @@ it simply hasn't been granted access. The API does not leak information on valid
 This library uses semver, which is a commonjs library. You will need to follow the recommended Angular documentation
 on how to suppress the warning. 
 
+## Older Versions
+
+We have deprecated [FeatureHub Eventsource Javascript SDK](https://www.npmjs.com/package/featurehub-eventsource-sdk) which covers both client (browser) and server (node) applications in favor of splitting it into two separate NPM modules to enable support for additional browser frameworks like Angular and Vue. To transition to one of the new NPM modules, follow installation instructions below and change the imports in your code. The FeatureHub SDK API hasn't changed so you don't have to reimplement your SDK code.
 
 ## Advanced Usage
 

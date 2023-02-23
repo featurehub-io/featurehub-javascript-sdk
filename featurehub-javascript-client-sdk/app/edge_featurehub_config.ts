@@ -8,6 +8,7 @@ import { EdgeServiceProvider, FeatureHubConfig, fhLog } from './feature_hub_conf
 import { Readyness, ReadynessListener } from './featurehub_repository';
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from './context_impl';
 import { FeatureHubPollingClient } from './polling_sdk';
+import { FeatureStateHolder } from './feature_state';
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _host: string;
@@ -33,7 +34,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
         return EdgeFeatureHubConfig._singleton;
       }
 
-      EdgeFeatureHubConfig._singleton.close();
+      EdgeFeatureHubConfig._singleton.forceClose();
     }
 
     EdgeFeatureHubConfig._singleton = new EdgeFeatureHubConfig(url, apiKey);
@@ -91,6 +92,14 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this.repository().readyness;
   }
 
+  public feature<T = any>(name: string): FeatureStateHolder<T> {
+    if (this.clientEvaluated()) {
+      throw new Error("You cannot use this method for client evaluated keys, please get a context with .newContext()")
+    }
+
+    return this.newContext().feature(name);
+  }
+
   public apiKey(apiKey: string): FeatureHubConfig {
     this._apiKeys.push(apiKey);
     return this;
@@ -124,6 +133,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
           this.getOrCreateEdgeService(edgeService, repository));
     }
 
+    // we are reference counting the client
+    this._clientContext.addClient();
+
     return this._clientContext
   }
 
@@ -145,6 +157,18 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   close(): void {
+    // we can have multiple consumers of the ServerEval context, and they may issue closes on this, which we don't want
+    if (this._clientContext) {
+      if (this._clientContext.removeClient()) {
+        this.forceClose();
+        this._clientContext = undefined;
+      }
+    } else {
+      this.forceClose();
+    }
+  }
+
+  forceClose(): void {
     this._edgeServices.forEach((es) => {
       es.close();
     });
