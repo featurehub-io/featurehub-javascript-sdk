@@ -35,10 +35,10 @@ function App() {
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
     <FeatureHub
-      url='https://app.featurehub.io/vanilla'
-      apiKey='f97b27c6-c0fd-42a6-b146-2dc5840fc8bf/ktxXJap7PotT2zvzwMCOm3WTC87kKUThQQQKdpJK'
+      url='http://localhost:8085'
+      apiKey='c320b6aa-3054-4505-92a5-c01682d47ec2/So1qQ4FOX2UM0Bpxs3r6TqjuDo0WjEIAeYO01dwa'
       userKey='irina'
-      pollInterval={10000}
+      pollInterval={15000}
     >
       <Main />
     </FeatureHub>

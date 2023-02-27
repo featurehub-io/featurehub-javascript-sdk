@@ -1,20 +1,17 @@
 import * as React from 'react';
 import { Configuration, Todo, TodoServiceApi } from './api';
 import './App.css';
-import globalAxios from 'axios';
-import { ClientContext,
-    EdgeFeatureHubConfig,
-    FeatureHubConfig,
-    Readyness,
-    FeatureHubPollingClient,
-    StrategyAttributeCountryName,
-    GoogleAnalyticsCollector } from 'featurehub-javascript-client-sdk';
+import {
+  ClientContext,
+  EdgeFeatureHubConfig,
+  FeatureHubConfig,
+  Readyness,
+  FeatureHubPollingClient,
+  StrategyAttributeCountryName,
+  GoogleAnalyticsCollector, FeatureHub
+} from 'featurehub-javascript-client-sdk';
 
 let todoApi: TodoServiceApi;
-let fhConfig: FeatureHubConfig;
-let fhClient: ClientContext;
-
-// change this user if you wish to specify a different user for the backend and for the userkey for the features
 const user = 'fred';
 
 class TodoData {
@@ -57,38 +54,27 @@ class App extends React.Component<{}, { todos: TodoData }> {
     }
 
     async initializeFeatureHub() {
-        if (fhConfig !== undefined) {
-          return;
-        }
-        const config = (await globalAxios.request({url: 'featurehub-config.json'})).data as ConfigData;
-        fhConfig = EdgeFeatureHubConfig.config(config.fhEdgeUrl, config.fhApiKey);
-
-        // fhConfig.edgeServiceProvider((repo, c) =>
-        //   new FeatureHubPollingClient(repo, c, 10000));
-
         // connect to Google Analytics
-        // fhConfig.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));
+        // FeatureHub.config.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));
 
-        fhClient = await fhConfig.newContext().userKey(user).build();
-
-        fhConfig.addReadinessListener((readyness, firstTimeReady) => {
+        FeatureHub.config.addReadinessListener((readyness, firstTimeReady) => {
             if (firstTimeReady) {
-                const color = fhClient.getString('SUBMIT_COLOR_BUTTON');
+                const color = FeatureHub.context.getString('SUBMIT_COLOR_BUTTON');
                 this.setState({todos: this.state.todos.changeColor(color)});
             }
         });
 
         // Uncomment this if you want to use rollout strategy with a country rule
-        // await fhClient
+        // await FeatureHub.context
         //     .country(StrategyAttributeCountryName.Australia)
         //     .build();
 
         // connect to the backend server
-        todoApi = new TodoServiceApi(new Configuration({basePath: config.todoServerBaseUrl}));
+        todoApi = new TodoServiceApi(new Configuration({basePath: 'http://localhost:8099'}));
         this._loadInitialData(); // let this happen in background
 
         // react to incoming feature changes in real-time
-        fhConfig.feature('SUBMIT_COLOR_BUTTON').addListener(fs => {
+        FeatureHub.feature('SUBMIT_COLOR_BUTTON').addListener(fs => {
             this.setState({todos: this.state.todos.changeColor(fs.getString())});
         });
 
@@ -104,7 +90,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     }
 
     componentWillUnmount(): void {
-     fhConfig.close(); // tidy up
+     FeatureHub.close(); // tidy up
     }
 
     async addTodo(title: string) {
@@ -115,13 +101,13 @@ class App extends React.Component<{}, { todos: TodoData }> {
         };
 
         // Send an event to Google Analytics
-        fhClient.logAnalyticsEvent('todo-add', new Map([['gaValue', '10']]));
+        FeatureHub.context.logAnalyticsEvent('todo-add', new Map([['gaValue', '10']]));
         const todoResult = (await todoApi.addTodo(user, todo)).data;
         this.setState({todos: this.state.todos.changeTodos(todoResult)});
     }
 
     async removeToDo(id: string) {
-        fhClient.logAnalyticsEvent('todo-remove', new Map([['gaValue', '5']]));
+        FeatureHub.context.logAnalyticsEvent('todo-remove', new Map([['gaValue', '5']]));
         const todoResult = (await todoApi.removeTodo(user, id)).data;
         this.setState({todos: this.state.todos.changeTodos(todoResult)});
     }
