@@ -3,7 +3,8 @@ import {
   EdgeFeatureHubConfig,
   EdgeServiceProvider,
   FeatureHubPollingClient,
-  Readyness
+  Readyness,
+  FeatureHub as fh
 } from "featurehub-javascript-client-sdk";
 import {
   Accessor,
@@ -75,10 +76,12 @@ const FeatureHub: Component<Props> = (props): JSXElement => {
   const config = createMemo(() => {
     console.info("FeatureHub Solid SDK: Creating config and context...");
 
-    EdgeFeatureHubConfig.edgeServiceProvider(provider);
+    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = provider;
     const fhConfig = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+    const context = fhConfig.newContext();
+    fh.set(fhConfig, context);
 
-    setClient(fhConfig.newContext()); // immediately assign anonymous context
+    setClient(context); // immediately assign anonymous context
 
     if (listenerId) {
       fhConfig.removeReadinessListener(listenerId);

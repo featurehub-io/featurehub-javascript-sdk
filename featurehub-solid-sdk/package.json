@@ -20,7 +20,7 @@
     "release": "npm run build && npm publish"
   },
   "peerDependencies": {
-		"featurehub-javascript-client-sdk": "file:../../featurehub-javascript-client-sdk",
+		"featurehub-javascript-client-sdk": "file:../featurehub-javascript-client-sdk",
     "solid-js": "^1.6.8"
   },
   "devDependencies": {

@@ -27,7 +27,8 @@ function useFeature<T = boolean>(key: string): Accessor<T> {
       listenerId = client()
         .feature<T>(key)
         .addListener((fsh) => {
-          setValue(fsh.value);
+          // @ts-ignore
+          setValue(client().feature<T>(key).value);
         });
 
       // Need this in order for Solid to pick up the initial value properly for some reason
