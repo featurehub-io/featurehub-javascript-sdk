@@ -1,5 +1,5 @@
 import { InternalFeatureRepository } from './internal_feature_repository';
-import { EdgeServiceSupplier, fhLog } from './feature_hub_config';
+import { EdgeServiceSupplier, FeatureHubConfig, fhLog } from './feature_hub_config';
 import {
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
@@ -48,14 +48,32 @@ export abstract class BaseClientContext implements ClientContext {
     return this;
   }
 
+  /**
+   * @deprecated - use attributeValue
+   * @param key
+   * @param value
+   */
   // eslint-disable-next-line camelcase
   attribute_value(key: string, value: string): ClientContext {
+    return this.attributeValue(key, value);
+  }
+
+  attributeValue(key: string, value: string): ClientContext {
     this._attributes.set(key, [value]);
     return this;
   }
 
+  /**
+   * @deprecated - use attributeValues
+   * @param key
+   * @param values
+   */
   // eslint-disable-next-line camelcase
   attribute_values(key: string, values: Array<string>): ClientContext {
+    return this.attributeValues(key, values);
+  }
+
+  attributeValues(key: string, values: Array<string>): ClientContext {
     this._attributes.set(key, values);
     return this;
   }
@@ -149,13 +167,25 @@ export abstract class BaseClientContext implements ClientContext {
 export class ServerEvalFeatureContext extends BaseClientContext {
   private readonly _edgeServiceSupplier: EdgeServiceSupplier;
   private _currentEdge: EdgeService;
+  private _config?: FeatureHubConfig;
   private _xHeader: string;
+  private _clientCount = 0;
 
   constructor(repository: InternalFeatureRepository,
-    edgeServiceSupplier: EdgeServiceSupplier) {
+    edgeServiceSupplier: EdgeServiceSupplier, config?: FeatureHubConfig) {
     super(repository);
 
     this._edgeServiceSupplier = edgeServiceSupplier;
+    this._config = config;
+  }
+
+  addClient(): void {
+    this._clientCount += 1;
+  }
+
+  removeClient(): boolean {
+    this._clientCount -= 1;
+    return this._clientCount <= 0;
   }
 
   async build(): Promise<ClientContext> {
@@ -189,7 +219,11 @@ export class ServerEvalFeatureContext extends BaseClientContext {
   }
 
   close(): void {
-    if (this._currentEdge) {
+    if (this._clientCount <= 1 && this._config !== undefined) {
+      fhLog.trace('closing because client count is ', this._clientCount);
+      this._config.close(); // tell the config to close us down
+    } else if (this._currentEdge) {
+      fhLog.trace('closing because directly requested close.');
       this._currentEdge.close();
     }
   }
@@ -220,6 +254,7 @@ export class ClientEvalFeatureContext extends BaseClientContext {
   }
 
   close(): void {
+
     this._edgeService.close();
   }
 

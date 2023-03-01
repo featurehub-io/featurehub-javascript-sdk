@@ -14,8 +14,23 @@ export interface ClientContext {
   platform(value: StrategyAttributePlatformName): ClientContext;
   version(version: string): ClientContext;
   // eslint-disable-next-line camelcase
+  attributeValue(key: string, value: string): ClientContext;
+
+  /**
+   * use attributeValue
+   * @param key
+   * @param value
+   */
   attribute_value(key: string, value: string): ClientContext;
+
   // eslint-disable-next-line camelcase
+  attributeValues(key: string, values: Array<string>): ClientContext;
+
+  /**
+   * @deprecated - use attributeValues
+   * @param key
+   * @param values
+   */
   attribute_values(key: string, values: Array<string>): ClientContext;
   clear(): ClientContext;
   build(): Promise<ClientContext>;

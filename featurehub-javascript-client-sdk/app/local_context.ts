@@ -69,7 +69,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   }
 
   public addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
-    listener(Readyness.Ready);
+    listener(Readyness.Ready, true);
 
     return 0;
   }

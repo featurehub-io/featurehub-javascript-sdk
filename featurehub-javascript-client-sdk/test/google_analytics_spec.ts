@@ -1,6 +1,5 @@
 import {
   ClientFeatureRepository,
-  FeatureState,
   FeatureValueType,
   GoogleAnalyticsApiClient,
   GoogleAnalyticsCollector, SSEResultState

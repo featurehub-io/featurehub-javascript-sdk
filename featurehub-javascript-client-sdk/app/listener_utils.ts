@@ -1,7 +1,7 @@
 
 
 export class ListenerUtils {
-  public static newListenerKey(where: Map<Number, any>): number {
+  public static newListenerKey(where: Map<number, any>): number {
     // find a unique slot, we can't keep a counter as we can bump from context to context
     // and placeholder to real
     let pos = Math.round(Math.random() * 10000);
@@ -13,7 +13,7 @@ export class ListenerUtils {
     return pos;
   }
 
-  public static removeListener(listeners: Map<Number, any>, listener: any) {
+  public static removeListener(listeners: Map<number, any>, listener: any) {
     if (typeof listener == 'number') {
       if (listeners.has(listener)) {
         listeners.delete(listener);
