@@ -108,7 +108,7 @@ describe('Catch and release should hold and then release feature changes', () =>
     expect(repo.getFeatureState('banana').getVersion()).to.eq(4);
     // and now ensure c&r mode is off
     internalRepo.notify(SSEResultState.Feature, { id: '1', key: 'banana', version: 5,
-      type: FeatureValueType.Boolean, value: false } as FeatureState );
+      type: FeatureValueType.Boolean, value: false } as FeatureState);
     expect(repo.getFlag('banana')).to.eq(false);
     expect(repo.getFeatureState('banana').getVersion()).to.eq(5);
 
@@ -144,13 +144,13 @@ describe('Catch and release should hold and then release feature changes', () =>
     repo.notify(SSEResultState.Features, features2);
     const handle = repo.addPostLoadNewFeatureStateAvailableListener((internalRepo) => {
       internal = internalRepo;
-      eventTriggerCount ++;
+      eventTriggerCount++;
     });
 
     let listenerTriggerCount = 0;
     const postListener = (internalRepo) => {
-      listenerTriggerCount ++;
-    }
+      listenerTriggerCount++;
+    };
 
     expect(internal).to.eq(repo);
     expect(eventTriggerCount).to.eq(1);
@@ -164,5 +164,5 @@ describe('Catch and release should hold and then release feature changes', () =>
     // we didn't get notified
     expect(listenerTriggerCount).to.eq(0);
     expect(eventTriggerCount).to.eq(0);
-  })
+  });
 });

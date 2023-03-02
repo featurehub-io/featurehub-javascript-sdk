@@ -1,6 +1,6 @@
 import { expect } from 'chai';
+import { Substitute, SubstituteOf, } from '@fluffy-spoon/substitute';
 import { EdgeFeatureHubConfig, EdgeService, InternalFeatureRepository } from '../app';
-import { Substitute, } from '@fluffy-spoon/substitute';
 
 describe('We can initialize the config', () => {
 
@@ -29,7 +29,7 @@ describe('We can initialize the config', () => {
     edge.received(1).poll();
   });
 
-  it('asking a new config for edge and repository should repeatedly give the same one', () => {
+  it('asking a new client side config for edge and repository should repeatedly give the same one', () => {
     const edge = Substitute.for<EdgeService>();
     const edgeProvider = () => edge;
     EdgeFeatureHubConfig.defaultEdgeServiceSupplier = edgeProvider;
@@ -77,15 +77,50 @@ describe('We can initialize the config', () => {
     expect(repos[0]).to.eq(repo);
   });
 
-  it('should allow for the creation of a new context which on building should poll the edge repo', async () => {
-    const edge = Substitute.for<EdgeService>();
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () =>
-      edge;
+  describe('server evaluated keys', async () => {
+    let edge: SubstituteOf<EdgeService>;
+    let fc: EdgeFeatureHubConfig;
 
-    const fc = new EdgeFeatureHubConfig('http://localhost:8080', '123345');
-    // tslint:disable-next-line:no-unused-expression
-    expect(fc.clientEvaluated()).to.be.false;
-    await fc.newContext().build();
-    edge.received(1).contextChange('');
+    beforeEach(() => {
+      edge = Substitute.for<EdgeService>();
+      EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () =>
+        edge;
+      fc = new EdgeFeatureHubConfig('http://localhost:8080', '123345');
+    });
+
+    it('should allow for the creation of a new context which on building should poll the edge repo', async () => {
+      // tslint:disable-next-line:no-unused-expression
+      expect(fc.clientEvaluated()).to.be.false;
+      await fc.newContext().build();
+      edge.received(1).contextChange('');
+    });
+
+    it('should return the same context each time i ask for a server evaluated key', async () => {
+      const c1 = fc.newContext();
+      const c2 = fc.newContext();
+      const c3 = fc.newContext();
+
+      expect(c1).to.eq(c2);
+      expect(c1).to.eq(c3);
+    });
+
+    it('should become initialised when the context is polled', async () => {
+      await fc.newContext().build();
+      expect(fc.initialized).to.be.true;
+      expect(fc.closed).to.be.false;
+      await fc.close();
+      edge.received(1).close();
+      expect(fc.initialized).to.be.false;
+      expect(fc.closed).to.be.true;
+    });
+  });
+
+  it('should allow singletons to work as expected', () => {
+    const f1 = EdgeFeatureHubConfig.config('http://localhost:8080', '123345');
+    const f2 = EdgeFeatureHubConfig.config('http://localhost:8080', '123345');
+    const f3 = EdgeFeatureHubConfig.config('http://localhost:8080', '123346');
+
+    expect(f1).to.eq(f2);
+    expect(f1).to.not.eq(f3);
   });
 });

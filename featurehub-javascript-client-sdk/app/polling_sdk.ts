@@ -59,7 +59,7 @@ export abstract class PollingBase implements PollingService {
   public parseCacheControl(cacheHeader: string | undefined) {
     const maxAge = cacheHeader?.match(/max-age=(\d+)/);
     if (maxAge) {
-      let newFreq = parseInt(maxAge[1], 10);
+      const newFreq = parseInt(maxAge[1], 10);
       if (newFreq > 0) {
         this._frequency = newFreq * 1000;
       }
@@ -84,8 +84,30 @@ export interface BrowserOptions {
   timeout?: number;
 }
 
-class BrowserPollingService extends PollingBase implements PollingService {
+/**
+ * This should never be used directly but we are exporting it because we need it
+ */
+export class BrowserPollingService extends PollingBase implements PollingService {
   private readonly _options: BrowserOptions;
+  private localStorageLastUrl: string | undefined;
+
+  // override this with a replacement if you need to
+  static httpRequestor = () => {
+    return new XMLHttpRequest();
+  };
+
+  // override this in React Native - for example use AsyncStorage
+  static localStorageRequestor = () => {
+    if (window.localStorage) {
+      return localStorage;
+    }
+
+    // maybe in React Native or other similar browsery thing.
+    return {
+      getItem: () => null,
+      setItem: () => {}
+    };
+  };
 
   constructor(options: BrowserOptions, url: string, frequency: number, callback: FeaturesFunction) {
     super(url, frequency, callback);
@@ -93,7 +115,23 @@ class BrowserPollingService extends PollingBase implements PollingService {
     this._options = options;
   }
 
+  private loadLocalState(url: string) {
+    if (url !== this.localStorageLastUrl) {
+      this.localStorageLastUrl = url;
 
+      const storedData = BrowserPollingService.localStorageRequestor().getItem(url);
+      if (storedData) {
+        try {
+          const data = JSON.parse(storedData);
+          if (data.e) { // save space with short name
+            this._callback(data.e as Array<FeatureEnvironmentCollection>);
+          }
+        } catch (ignored) {
+          // ignore exception
+        }
+      }
+    }
+  }
 
   public poll(): Promise<void> {
     if (this._stopped) {
@@ -102,8 +140,12 @@ class BrowserPollingService extends PollingBase implements PollingService {
       });
     }
     return new Promise((resolve, reject) => {
-      const req = new XMLHttpRequest();
       const calculatedUrl = `${this.url}&contextSha=${this._shaHeader}`;
+
+      // check in case we have a cached copy of it
+      this.loadLocalState(this.url);
+
+      const req = BrowserPollingService.httpRequestor();
       req.open('GET', calculatedUrl);
       req.setRequestHeader('Content-type', 'application/json');
 
@@ -123,7 +165,13 @@ class BrowserPollingService extends PollingBase implements PollingService {
             this._etag = req.getResponseHeader('etag');
             this.parseCacheControl(req.getResponseHeader('cache-control'));
 
-            this._callback(JSON.parse(req.responseText) as Array<FeatureEnvironmentCollection>);
+            const environments = JSON.parse(req.responseText) as Array<FeatureEnvironmentCollection>;
+            try {
+              BrowserPollingService.localStorageRequestor().setItem(this.url, JSON.stringify({ e: environments }));
+            } catch (e) {
+              fhLog.error('featurehub: unable to cache features');
+            }
+            this._callback(environments);
 
             this._stopped = (req.status === 236);
             resolve();
@@ -153,6 +201,7 @@ export class FeatureHubPollingClient implements EdgeService {
   private _pollPromiseResolve: (value: (PromiseLike<void> | void)) => void;
   private _pollPromiseReject: (reason?: any) => void;
   private _pollingStarted = false;
+  private _currentTimer: any;
 
   public static pollingClientProvider: PollingClientProvider = (opt, url, freq, callback) =>
     new BrowserPollingService(opt, url, freq, callback);
@@ -161,6 +210,7 @@ export class FeatureHubPollingClient implements EdgeService {
     config: FeatureHubConfig,
     frequency: number,
     options: BrowserOptions | NodejsOptions = {}) {
+    this._startable = true;
     this._frequency = frequency;
     this._repository = repository;
     this._options = options;
@@ -169,7 +219,7 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _initService(): void {
-    if (this._pollingService === undefined) {
+    if (this._pollingService === undefined && this._startable) {
       this._pollingService =
         FeatureHubPollingClient.pollingClientProvider(this._options, this._url,
           this._frequency,
@@ -180,24 +230,22 @@ export class FeatureHubPollingClient implements EdgeService {
     }
   }
 
-  public contextChange(header: string): Promise<void> {
+  public async contextChange(header: string): Promise<void> {
     if (!this._config.clientEvaluated()) {
       if (this._xHeader !== header) {
         this._xHeader = header;
 
         this._initService();
 
-        const pollForContext = this._pollingService.attributeHeader(header);
-
-        if (!this._pollingStarted) {
-          this._restartTimer();
+        if (this._pollingService) {
+          await this._pollingService.attributeHeader(header);
         }
 
-        return pollForContext;
+        this._restartTimer();
       }
-    } else {
-      return new Promise<void>((resolve) => resolve());
     }
+
+    return new Promise<void>((resolve) => resolve());
   }
 
   public clientEvaluated(): boolean {
@@ -209,14 +257,33 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   public close(): void {
-    if (this._pollingService) {
-      this._pollingService.stop();
+    this.stop();
+  }
+
+  private stop() {
+    fhLog.trace('polling stopping');
+    // stop the timeout if one is going on
+    if (this._currentTimer) {
+      clearTimeout(this._currentTimer);
+      this._currentTimer = undefined;
     }
+
+    if (this._pollPromiseReject !== undefined) {
+      this._pollPromiseReject('Never came live');
+    }
+
+    // stop the polling service and clear it
+    this._pollingService?.stop();
+    this._pollingService = undefined;
   }
 
   public poll(): Promise<void> {
     if (this._pollPromiseResolve !== undefined || this._pollingStarted) {
       return new Promise<void>((resolve) => resolve());
+    }
+
+    if (!this._startable) {
+      return new Promise<void>((_, reject) => reject());
     }
 
     this._initService();
@@ -229,14 +296,33 @@ export class FeatureHubPollingClient implements EdgeService {
     });
   }
 
-  private stop() {
-    this._pollingService.stop();
-    this._pollingService = undefined;
+
+  public get canStart() {
+    return this._startable;
+  }
+
+  public get pollingFrequency() : undefined|number {
+    return this._pollingService?.frequency;
+  }
+
+  public get active() : boolean {
+    return this._pollingStarted || this._currentTimer !== undefined;
+  }
+
+  public get awaitingFirstSuccess(): boolean {
+    return this._pollPromiseReject !== undefined;
   }
 
   private _restartTimer() {
-    if (this._pollingService === undefined || this._pollingStarted) {
+    if (this._pollingService === undefined || this._pollingStarted || !this._startable) {
       return;
+    }
+
+    fhLog.trace('polling restarting');
+
+    if (this._currentTimer) {
+      clearTimeout(this._currentTimer);
+      this._currentTimer = undefined;
     }
 
     this._pollingStarted = true;
@@ -247,6 +333,11 @@ export class FeatureHubPollingClient implements EdgeService {
   private _pollFunc() {
     this._pollingService.poll()
       .then(() => {
+        fhLog.trace('poll successful');
+
+        // set the next one going before we resolve as otherwise the test will fail
+        this._readyNextPoll();
+
         if (this._pollPromiseResolve !== undefined) {
           try {
             this._pollPromiseResolve();
@@ -259,9 +350,18 @@ export class FeatureHubPollingClient implements EdgeService {
         this._pollPromiseResolve = undefined;
       })
       .catch((status) => {
-        if (status === 404) {
-          fhLog.error('The API Key provided does not exist, stopping polling.');
+        fhLog.trace('poll failed', status);
+        // ready to poll again at the right interval
+        this._pollingStarted = false;
+
+        if (status === 404 || status == 400) {
+          if (status == 404) {
+            fhLog.error('The API Key provided does not exist, stopping polling.');
+          }
+
           this._repository.notify(SSEResultState.Failure, null);
+          this._startable = false;
+
           this.stop();
 
           if (this._pollPromiseReject) {
@@ -274,16 +374,29 @@ export class FeatureHubPollingClient implements EdgeService {
 
           this._pollPromiseReject = undefined;
           this._pollPromiseResolve = undefined;
-        } else if (status == 503) {
-          fhLog.log('The backend is not ready, waiting for the next poll.');
+        } else {
+          this._readyNextPoll();
+
+          if (status == 503) {
+            fhLog.log('The backend is not ready, waiting for the next poll.');
+          }
         }
       }).finally(() => {
-        // ready to poll again at the right interval
-        this._pollingStarted = false;
-        if (this._pollingService) { // in case we got a 404, and it was shut down
-          setTimeout(() => this._restartTimer(),  this._pollingService.frequency);
-        }
       });
+  }
+
+  private _readyNextPoll() {
+    // ready to poll again at the right interval (tests need this here)
+    this._pollingStarted = false;
+
+    if (this._pollingService && this._pollingService.frequency > 0) { // in case we got a 404, and it was shut down
+      fhLog.trace('starting timer for poll', this._pollingService.frequency);
+      this._currentTimer = setTimeout(() => this._restartTimer(),  this._pollingService.frequency);
+    } else {
+      fhLog.trace('no polling service or 0 frequence, stopping polling.',
+        this._pollingService === undefined,
+        this._pollingService?.frequency);
+    }
   }
 
   private response(environments: Array<FeatureEnvironmentCollection>): void {

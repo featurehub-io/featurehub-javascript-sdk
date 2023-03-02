@@ -27,7 +27,7 @@ describe('test the strategy matchers', () => {
 
   it('percentage rollout is consistent', () => {
     const base = new Murmur3PercentageCalculator().determineClientPercentage('irina', 'one');
-    for(let count = 0; count < 5; count ++) {
+    for (let count = 0; count < 5; count++) {
       expect(new Murmur3PercentageCalculator().determineClientPercentage('irina', 'one')).to.eq(base);
     }
   });

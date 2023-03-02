@@ -1,3 +1,12 @@
+#### 1.2.0
+- Support for localstorage in a browser to cache the features
+- EdgeFeatureHubConfig will now hold onto only a single context for server evaluated keys. Once created
+it will always give out the same one.
+- EdgeFeatureHubConfig ensures there is only one connection to the server and only one set of polling will
+happen that is under its control. This ensures the React SDK for example will only have one active poll.
+- removed the alternative log silencing method
+- added meta-tag support for browsers and a new FeatureHub object to access them
+- updated documentation
 #### 1.1.7
 - Support multiple attribute values per custom evaluated key.
 - Support a .value method on all SDKs (contributed by Daniel Sanchez (@thedanchez))

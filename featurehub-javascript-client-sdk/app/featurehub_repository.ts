@@ -12,7 +12,7 @@ export enum Readyness {
 }
 
 export interface ReadynessListener {
-  (state: Readyness): void;
+  (state: Readyness, firstTimeReady: boolean): void;
 }
 
 export interface PostLoadNewFeatureStateAvailableListener {

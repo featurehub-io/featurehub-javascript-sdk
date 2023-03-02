@@ -4,6 +4,7 @@ import { InternalFeatureRepository } from './internal_feature_repository';
 import { AnalyticsCollector } from './analytics';
 import { FeatureStateValueInterceptor } from './interceptors';
 import { FeatureHubRepository, Readyness, ReadynessListener } from './featurehub_repository';
+import { FeatureStateHolder } from './feature_state';
 
 // eslint-disable-next-line no-use-before-define
 export type EdgeServiceProvider = (repository: InternalFeatureRepository, config: FeatureHubConfig) => EdgeService;
@@ -18,15 +19,17 @@ export class FHLog {
   public static fhLog = new FHLog();
 
   public log: FHLogMethod = (...args: any[]) => {
-    console.log(args);
+    console.log('FeatureHub/Log: ', ...args);
   };
 
   public error: FHLogMethod = (...args: any[]) => {
-    console.error(args);
+    console.error('FeatureHub/Error: ', ...args);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public trace: FHLogMethod = (...args: any[]) => {};
+  public trace: FHLogMethod = (...args: any[]) => {
+    // console.log('FeatureHub/Trace: ', ...args);
+  };
 
   public quiet(): void {
     FHLog.fhLog.log = () => {
@@ -36,13 +39,6 @@ export class FHLog {
 
     FHLog.fhLog.trace = () => {
     };
-  }
-
-  /**
-   * @deprecated The method is deprecated. Use quiet() instead.
-   */
-  public Замолчи(): void {
-    this.quiet();
   }
 }
 
@@ -56,6 +52,13 @@ export interface FeatureHubConfig {
   readyness: Readyness;
 
   readiness: Readyness;
+
+  /**
+   * When using a Server Evaluated key, we only have one context so we can get the features directly from the
+   * config
+   * @param name
+   */
+  feature<T = any>(name: string): FeatureStateHolder<T>;
 
   url(): string;
 
@@ -85,6 +88,16 @@ export interface FeatureHubConfig {
 
   // close any server connections
   close(): void;
+
+  /**
+   * Is this config open or closed? If closed it has no edge connections
+   */
+  get closed(): boolean;
+
+  /**
+   * if initialized, it means initialize has been called
+   */
+  get initialized(): boolean;
 
   /**
    * add a callback for when the system is ready

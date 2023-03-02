@@ -130,8 +130,8 @@ describe('apply feature works as expected', () => {
 
     expect(ApplyFeature.determinePercentageKey(ctx, [])).to.eq('user@email');
 
-    ctx.getAttr('a', Arg.any()).returns('one-thing')
-    ctx.getAttr('b', Arg.any()).returns('two-thing')
+    ctx.getAttr('a', Arg.any()).returns('one-thing');
+    ctx.getAttr('b', Arg.any()).returns('two-thing');
 
     expect(ApplyFeature.determinePercentageKey(ctx, ['a', 'b'])).to.eq('one-thing$two-thing');
   });

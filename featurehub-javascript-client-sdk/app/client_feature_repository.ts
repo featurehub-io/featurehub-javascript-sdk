@@ -53,7 +53,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
         case SSEResultState.Failure:
           this.readynessState = Readyness.Failed;
           if (!this._catchAndReleaseMode) {
-            this.broadcastReadynessState();
+            this.broadcastReadynessState(false);
           }
           break;
         case SSEResultState.Feature: {
@@ -69,7 +69,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
         }
           break;
         case SSEResultState.Features: {
-          const features = (data as []).filter((f:any) => f?.key !== undefined ).map((f : any) => f as FeatureState);
+          const features = (data as []).filter((f:any) => f?.key !== undefined).map((f : any) => f as FeatureState);
           if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
             this._catchUpdatedFeatures(features, true);
           } else {
@@ -79,7 +79,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
             this.readynessState = Readyness.Ready;
             if (!this.hasReceivedInitialState) {
               this.hasReceivedInitialState = true;
-              this.broadcastReadynessState();
+              this.broadcastReadynessState(true);
             } else if (updated) {
               this.triggerNewStateAvailable();
             }
@@ -156,7 +156,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
     if (!ignoreNotReadyOnRegister || (ignoreNotReadyOnRegister && this.readynessState != Readyness.NotReady)) {
       // always let them know what it is in case its already ready
-      listener(this.readynessState);
+      listener(this.readynessState, this.hasReceivedInitialState);
     }
 
     return pos;
@@ -168,11 +168,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   notReady(): void {
     this.readynessState = Readyness.NotReady;
-    this.broadcastReadynessState();
+    this.broadcastReadynessState(false);
   }
 
-  public broadcastReadynessState(): void {
-    this._readinessListeners.forEach((l) => l(this.readynessState));
+  public broadcastReadynessState(firstState: boolean): void {
+    this._readinessListeners.forEach((l) => l(this.readynessState, firstState));
   }
 
   public addAnalyticCollector(collector: AnalyticsCollector): void {
