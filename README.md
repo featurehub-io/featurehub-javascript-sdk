@@ -23,6 +23,7 @@ backend servers, Web front-ends (e.g. Vanilla, React, Angular) or Mobile apps (R
 
 To control the feature flags from the FeatureHub Admin console, either use our [demo](https://demo.featurehub.io) version for evaluation or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
 
+
 ## SDK installation
 
 Run to install the dependency: 
@@ -45,16 +46,13 @@ There are 2 ways to request for feature updates via this SDK:
 - **FeatureHub polling client (GET request updates)** 
   
   In this mode, you make a GET request, which you can choose to either do once, when specific things happen in your application,
-  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The SDK defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this. 
+  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The featurehub-javascript-sdk defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this. 
 
 - **SSE (Server Sent Events) realtime updates mechanism**
 
-  In this mode, you will make a connection to the FeatureHub Edge server using the EventSource, and any updates to any features will come through to you in _near realtime_, automatically updating the feature values in the repository. This method is recommended for server (Node) applications. If you decide to use it in the browser applications, there is a known issues in the browsers with Kaspersky antivirus potentially blocking SSE events. [GitHub issue](https://github.com/featurehub-io/featurehub/issues/296)
+  In this mode, you will make a connection to the FeatureHub Edge server using the EventSource, and any updates to any features will come through to you in _near realtime_, automatically updating the feature values in the repository. This method is recommended for server (Node) applications. Featurehub-node-sdk is configured to use SSE by default. If you decide to use it in the browser applications, there is a known issues in the browsers with Kaspersky antivirus potentially blocking SSE events. [GitHub issue](https://github.com/featurehub-io/featurehub/issues/296)
 
-If you have browser code that uses the version earlier than 1.2.0, it still works largely the same (and its unlikely you will need to change anything), see migration notes below. 
                      
-NOTE: the quick starts don't cover Feature Targeting or Strategies or A/B testing.
-
 ## Browser Quick Start
 
 ### Connecting to FeatureHub
@@ -65,27 +63,17 @@ There are 3 steps to connecting:
 3) Request feature state
 
 #### 1. API Key from the FeatureHub Admin Console
-Find and copy your API Key from the FeatureHub Admin Console on the API Keys page - 
-you will use this in your code to configure feature updates for your environments. 
+Find and copy your Server Eval API Key from the FeatureHub Admin Console on the API Keys page - 
+you will use this in your code to configure feature updates for your environments. _Server Side evaluation_ is more suitable when you are using an _insecure client_. (e.g. Browser or Mobile). This means your application is reflecting the actions of a single person. 
 
 It should look similar to this: ```5e61fd62-d4ed-40e0-9cc1-cb3d809f6149/YDr1E4uQGA2Li54fQ0HpmSr2LMv9yHhwzxut2DRO```.
-
-If you are using FeatureHub SaaS, you can get your URL from the same page. 
-
-There are two options 
-
-* _Client Side evaluation_ is intended for use in secure environments (such as microservices, e.g Node JS) and is intended for rapid client side evaluation, per request for example.
-
-* _Server Side evaluation_ is more suitable when you are using an _insecure client_. (e.g. Browser or Mobile). This means your
-application is reflecting the actions of a single person. 
 
 There are other variations of applications where you might want to use a key in a different way from above, we cover more on 
 this [in the main FeatureHub documentation](https://docs.featurehub.io/featurehub/latest/sdks.html#_client_and_server_api_keys)
 
 #### 2. Create FeatureHub config:
 
-We will use a Browser example here, so prefer a Server Evaluated Key (it won't have an `*` in it). In your page's HTML,
-add:
+In your page's HTML, add the following (replacing the urls and keys with your own server details):
 
 ```html
     <meta name="featurehub-url" content="http://localhost:8085"/>
@@ -93,9 +81,7 @@ add:
     <meta name="featurehub-interval" content="15000"/>
 ```
 
-Replacing the urls and keys with whatever your server has goven you. The interval indicates 15 seconds, change it to a lower
-value to see updates faster, a higher value to see them more slowly. This kind of templating makes it particularly easy when you
-are using a server side templating language to expose api keys that change per environment.
+The interval indicates polling frequency to get feature updates and set at 15 seconds. It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments. 
 
 ```typescript
 import {
@@ -103,15 +89,13 @@ import {
 } from 'featurehub-javascript-client-sdk';
 ```
 
-As we are focused on the most common use case, we will use the defaults here - which will create
-a Polling client with a 15 second delay between polls (see below for alternatives). The above
-code configured a server evaluated connection and immediately requests to connect and get the
-features from the server. See below for why you might delay this.
+The above code configured a server evaluated connection and immediately requests to connect and get the
+features from the server. See below for why you might want to delay this.
 
-#### 3. Start using the features
+#### 3. Request feature state
 
-In a normal browser situation, there is a single active connection to the FeatureHub server. 
-Its usual to include ask for the feature state in your conditional code (we use a flag here):
+In a standard browser situation, there is a single active connection to the FeatureHub server. 
+You can ask for the feature state in your conditional code (we use a boolean flag here):
 
 ```typescript
 if (FeatureHub.feature('FEATURE_KEY').enabled) {
@@ -119,10 +103,10 @@ if (FeatureHub.feature('FEATURE_KEY').enabled) {
 }
 ```
 
-There is always some kind of delay between you loading the page, and the initial state of the features loading. If your 
+There is always a possibility of a delay between loading the page and the initial state of the features loading. If your 
 conditional code executes before the features load (e.g. it has never loaded before or the cache we store of features in
-`localStorage` hasn't loaded yet), you will get an "empty" feature - which will generally evaluate all flags to disabled/false,
-and all non-flags to empty.
+`localStorage` hasn't loaded yet), you will get an "empty" feature - which will generally evaluate all boolean flags to disabled/false,
+and all other types of flags to empty.
 
 They may not exist, but you can _react_ to changes in feature state. If you wish parts of your page to render
 when the feature repository gains state, you can listen for the event `addReadynessListener`:
@@ -149,33 +133,28 @@ FeatureHub.feature('FEATURE_KEY').addListener((feature) => {
 
 You can listen to these events at any point, the state of the features doesn't need to be loaded yet.
 
-# Quick Start for NodeJs
+# Quick Start for NodeJS
 
 ## Step 1: Getting an apiKey
 
-Generally for a nodejs application (unless its a batch application) you would use a _client evaluated key_. This means all of the
-Feature targeting information comes down to the server application and it can make complex feature decisions locally. This makes
-it considerably faster, and it means the details about how your features are working is kept private.
+Generally for a nodejs application (unless its a batch application) you would use a _client evaluated key_. _Client Side evaluation_ is intended for use in secure environments (such as microservices, e.g Node JS) and is intended for rapid client side evaluation, per request for example. This also means all of the feature flag targeting information comes down to the server application and it can make complex feature decisions locally.
+
 
 ## Step 2: Setting up your configuration
 
-Its expected that you are going to get the location of your FeatureHub server, your API key and other global information via
-environment variables.
-
-Something like:
+Set the location of your FeatureHub server, your API key and other global information via
+environment variables:
  
-### Initializing
 ```typescript
 const fhConfig = new EdgeFeatureHubConfig(process.env.FEATUREHUB_EDGE_URL, process.env.FEATUREHUB_CLIENT_API_KEY).init();
 ```
 
 In this case, we are creating a global connection and adding it to the startup of the application and telling it to kick off.
 
-We recommend that for a server application, you include the _readyness_ of the FeatureHub Connection in your health check, so
+We recommend that for a server application, you include the _readyness_ of the FeatureHub connection in your health check, so
 don't let the deployment orchestration (be it a FaaS, kubernetes, ECS, etc) let any traffic route to your server unless you
-have a healthy connection to FeatureHub (just like you could with a database). Something like:
+have a healthy connection to FeatureHub (just like you could with a database):
 
-### A health check
 
 ```typescript
 server.get('/health/liveness', (req, res, next) => {
@@ -190,10 +169,11 @@ server.get('/health/liveness', (req, res, next) => {
   next();
 });
 ```
-### Some middleware
+
+### Adding middleware
 
 To personalise the results for each person, FeatureHub uses _Contexts_ - in browser mode there is only one as a 
-browser represents a single user, but in your NodeJS server app, _each request_ can represent a different person.
+browser represents a single user, but in your NodeJS server app, each request can represent a different person.
 Your middleware is typically where you will create the per-request context and personalise it. 
 
 ```typescript
@@ -219,11 +199,10 @@ export function userMiddleware(fhConfig: FeatureHubConfig) {
 }
 ```
 
-# Step 3: Using it in your application
+## Step 3: Using it in your application
 
 
-A simple GET method on / for example could now determine based on the user if they should send one message or
-another:
+In a GET method, determine which message to send: 
 
 ```typescript
 app.get('/', function (req, res) {
@@ -235,19 +214,20 @@ app.get('/', function (req, res) {
 })
 ```
  
-## Beyond the Quick Start: 
+# Beyond the Quick Start: 
 
-In this section we cover a bundle of different variations that crop up, for clients and servers.
+In this section we cover a bundle of different variations for clients and servers.
                     
 ### Does my existing code from 1.x work?
 
-The biggest change we made in 1.2.+ is in the browser. The 99% use case for a browser is a single user, so
+If you have browser code that uses the version earlier than 1.2.0, it still works largely the same and its unlikely you will need to change anything.
+The biggest change we made in 1.2.+ is in the browser handling. The 99% use case for a browser is a single user, so
 that means requests for a new context (`FeatureHub.config.newContext()` for example) always actually give
 you back exactly the same context. And we reference count your requests as well, once your connection is open,
 its open until all requests to create a new context also close them. 
 
 If you actually _want_ a second (or third, or forth) context in a browser, you can absolutely get one, you will
-need to create one - you need to create a new `ServerEvalFeatureContext`.
+need to create one - a new `ServerEvalFeatureContext`.
  
 ### Can the browser initialize like the NodeJS example?
 
@@ -268,15 +248,12 @@ If you want to ensure you can use the global `FeatureHub` class, then simply set
 FeatureHub.set(fhConfig);
 ```
 
-### What is meant by extra detail? How do I use the strategies features of FeatureHub?
+### What is meant by extra detail? How do I use the strategies attached to feature flags?
 
-FeatureHub is able to provide targeting - to support progressive rollouts, targeted rollouts and even
-A/B testing. By creating your config and immediately initializing, you miss the first opportunity to
-customise the connection. You can customise this connection at any time however, particularly in
-browser based information you may not know what information you wish to customise with until after you
-have logged in. More information is provided below in "Rollout Strategies and Client Context".
+FeatureHub is able to provide user targeting - to support progressive rollouts, targeted rollouts and even
+A/B testing. This will require you to pass ClientContext. When you create config and immediately initialize it, it doesn't contain any Client Context information, however you can customise this connection at any time and add the context:
 
-In our step 2 from the Quick Starts you can see that if you wish for example to specify the languages 
+Example to specify the languages  
 and username of the person up front you can do this:
 
 ```typescript
@@ -284,16 +261,15 @@ const fhConfig = EdgeFeatureHubConfig.config(edgeUrl, apiKey);
 fhConfig.newContext().userKey('<some-user-key>').attributeValues('languages', navigator.languages).build();
 ```
 
-This tells the SDK to hold onto that those pieces of information and provide targeted evaluation
+This tells the SDK to hold onto those pieces of information and provide targeted evaluation
 against them. 
 
 **Important Note** - you can change these at any time, just remember to add `.build()` on the end. You also do not require the `init()` because the `.build()` will do it for you.
 
 ### What is the deal with readyness?
 
-Readyness indicates to you when the SDK has received state, or failed to receive state. There is an event on the SDK called
-`addReadynessListener` - and that will tell you two things: what is the state of the readyness and is it the first time that
-it has called you back. You get two pieces of information, the readyness status and whether its the first time its been ready.
+Readyness indicates when the SDK has received state or failed to receive state. There is an event on the SDK called
+`addReadynessListener`. You get two pieces of information, the readyness status and whether its the first time its been ready.
 This is often the information you need to kick your UI into gear in some way.
 
 ```typescript
@@ -334,7 +310,7 @@ mechanism as above.
 
 Please note - you should do this before doing an `EdgeFeatureHubConfig.config()`.
 
-### Changing to SSE - real time streaming updates
+### Changing to SSE (Server Sent Events) - real time streaming updates
 
 If you are keen to see real time updates, then swapping to the Streaming connector is achieved by:
 
@@ -342,7 +318,7 @@ If you are keen to see real time updates, then swapping to the Streaming connect
 EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) => new FeatureHubEventSourceClient(config, repository);
 ```
 
-This is automatically done when you use the node-sdk.
+This is a default method for feature updates in the featurehub-node-sdk.
 
 ## General Documentation
 
