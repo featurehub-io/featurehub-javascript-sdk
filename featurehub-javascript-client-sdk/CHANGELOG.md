@@ -6,7 +6,7 @@ it will always give out the same one.
 happen that is under its control. This ensures the React SDK for example will only have one active poll.
 - removed the alternative log silencing method
 - added meta-tag support for browsers and a new FeatureHub object to access them
-- refreshed the documentation to reflect current ways of accessing things
+- updated documentation
 #### 1.1.7
 - Support multiple attribute values per custom evaluated key.
 - Support a .value method on all SDKs (contributed by Daniel Sanchez (@thedanchez))
