@@ -74,7 +74,7 @@ export class FeatureHub {
         } else if (name === 'featurehub-interval') {
           pollInterval = content;
         } else if (name?.startsWith('featurehub-')) {
-          params.push([name.substring(12), content]);
+          params.push([name.substring(11), content]);
         }
       }
 
