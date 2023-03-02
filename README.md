@@ -46,11 +46,11 @@ There are 2 ways to request for feature updates via this SDK:
 - **FeatureHub polling client (GET request updates)** 
   
   In this mode, you make a GET request, which you can choose to either do once, when specific things happen in your application,
-  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The featurehub-javascript-sdk defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this. 
+  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The `featurehub-javascript-client-sdk` defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this. 
 
 - **SSE (Server Sent Events) realtime updates mechanism**
 
-  In this mode, you will make a connection to the FeatureHub Edge server using the EventSource, and any updates to any features will come through to you in _near realtime_, automatically updating the feature values in the repository. This method is recommended for server (Node) applications. Featurehub-node-sdk is configured to use SSE by default. If you decide to use it in the browser applications, there is a known issues in the browsers with Kaspersky antivirus potentially blocking SSE events. [GitHub issue](https://github.com/featurehub-io/featurehub/issues/296)
+  In this mode, you will make a connection to the FeatureHub Edge server using the EventSource, and any updates to any features will come through to you in _near realtime_, automatically updating the feature values in the repository. This method is recommended for server (Node) applications. `featurehub-javascript-node-sdk` is configured to use SSE by default. If you decide to use SSE in the browser applications, there is a known issues in the browsers with Kaspersky antivirus potentially blocking SSE events. [GitHub issue](https://github.com/featurehub-io/featurehub/issues/296)
 
                      
 ## Browser Quick Start
