@@ -3,7 +3,8 @@ import {
   EdgeFeatureHubConfig,
   EdgeServiceProvider,
   FeatureHubPollingClient,
-  Readyness
+  Readyness,
+  FeatureHub as fh
 } from "featurehub-javascript-client-sdk";
 import {
   Accessor,
@@ -75,10 +76,12 @@ const FeatureHub: Component<Props> = (props): JSXElement => {
   const config = createMemo(() => {
     console.info("FeatureHub Solid SDK: Creating config and context...");
 
-    const fhConfig = new EdgeFeatureHubConfig(props.url, props.apiKey);
-    fhConfig.edgeServiceProvider(provider);
+    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = provider;
+    const fhConfig = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+    const context = fhConfig.newContext();
+    fh.set(fhConfig, context);
 
-    setClient(fhConfig.newContext()); // immediately assign anonymous context
+    setClient(context); // immediately assign anonymous context
 
     if (listenerId) {
       fhConfig.removeReadinessListener(listenerId);
@@ -101,10 +104,10 @@ const FeatureHub: Component<Props> = (props): JSXElement => {
       /*
         Observed that this switch case gets called again at an unexpected time with a readiness value
         that is not in sync with the readiness of the config client repository object. To clarify, this
-        unexpected, additional call happens AFTER entering into a Readyness.Ready state. Because of that, 
+        unexpected, additional call happens AFTER entering into a Readyness.Ready state. Because of that,
         we add ready guards to make sure the console messages get sent when those two values are in sync.
 
-        To verify this, simply log the current value of readiness along with the FeatureHub config object here, 
+        To verify this, simply log the current value of readiness along with the FeatureHub config object here,
         rebuild the SDK and inspect the readiness value of the underlying _clientRepository object in the browser.
       */
       switch (readiness()) {
