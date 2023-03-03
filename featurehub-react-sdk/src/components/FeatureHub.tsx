@@ -4,11 +4,12 @@ import {
   EdgeFeatureHubConfig,
   FeatureHubPollingClient,
   ReadinessListenerHandle,
-  Readyness
+  Readyness,
+  FeatureHub as fh, FeatureHubConfig
 } from "featurehub-javascript-client-sdk";
 
 export type UseFeatureHub = {
-  readonly config: EdgeFeatureHubConfig;
+  readonly config: FeatureHubConfig;
   readonly client: ClientContext;
 };
 
@@ -16,8 +17,6 @@ export type UseFeatureHub = {
 // @ts-ignore
 export const FeatureHubContext = createContext<UseFeatureHub>(undefined);
 FeatureHubContext.displayName = "FeatureHub";
-
-let config: EdgeFeatureHubConfig;
 
 type Props = {
   /** The url to the running instance of the FeatureHub EDGE API */
@@ -54,19 +53,19 @@ export default function FeatureHub({
   pollInterval = 60000,
   children
 }: Props): JSX.Element {
-  const fhConfig = useMemo(() => {
-    if (!config) {
-      // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
-      // Noticed that React has a tendency to create two with the nature of the render cycles
-      // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
-      console.info("FeatureHub React SDK: Creating config.");
-      config = new EdgeFeatureHubConfig(url, apiKey);
-      config.edgeServiceProvider((repo, c) => new FeatureHubPollingClient(repo, c, pollInterval));
-    }
-    return config;
+  useMemo(() => {
+    // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
+    // Noticed that React has a tendency to create two with the nature of the render cycles
+    // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
+    console.info("FeatureHub React SDK: Creating config.");
+    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = ((repo, c) => new FeatureHubPollingClient(repo, c, pollInterval));
+    const config = EdgeFeatureHubConfig.config(url, apiKey);
+    const context = config.newContext();
+    fh.set(config, context);
+    context.build();
   }, [url, apiKey, pollInterval]);
 
-  const [client, setClient] = useState(fhConfig.newContext());
+  const [client] = useState(fh.context);
   const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
 
   useEffect(() => {
@@ -88,29 +87,28 @@ export default function FeatureHub({
           }
 
           console.info("FeatureHub React SDK: Connection ready! Using context with userKey set.");
-          setClient(await client.userKey(userInfo).build());
+          await client.userKey(userInfo).build(); // still the same userKey, doesn't change
         }
       }
     };
 
     if (activeListenerIdRef.current !== null) {
       // Remove potential previous existing listener (for use-case when the username updates while component still mounted)
-      fhConfig.removeReadinessListener(activeListenerIdRef.current);
+      fh.config.removeReadinessListener(activeListenerIdRef.current);
     }
 
-    const listenerId = fhConfig.addReadinessListener(listener, true);
+    const listenerId = fh.config.addReadinessListener(listener, true);
     activeListenerIdRef.current = listenerId; // Keep track of registered listener
-    fhConfig.init();
 
     return () => {
       console.warn("FeatureHub React SDK: Context unmounting. Terminating connection!");
-      fhConfig.removeReadinessListener(listenerId);
-      fhConfig.close();
+      fh.config.removeReadinessListener(listenerId);
+      fh.config.close();
     };
   }, [userKey]);
 
   return (
-    <FeatureHubContext.Provider value={{ config: fhConfig, client }}>
+    <FeatureHubContext.Provider value={{ config: fh.config, client }}>
       {children}
     </FeatureHubContext.Provider>
   );

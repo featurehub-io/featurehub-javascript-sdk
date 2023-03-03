@@ -31,7 +31,7 @@ function App() {
         - docker run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
         - podman run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
 
-        Once you go through the intial setup wizard/guide to create a service account + permissions, 
+        Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
     <FeatureHub
@@ -86,7 +86,7 @@ function Main() {
 
         <p>The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText}`}</code></p>
         <p>The value of <code>text_colour</code> feature is <code>{textColour}</code></p>
-        
+
         <p style={{ color: textColour} }>This paragraph color should be {textColour}</p>
         <p>{displayText}</p>
       </div>
