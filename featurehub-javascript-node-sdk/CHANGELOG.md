@@ -1,3 +1,6 @@
+#### 1.2.0
+- update dependency to use featurehub-javascript-client-sdk v 1.2.0
+- documentation update
 #### 1.1.7
 - Support multiple attribute values per custom evaluated key.
 - Support a .value method on all SDKs (contributed by Daniel Sanchez (@thedanchez))
