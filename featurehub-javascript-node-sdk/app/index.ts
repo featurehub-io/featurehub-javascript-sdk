@@ -4,7 +4,7 @@ import {
   NodejsOptions,
   PollingBase,
   FeatureHubEventSourceClient,
-  PollingService, FeaturesFunction, FeatureEnvironmentCollection
+  PollingService, FeaturesFunction, FeatureEnvironmentCollection, EdgeFeatureHubConfig
 } from 'featurehub-javascript-client-sdk';
 import { URL } from 'url';
 import { RequestOptions } from 'https';
@@ -141,4 +141,4 @@ class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
 }
 
 GoogleAnalyticsCollector.googleAnalyticsClientProvider = () => new NodejsGoogleAnalyticsApiClient();
-
+EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) => new FeatureHubEventSourceClient(config, repository);
