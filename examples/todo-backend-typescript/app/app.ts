@@ -2,15 +2,13 @@ import * as restify from 'restify';
 import * as corsMiddleware from 'restify-cors-middleware2';
 import { ITodoApiController, Todo, TodoApiRouter } from "./generated-interface";
 import {
-  EdgeFeatureHubConfig,
   ClientContext,
-  Readyness,
+  EdgeFeatureHubConfig,
   featurehubMiddleware,
-  GoogleAnalyticsCollector,
+  Readyness,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
-  StrategyAttributePlatformName,
-  FeatureHubPollingClient, fhLog
+  StrategyAttributePlatformName
 } from 'featurehub-javascript-node-sdk';
 
 if (process.env.FEATUREHUB_EDGE_URL === undefined || process.env.FEATUREHUB_CLIENT_API_KEY === undefined) {
@@ -24,6 +22,10 @@ if (process.env.FEATUREHUB_EDGE_URL === undefined || process.env.FEATUREHUB_CLIE
 // fhLog.trace = (...args: any) => console.log(args);
 const fhConfig = new EdgeFeatureHubConfig(process.env.FEATUREHUB_EDGE_URL, process.env.FEATUREHUB_CLIENT_API_KEY);
 
+fhConfig.addReadinessListener((ready, firstTime) => {
+
+}, true);
+
 // Add override to use polling client
 // const FREQUENCY = 5000; // 5 seconds
 // fhConfig.edgeServiceProvider((repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY));
@@ -35,6 +37,18 @@ fhConfig.init();
 
 
 const api = restify.createServer();
+
+api.get('/health/liveness', (req, res, next) => {
+  if (fhConfig.readyness === Readyness.Ready) {
+    res.status(200);
+    res.send('ok');
+  } else {
+    res.send('not ready');
+    res.status(500);
+  }
+
+  next();
+});
 
 const cors = corsMiddleware({origins: ['*'], allowHeaders: ['baggage'], exposeHeaders: []});
 
@@ -168,16 +182,6 @@ process.on('SIGINT', () => {
 	process.exit(0);
 });
 
-let initialized = false;
-console.log("Waiting for features...");
-fhConfig.addReadynessListener((ready) => {
-	if (!initialized) {
-		if (ready == Readyness.Ready) {
-			console.log("Features are available, starting server...");
-			initialized = true;
-			api.listen(port, function () {
-				console.log('server is listening on port', port);
-			});
-		}
-	}
+api.listen(port, function () {
+  console.log('server is listening on port', port);
 });
