@@ -13,20 +13,20 @@ and so  the code is currently commented out.
 2. You need to setup a feature of type "Feature flag - string" in the FeatureHub Admin Console.
 Set feature key to `SUBMIT_COLOR_BUTTON`.
 
-3. In the `public/featurehub-config.json` file specify the following: 
+3. In the `public/index.html` file specify the following:
 
 * FeatureHub Edge server Url. It will depend on your installation, e.g.:
 
- `"fhEdgeUrl": "http://localhost:8903",`
+ `"<meta name="featurehub-url" content="http://localhost:8903"/>`
 
 * You are required to have a Service Account created in the FeatureHub Admin Console with the "read" permissions for your desired environment.
 Once this is set, copy the API Key (Server eval key) from the API Keys page for your desired environment and set it as an environment variable:
 
- `"fhApiKey": "default/3f7a1a34-642b-4054-a82f-1ca2d14633ed/4SJ1FNtm4irPfdePtqUJQ4ebOFXvPFXcRcx9OWDa"`
+ `meta name="featurehub-apiKey" content="3f7a1a34-642b-4054-a82f-1ca2d14633ed/4SJ1FNtm4irPfdePtqUJQ4ebOFXvPFXcRcx9OWDa"/>`
 
-* Specify the backend Todo server URL:
-
- `"todoServerBaseUrl": "http://localhost:8099",`
+* Optionally you can change the polling interval and a test user key
+<meta name="featurehub-interval" content="15000"/>
+<meta name="featurehub-userKey" content="fred"/>
 
 
 4. If you like to see events fire in your Google Analytics, you will require to have valid GA Tracking ID, e.g. 'UA-XXXXXXXXX-X'.
@@ -52,11 +52,11 @@ Install dependencies
 
 `npm install`
 
-Run the back-end server: 
+Run the back-end server:
 
 `cd ../todo-backend-typescript`
 
-provide your Edge Url and API Key  in `run.sh` file (this is required as backened server example also connects to FeatureHub for demo purposes)  
+provide your Edge Url and API Key  in `run.sh` file (this is required as backened server example also connects to FeatureHub for demo purposes)
 
 `npm install && npm run-script start`
 
