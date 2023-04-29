@@ -35,7 +35,7 @@ export interface ClientContext {
   clear(): ClientContext;
   build(): Promise<ClientContext>;
 
-  getAttr(key: string, defaultValue: string): string;
+  getAttr(key: string, defaultValue?: string): string | undefined;
   getAttrs(key: string): Array<string>;
   getNumber(name: string): number | undefined;
   getString(name: string): string | undefined;
@@ -44,7 +44,7 @@ export interface ClientContext {
   getFlag(name: string): boolean | undefined;
   getBoolean(name: string): boolean | undefined;
 
-  defaultPercentageKey(): string;
+  defaultPercentageKey(): string | undefined;
 
   feature<T = any>(name: string): FeatureStateHolder<T>;
   isEnabled(name: string): boolean;

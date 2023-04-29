@@ -13,7 +13,7 @@ export interface GoogleAnalyticsApiClient {
 
 class BrowserGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
   cid(other: Map<string, string>): string {
-    return other.get('cid');
+    return other.get('cid') || '';
   }
 
   postBatchUpdate(batchData: string): void {
@@ -27,7 +27,7 @@ type GoogleAnalyticsApiClientProvider = () => GoogleAnalyticsApiClient;
 
 export class GoogleAnalyticsCollector implements AnalyticsCollector {
   private uaKey: string;
-  private _cid: string;
+  private _cid: string | undefined;
   private apiClient: GoogleAnalyticsApiClient;
 
   public static googleAnalyticsClientProvider: GoogleAnalyticsApiClientProvider =
@@ -60,19 +60,19 @@ export class GoogleAnalyticsCollector implements AnalyticsCollector {
     }
 
     const ev = (other !== undefined && other !== null
-      && other.get('gaValue') !== undefined) ? ('&ev=' + encodeURI(other.get('gaValue'))) : '';
+      && other.get('gaValue') !== undefined) ? ('&ev=' + encodeURI(other.get('gaValue') || '')) : '';
     const baseForEachLine = 'v=1&tid=' + this.uaKey
       + '&cid=' + finalCid + '&t=event&ec=FeatureHub%20Event&ea=' + encodeURI(action) + ev + '&el=';
 
     let postString = '';
     featureStateAtCurrentTime.forEach((f) => {
-      let line = null;
+      let line : string | undefined = undefined;
       if (f.getType() === FeatureValueType.Boolean) {
         line = f.getBoolean() === true ? 'on' : 'off';
       } else if (f.getType() === FeatureValueType.String) {
         line = f.getString();
       } else if (f.getType() === FeatureValueType.Number) {
-        line = f.getNumber().toString();
+        line = f.getNumber()?.toString();
       }
 
       if (line !== null && line !== undefined) {

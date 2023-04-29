@@ -102,7 +102,7 @@ export interface FeatureStateHolder<T = any> {
   triggerListeners(feature?: FeatureStateHolder<T>): void;
 
   /** the value of the feature flag */
-  get value(): T;
+  get value(): T | undefined;
 
   /**
    * getVersion: returns feature update version number (every change on the feature causes its version to update).

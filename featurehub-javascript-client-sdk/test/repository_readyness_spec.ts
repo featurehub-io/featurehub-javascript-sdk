@@ -19,7 +19,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
     const fhConfig = new EdgeFeatureHubConfig('http://localhost:8080', '123*123');
     fhConfig.repository(repo);
     let readinessTrigger = 0;
-    let lastReadiness: Readyness = undefined;
+    let lastReadiness: Readyness | undefined = undefined;
     const triggerHandler = fhConfig.addReadinessListener((state) => {
       lastReadiness = state;
       readinessTrigger++;
@@ -50,7 +50,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
   it('should start not ready, receive a list of features and become ready and on failure be failed', () => {
 
     let readinessTrigger = 0;
-    let lastReadiness: Readyness = undefined;
+    let lastReadiness: Readyness | undefined = undefined;
     repo.addReadinessListener((state) => {
       lastReadiness = state;
       return readinessTrigger++;
@@ -77,7 +77,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
 
   it('we should be able to be ready and then be still ready on a bye', () => {
     let readinessTrigger = 0;
-    let lastReadiness: Readyness = undefined;
+    let lastReadiness: Readyness | undefined = undefined;
     repo.addReadinessListener((state) => {
       lastReadiness = state;
       return readinessTrigger++;
@@ -95,7 +95,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
 
   it('should allow us to register disinterest in the initial notready status', () => {
     let readinessTrigger = 0;
-    let lastReadiness: Readyness = undefined;
+    let lastReadiness: Readyness | undefined = undefined;
 
     const listener = (state) => {
       lastReadiness = state;

@@ -40,11 +40,13 @@ export function w3cBaggageHeader({ repo, values, header }: BaggageHeader): strin
       Array.from(values)
         .map(e => e[0] + '=' + (e[1] ? encodeURIComponent(e[1]) : ''))
         .join(','));
-  } else {
+  } else if (repo) {
     features = encodeURIComponent(
       Array.from(repo.simpleFeatures().entries())
         .map(e => e[0] + '=' + (e[1] ? encodeURIComponent(e[1]) : ''))
         .join(','));
+  } else {
+    return undefined;
   }
 
   return createBaggageHeader(features, newHeader);

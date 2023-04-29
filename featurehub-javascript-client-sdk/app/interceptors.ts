@@ -3,7 +3,7 @@ import { InternalFeatureRepository } from './internal_feature_repository';
 export class InterceptorValueMatch {
   public value: string | undefined;
 
-  constructor(value: string) {
+  constructor(value: string | undefined) {
     this.value = value;
   }
 }

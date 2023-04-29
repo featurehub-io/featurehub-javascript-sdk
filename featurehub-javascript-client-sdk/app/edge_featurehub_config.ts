@@ -17,11 +17,11 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _clientEval: boolean;
   private _originalUrl: string;
   private _url: string;
-  private _repository: InternalFeatureRepository;
-  private _edgeService: EdgeServiceProvider;
+  private _repository: InternalFeatureRepository | undefined;
+  private _edgeService: EdgeServiceProvider | undefined;
   private _edgeServices: Array<EdgeService> = [];
   private _clientContext: ServerEvalFeatureContext | undefined;
-  private _initialized: boolean | undefined;
+  private _initialized = false;
 
   static defaultEdgeServiceSupplier: EdgeServiceProvider = (repository, config) =>
     new FeatureHubPollingClient(repository, config, 30000);
@@ -130,7 +130,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     if (!this._clientContext) {
       this._clientContext =
         new ServerEvalFeatureContext(repository, () =>
-          this.getOrCreateEdgeService(edgeService, repository));
+          this.getOrCreateEdgeService(edgeService!, repository));
     }
 
     // we are reference counting the client

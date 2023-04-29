@@ -1,4 +1,4 @@
-import { ClientContext, ClientFeatureRepository, FeatureState, FeatureValueType, SSEResultState } from '../app';
+import { ClientContext, ClientFeatureRepository, FeatureValueType, SSEResultState } from '../app';
 import { expect } from 'chai';
 import { Substitute } from '@fluffy-spoon/substitute';
 
@@ -84,7 +84,8 @@ describe('repository reacts to single feature changes as expected', () => {
 
     repo.notify(SSEResultState.DeleteFeature, { id: '1', key: 'banana' });
 
-    expect(repo.hasFeature('banana').getRawJson()).to.be.undefined;
+    expect(repo.hasFeature('banana')).to.not.be.undefined;
+    expect(repo.hasFeature('banana')?.getRawJson()).to.be.undefined;
   });
 
   it('should react to a single feature changing', () => {
@@ -97,7 +98,7 @@ describe('repository reacts to single feature changes as expected', () => {
     repo.getFeatureState('peach').addListener(() => triggerPeach++);
 
     const features = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Json, value: '{}' },
+      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Json, value: '{}', l: false },
       { id: '2', key: 'pear', version: 1, type: FeatureValueType.Json, value: '"nashi"' },
       {
         id: '3', key: 'peach', version: 1, type: FeatureValueType.Json,
@@ -108,7 +109,7 @@ describe('repository reacts to single feature changes as expected', () => {
     repo.notify(SSEResultState.Features, features);
 
     repo.notify(SSEResultState.Feature, {
-      id: '1', key: 'banana',
+      id: '1', key: 'banana', l: false,
       version: 2, type: FeatureValueType.Json, value: '{}'
     });
 
@@ -116,7 +117,7 @@ describe('repository reacts to single feature changes as expected', () => {
     expect(triggerBanana).to.eq(1);
 
     repo.notify(SSEResultState.Feature, {
-      id: '1', key: 'banana',
+      id: '1', key: 'banana', l: true,
       version: 3, type: FeatureValueType.Json, value: '"yellow"'
     });
 
@@ -146,7 +147,11 @@ describe('repository reacts to single feature changes as expected', () => {
     repo.notify(SSEResultState.Features, features);
     expect(triggerRhubarb).to.eq(1);
     repo.feature('rhubarb').removeListener(handle);
-    repo.notify(SSEResultState.Features, []);
+    const features1 = [
+      { id: '1', key: 'rhubarb', version: 2, type: FeatureValueType.Number, value: 17.8 },
+    ];
+    repo.notify(SSEResultState.Features, features1);
     expect(triggerRhubarb).to.eq(1);
+    expect(repo.feature('rhubarb').num).to.eq(17.8);
   });
 });

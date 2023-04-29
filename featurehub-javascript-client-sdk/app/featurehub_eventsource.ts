@@ -47,15 +47,15 @@ export declare namespace EventSource {
 export type EventSourceProvider = (url: string, eventSourceInitDict?: EventSource.EventSourceInitDict) => EventSource;
 
 export class FeatureHubEventSourceClient implements EdgeService {
-  private eventSource: EventSource;
+  private eventSource: EventSource | undefined;
   private readonly _config: FeatureHubConfig;
   private readonly _repository: InternalFeatureRepository;
-  private _header: string;
+  private _header: string | undefined;
   private _staleEnvironmentTimeoutId: any;
-  private _stopped: boolean;
+  private _stopped: boolean = false;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
-    const realUrl = dict.headers && dict.headers['x-featurehub'] ?
+    const realUrl = dict?.headers && dict.headers['x-featurehub'] ?
       url + '?xfeaturehub=' + encodeURI(dict.headers['x-featurehub']) : url;
     return new EventSource(realUrl, dict);
   };
@@ -87,9 +87,9 @@ export class FeatureHubEventSourceClient implements EdgeService {
 
     this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(this._config.url(), options);
 
-    [SSEResultState.Features, SSEResultState.Feature, SSEResultState.DeleteFeature,
+    for (const name of [SSEResultState.Features, SSEResultState.Feature, SSEResultState.DeleteFeature,
       SSEResultState.Bye, SSEResultState.Failure, SSEResultState.Ack,
-      SSEResultState.Config].forEach((name) => {
+      SSEResultState.Config]) {
       const fName = name.toString();
       this.eventSource.addEventListener(fName,
         e => {
@@ -105,7 +105,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
             fhLog.error('SSE: Failed to understand result', e);
           }
         });
-    });
+    }
 
     this.eventSource.onerror = (e: any) => {
       if (!this._stopped) {

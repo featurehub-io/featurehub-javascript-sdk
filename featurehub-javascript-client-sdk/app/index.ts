@@ -80,8 +80,11 @@ export class FeatureHub {
 
       if (apiKeys.length > 0) {
         if (pollInterval) {
+          const _interval = pollInterval;
           fhLog.trace('setting polling interval to', pollInterval);
-          EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repo, config) => new FeatureHubPollingClient(repo, config, parseInt(pollInterval));
+          EdgeFeatureHubConfig.defaultEdgeServiceSupplier =
+            (repo, config) =>
+              new FeatureHubPollingClient(repo, config, parseInt(_interval));
         }
 
         const config = EdgeFeatureHubConfig.config(url || 'https://app.featurehub.io/vanilla', apiKeys[0]);

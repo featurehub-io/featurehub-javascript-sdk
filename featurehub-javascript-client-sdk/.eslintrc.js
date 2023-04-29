@@ -23,6 +23,8 @@ module.exports = {
     "filenames-simple/naming-convention": ["error", {
       "rule": "snake_case"
     }],
+	  "@typescript-eslint/no-non-null-assertion": "off",
+	  "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/no-var-requires": "off",
     "@typescript-eslint/naming-convention": [
       "error",

@@ -49,7 +49,6 @@ describe('test the strategy matchers', () => {
   it('the string strategy matcher should work as expected', () => {
     type = RolloutStrategyFieldType.String;
 
-    equals(RolloutStrategyAttributeConditional.Equals, ['a', 'b'], null, false);
     equals(RolloutStrategyAttributeConditional.Equals, ['a', 'b'], 'a', true);
     equals(RolloutStrategyAttributeConditional.Includes, ['a', 'b'], 'a', true);
     equals(RolloutStrategyAttributeConditional.NotEquals, ['a', 'b'], 'a', false);

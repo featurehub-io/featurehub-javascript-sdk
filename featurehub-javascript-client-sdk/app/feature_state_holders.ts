@@ -9,9 +9,9 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   protected _key: string;
   protected listeners: Map<number, FeatureListener> = new Map<number, FeatureListener>();
   protected _repo: InternalFeatureRepository;
-  protected _ctx: ClientContext;
+  protected _ctx: ClientContext | undefined;
   // eslint-disable-next-line no-use-before-define
-  protected parentHolder: FeatureStateBaseHolder;
+  protected parentHolder: FeatureStateBaseHolder | undefined;
 
   constructor(repository: InternalFeatureRepository, key: string, existingHolder?: FeatureStateBaseHolder) {
     if (existingHolder !== null && existingHolder !== undefined) {
@@ -26,19 +26,19 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getKey();
   }
 
-  get str(): string {
+  get str(): string | undefined {
     return this.getString();
   }
 
-  get flag(): boolean {
+  get flag(): boolean | undefined {
     return this.getFlag();
   }
 
-  get num(): number {
+  get num(): number | undefined {
     return this.getNumber();
   }
 
-  get rawJson(): string {
+  get rawJson(): string | undefined {
     return this.getRawJson();
   }
 
@@ -58,7 +58,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getVersion();
   }
 
-  get type(): FeatureValueType {
+  get type(): FeatureValueType | undefined {
     return this.getType();
   }
 
@@ -96,7 +96,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getBoolean();
   }
 
-  public getKey(): string | undefined {
+  public getKey(): string {
     return this._key;
   }
 
@@ -117,7 +117,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return val !== undefined && val != null;
   }
 
-  getFeatureState(): FeatureState {
+  getFeatureState(): FeatureState | undefined {
     return this.featureState();
   }
 
@@ -125,11 +125,11 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   /// as it is dereferenced via the parentHolder
   setFeatureState(fs: FeatureState | undefined): boolean {
     const existingValue = this._getValue();
-    const existingLocked = this.featureState()?.l;
+    const existingLocked = this.locked;
 
     this.internalFeatureState = fs;
 
-    const changed = existingLocked !== this.featureState()?.l || existingValue !== this._getValue();
+    const changed = existingLocked !== this.featureState()?.l || existingValue !== this._getValue(fs?.type);
 
     if (changed) {
       this.notifyListeners();
@@ -153,12 +153,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.featureState()?.type;
   }
 
-  getVersion(): number | undefined {
-    return this.featureState() === undefined ? undefined : this.featureState().version;
+  getVersion(): number {
+    const version1 = this.featureState()?.version;
+    return version1 !== undefined ? version1 : -1;
   }
 
   isLocked(): boolean {
-    return this.featureState() === undefined ? undefined : this.featureState().l;
+    return this.featureState() === undefined ? false : this.featureState()!.l!;
   }
 
   triggerListeners(feature: FeatureStateHolder): void {
@@ -194,6 +195,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   }
 
   private _getValue(type?: FeatureValueType, parseJson = false): any | undefined {
+    if (!type) {
+      type = this.getType();
+    }
+    if (!type) {
+      return undefined;
+    }
+
     if (!this.isLocked()) {
       const intercept = this._repo.valueInterceptorMatched(this._key);
 
@@ -203,12 +211,12 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     }
 
     const featureState = this.featureState();
-    if (!featureState || (type != null && featureState.type !== type)) {
+    if (!featureState || (featureState.type !== type)) {
       return undefined;
     }
 
-    if (this._ctx != null) {
-      const matched = this._repo.apply(featureState.strategies, this._key, featureState.id, this._ctx);
+    if (this._ctx != null && featureState.strategies?.length) {
+      const matched = this._repo.apply(featureState!.strategies || [], this._key, featureState.id, this._ctx);
 
       if (matched.matched) {
         return this._castType(type, matched.value, parseJson);
@@ -218,7 +226,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return featureState?.value;
   }
 
-  private _castType(type: FeatureValueType, value: any, parseJson = false): any | undefined {
+  private _castType(type: FeatureValueType, value?: any, parseJson = false): any | undefined {
     if (value == null) {
       return undefined;
     }

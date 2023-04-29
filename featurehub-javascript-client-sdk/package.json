@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-client-sdk",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "FeatureHub client/browser SDK",
   "author": "info@featurehub.io",
   "sideEffects": false,
@@ -31,7 +31,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "npm run clean && npm run tsc tsconfig.json && npm run tsc tsconfig-es.json",
+    "build": "npm run clean && npm run tsc tsconfig-build.json && npm run tsc tsconfig-es.json",
     "clean": "rm -rf dist lib && rm -rf app/*.js app/*.d.ts app/*.map",
     "build:watch": "npm run build -- -- -w",
     "mocha": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' node ./node_modules/mocha/bin/mocha --config mocharc.yml",

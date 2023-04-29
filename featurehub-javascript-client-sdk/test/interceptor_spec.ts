@@ -19,7 +19,7 @@ class KeyValueInterceptor implements FeatureStateValueInterceptor {
   }
 
   matched(key: string): InterceptorValueMatch {
-    return key === this.key ? new InterceptorValueMatch(this.value) : undefined;
+    return key === this.key ? new InterceptorValueMatch(this.value) : new InterceptorValueMatch(undefined);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

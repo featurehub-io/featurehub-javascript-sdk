@@ -28,7 +28,7 @@ describe('apply feature works as expected', () => {
   });
 
   it('should always return false when there is an undefined context', () => {
-    const found = app.apply([{} as FeatureRolloutStrategy], 'key', 'fid', undefined);
+    const found = app.apply([{} as FeatureRolloutStrategy], 'key', 'fid', Substitute.for<ClientContext>());
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
