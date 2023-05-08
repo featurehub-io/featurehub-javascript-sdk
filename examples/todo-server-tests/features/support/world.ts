@@ -1,5 +1,9 @@
 import globalAxios, { AxiosResponse } from "axios";
-import { FeatureStateUpdate, FeatureUpdater, FeatureStateHolder } from "featurehub-javascript-node-sdk";
+import {
+  FeatureStateUpdate,
+  FeatureUpdater,
+  FeatureStateHolder, NodejsFeaturePostUpdater
+} from "featurehub-javascript-node-sdk";
 import { Config } from "./config";
 import { expect } from "chai";
 import waitForExpect from "wait-for-expect";
@@ -31,11 +35,13 @@ export const responseToRecord = function (response: AxiosResponse) {
   };
 };
 
-class CustomWorld {
+let requestId: number = 1;
 
+export class CustomWorld {
   private variable: number;
   private user: string;
   private response: boolean;
+
 
   constructor() {
     this.variable = 0;
@@ -65,29 +71,55 @@ class CustomWorld {
   }
 
   async updateFeatureOnlyValue(name: string, newValue: any) {
-    const featureUpdater = new FeatureUpdater(Config.fhConfig);
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
     this.response = await featureUpdater.updateKey(name, {
       value: newValue,
     } as FeatureStateUpdate);
     console.log(`Feature ${name}: new value ${newValue} (no lock change) : result ${this.response}`);
   }
 
-  async lockFeature(name: string) {
-    const featureUpdater = new FeatureUpdater(Config.fhConfig);
+  async justLockFeature(name: string, locked: boolean = true) {
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
     this.response = await featureUpdater.updateKey(name, {
-      lock: true,
+      lock: locked,
+    } as FeatureStateUpdate);
+    console.log(`Feature ${name}: lock true, response is ${this.response}`);
+  }
+
+  async lockFeature(name: string, locked: boolean = true) {
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
+    const timeout = process.env.FEATUREHUB_POLLING_INTERVAL ? (parseInt(process.env.FEATUREHUB_POLLING_INTERVAL) + 4000) : 7000;
+    const interval = 1000;
+    let counter = 0;
+    const self=this;
+    this.response = await featureUpdater.updateKey(name, {
+      lock: locked,
     } as FeatureStateUpdate);
     console.log(`Feature ${name}: lock true, response is ${this.response}`);
     console.log(`Feature ${name}: waiting for lock to be true`);
+    const ctx = await Config.fhConfig.newContext().build();
     await waitForExpect(async () => {
-      const feature: FeatureStateHolder = Config.fhConfig.repository().feature(name);
-      console.log(`Lock is ${feature.isLocked()}`);
-      expect(feature.isLocked()).to.equal(true);
-    }, 10000, 1000);
+      const feature: FeatureStateHolder = ctx.feature(name);
+      console.log(`Lock is ${feature.isLocked()} vs ${locked}`);
+      counter++;
+      if ((counter % 2 == 0) && (feature.isLocked() !== locked)) { // might have failed due to a conflicting update
+        await this.justLockFeature(name, locked);
+      }
+      expect(feature.isLocked()).to.equal(locked);
+    }, timeout, interval);
+  }
+
+  addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
+    const updater = new FeatureUpdater(Config.fhConfig);
+    (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
+      req.headers['Baggage'] = `cuke-req-id=${requestId}`;
+      requestId ++;
+    }
+    return updater;
   }
 
   async unlockAndUpdateFeature(name: string, newValue: any) {
-    const featureUpdater = new FeatureUpdater(Config.fhConfig);
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
     this.response = await featureUpdater.updateKey(name, {
       lock: false,
       value: newValue,
@@ -98,6 +130,27 @@ class CustomWorld {
   getFeatureUpdateResponse() {
     return this.response;
   }
+
+  async updateFeature(name: string, newValue: any) {
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
+
+    const response = await featureUpdater.updateKey(name, {
+      lock: false,
+      value: newValue,
+    } as FeatureStateUpdate);
+    console.log(`Feature ${name}: lock: false, new value ${newValue}, response is ${response}`);
+    expect(response).to.equal(true);
+  }
+
+  async setFeatureToNotSet(name: string) {
+    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
+    const response = await featureUpdater.updateKey(name, {
+      lock: false,
+      updateValue: true
+    } as FeatureStateUpdate);
+    console.log(`Feature ${name}: lock: false, clear feature, response is ${response}`);
+  }
+
 
 }
 

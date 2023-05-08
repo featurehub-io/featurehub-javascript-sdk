@@ -26,7 +26,7 @@ export type FeatureUpdaterProvider = () => FeatureUpdatePostManager;
 
 export class FeatureUpdater {
   private sdkUrl: string;
-  private manager: FeatureUpdatePostManager;
+  public readonly manager: FeatureUpdatePostManager;
 
   public static featureUpdaterProvider: FeatureUpdaterProvider = () => new BrowserFeaturePostUpdater();
 

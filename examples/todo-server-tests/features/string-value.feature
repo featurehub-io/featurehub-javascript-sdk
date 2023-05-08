@@ -1,3 +1,4 @@
+@FEATURE_TITLE_TO_UPPERCASE_OFF
 Feature: Checks string feature
 
   @FEATURE_STRING_MILK
@@ -35,8 +36,12 @@ Feature: Checks string feature
     When I have added a new to-do item "buy"
     Then my list of todos should contain "buy"
 
+    @stringlock
   Scenario: Check string lock function
-    Given I lock the feature "FEATURE_STRING"
+    And I set the flag "FEATURE_STRING" to "ugg-boots"
+    Then feature FEATURE_STRING is unlocked and "ugg-boots"
+    And I lock the feature "FEATURE_STRING"
+    Then feature FEATURE_STRING is locked and "ugg-boots"
     When I attempt to update feature "FEATURE_STRING" to string value "run"
     Then I should not be able to update the value
 

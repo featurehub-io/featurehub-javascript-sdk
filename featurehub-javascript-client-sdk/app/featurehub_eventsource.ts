@@ -83,7 +83,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
       };
     }
 
-    fhLog.log('listening at ', this._config.url());
+    fhLog.trace('listening at ', this._config.url());
 
     this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(this._config.url(), options);
 

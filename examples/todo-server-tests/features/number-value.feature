@@ -1,3 +1,4 @@
+@FEATURE_TITLE_TO_UPPERCASE_OFF
 Feature: Checks number feature
 
   @FEATURE_NUMBER_1  @number
@@ -35,9 +36,12 @@ Feature: Checks number feature
     When I have added a new to-do item "pay"
     Then my list of todos should contain "pay"
 
-  @number
+  @number @numberlock
   Scenario: Check number lock function
-    Given I lock the feature "FEATURE_NUMBER"
+    Given I set the flag "FEATURE_NUMBER" to "26"
+    Then feature FEATURE_NUMBER is unlocked and "26"
+    And I lock the feature "FEATURE_NUMBER"
+    Then feature FEATURE_NUMBER is locked and "26"
     When I attempt to update feature "FEATURE_NUMBER" to number value "35"
     Then I should not be able to update the value
 
