@@ -4,4 +4,7 @@
     "module": "es2015",
     "outDir": "lib"
   },
+	"include": [
+		"app/**/*",
+	]
 }

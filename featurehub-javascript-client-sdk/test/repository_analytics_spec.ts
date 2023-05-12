@@ -9,9 +9,9 @@ import { expect } from 'chai';
 
 describe('We should be able to log an analytics event', () => {
   let repo: ClientFeatureRepository;
-  let firedAction: string;
-  let firedOther: Map<string, string>;
-  let firedFeatures: Array<FeatureStateHolder>;
+  let firedAction: string | undefined;
+  let firedOther: Map<string, string> | undefined;
+  let firedFeatures: Array<FeatureStateHolder> | undefined;
 
   beforeEach(() => {
     repo = new ClientFeatureRepository();
@@ -42,25 +42,25 @@ describe('We should be able to log an analytics event', () => {
       }
     });
     repo.logAnalyticsEvent('name');
-    expect(firedFeatures.length).to.eq(0);
+    expect(firedFeatures?.length).to.eq(0);
     expect(firedAction).to.eq('name');
     // tslint:disable-next-line:no-unused-expression
-    expect(firedOther).to.be.undefined;
+    expect(firedOther?.size).to.eq(0);
   });
 
   it('Should enable us to log an event with no other and no features', () => {
     repo.logAnalyticsEvent('name');
-    expect(firedFeatures.length).to.eq(0);
+    expect(firedFeatures?.length).to.eq(0);
     expect(firedAction).to.eq('name');
     // tslint:disable-next-line:no-unused-expression
-    expect(firedOther).to.be.undefined;
+    expect(firedOther?.size).to.eq(0);
   });
 
   it('should carry through the other field', () => {
     const other = new Map();
     other.set('ga', 'value');
     repo.logAnalyticsEvent('name', other);
-    expect(firedFeatures.length).to.eq(0);
+    expect(firedFeatures?.length).to.eq(0);
     expect(firedAction).to.eq('name');
     // tslint:disable-next-line:no-unused-expression
     expect(firedOther).to.eq(other);
@@ -75,8 +75,8 @@ describe('We should be able to log an analytics event', () => {
 
     repo.logAnalyticsEvent('name');
 
-    expect(firedFeatures.length).to.eq(1);
-    const fs = firedFeatures[0];
+    expect(firedFeatures?.length).to.eq(1);
+    const fs = firedFeatures![0];
     // tslint:disable-next-line:no-unused-expression
     expect(fs.isSet()).to.be.true;
     // tslint:disable-next-line:no-unused-expression

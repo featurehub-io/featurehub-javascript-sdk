@@ -63,7 +63,7 @@ describe('We can initialize the config', () => {
   it ('should create edge services with the repository i provide in a new context', () => {
     const edge = Substitute.for<EdgeService>();
     const repo = Substitute.for<InternalFeatureRepository>();
-    const repos = [];
+    const repos: Array<InternalFeatureRepository> = [];
     EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repo1) => {
       repos.push(repo1);
       return edge;
@@ -77,7 +77,7 @@ describe('We can initialize the config', () => {
     expect(repos[0]).to.eq(repo);
   });
 
-  describe('server evaluated keys', async () => {
+  describe('server evaluated keys', () => {
     let edge: SubstituteOf<EdgeService>;
     let fc: EdgeFeatureHubConfig;
 
@@ -95,7 +95,7 @@ describe('We can initialize the config', () => {
       edge.received(1).contextChange('');
     });
 
-    it('should return the same context each time i ask for a server evaluated key', async () => {
+    it('should return the same context each time i ask for a server evaluated key',  () => {
       const c1 = fc.newContext();
       const c2 = fc.newContext();
       const c3 = fc.newContext();

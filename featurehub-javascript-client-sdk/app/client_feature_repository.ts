@@ -14,7 +14,7 @@ import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener 
 import { ListenerUtils } from './listener_utils';
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
-  private hasReceivedInitialState: boolean;
+  private hasReceivedInitialState = false;
   // indexed by key as that what the user cares about
   private features = new Map<string, FeatureStateBaseHolder>();
   private analyticsCollectors = new Array<AnalyticsCollector>();
@@ -118,7 +118,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     matcher.repository(this);
   }
 
-  public valueInterceptorMatched(key: string): InterceptorValueMatch {
+  public valueInterceptorMatched(key: string): InterceptorValueMatch | undefined {
     for (const matcher of this._matchers) {
       const m = matcher.matched(key);
       if (m?.value) {
@@ -126,7 +126,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
@@ -209,7 +209,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   public logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext): void {
-    const featureStateAtCurrentTime = [];
+    const featureStateAtCurrentTime: Array<FeatureStateBaseHolder> = [];
 
     for (const fs of this.features.values()) {
       if (fs.isSet()) {
@@ -218,7 +218,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
       }
     }
 
-    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other, featureStateAtCurrentTime));
+    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other || new Map<string, string>(),
+      featureStateAtCurrentTime));
   }
 
   public hasFeature(key: string): undefined | FeatureStateHolder {
@@ -246,7 +247,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   set catchAndReleaseMode(value: boolean) {
-    if (this._catchAndReleaseMode !== value && value === false) {
+    if (this._catchAndReleaseMode !== value && !value) {
       this.release(true);
     }
     this._catchAndReleaseMode = value;
@@ -303,7 +304,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
       features.forEach((f) => {
         const existingFeature = this.features.get(f.key);
         if (!existingFeature || !existingFeature.exists || (existingFeature.getKey()
-          && f.version > existingFeature.getFeatureState()?.version)) {
+          && f.version! > (existingFeature.getFeatureState()?.version || -1))) {
           const fs = this._catchReleaseStates.get(f.id);
           if (fs == null) {
             this._catchReleaseStates.set(f.id, f);
@@ -352,9 +353,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
       holder = newFeature;
     } else if (holder.getFeatureState() !== undefined) {
-      if (fs.version < holder.getFeatureState().version) {
+      const fState = holder.getFeatureState()!;
+      if (fs.version! < fState.version!) {
         return false;
-      } else if (fs.version === holder.getFeatureState().version && fs.value === holder.getFeatureState().value) {
+      } else if (fs.version === fState.version && fs.value === fState.value) {
         return false;
       }
     }

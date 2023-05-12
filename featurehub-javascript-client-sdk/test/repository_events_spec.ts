@@ -163,13 +163,13 @@ describe('Feature repository reacts to incoming event lists as expected', () => 
       let repoNumber = 0;
 
       repo.getFeatureState('fruit').addListener((fs) => {
-        repoNumber = fs.getNumber();
+        repoNumber = fs.getNumber()!;
         triggerRepo++;
       });
       const fhContext = await fhConfig.newContext().userKey('fred').build();
       const feat = fhContext.feature('fruit');
       feat.addListener((fs) => {
-        contextNumber = fs.getNumber();
+        contextNumber = fs.getNumber()!;
         triggerContext++;
       });
 

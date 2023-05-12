@@ -157,21 +157,25 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     }
   }
 
-  get value(): T {
-    const v = {
-      [FeatureValueType.Boolean]: this.getBoolean(),
-      [FeatureValueType.String]: this.getString(),
-      [FeatureValueType.Number]: this.getNumber(),
-      [FeatureValueType.Json]: this._valueParseJson(),
-    }[this.type];
+  get value(): T | undefined {
+    if (this.type) {
+      const v = {
+        [FeatureValueType.Boolean]: this.getBoolean(),
+        [FeatureValueType.String]: this.getString(),
+        [FeatureValueType.Number]: this.getNumber(),
+        [FeatureValueType.Json]: this._valueParseJson(),
+      }[this.type];
 
-    return v as T;
+      return v as T;
+    }
+
+    return undefined;
   }
 }
 
 class BaggageRepository implements InternalFeatureRepository {
   private readonly repo: InternalFeatureRepository;
-  private baggage: Map<string, string | undefined>;
+  private baggage: Map<string, string>;
   private mappedBaggage = new Map<string, FeatureStateHolder>();
 
   constructor(repo: InternalFeatureRepository, baggage: Map<string, string>) {
@@ -220,7 +224,7 @@ class BaggageRepository implements InternalFeatureRepository {
 
         // we don't map json types, create it if it isn't there
         if (fh === undefined && realFeature.getType() !== FeatureValueType.Json) {
-          fh = new BaggageHolder(realFeature, this.baggage.get(key));
+          fh = new BaggageHolder(realFeature, this.baggage.get(key)!);
           this.mappedBaggage.set(key, fh);
         }
 
@@ -231,12 +235,14 @@ class BaggageRepository implements InternalFeatureRepository {
       }
     }
 
-    return realFeature;
+    // get the original one (or create it if it doesn't exist)
+    return this.repo.feature(key);
   }
 
   logAnalyticsEvent(action: string, other?: Map<string, string>) {
     const otherCopy = other ? other : new Map<string, string>();
-    const baggageCopy = new Map<string, string>([...this.baggage.entries(), ...otherCopy.entries()]);
+    const baggageCopy = new Map<string, string>(
+      [...this.baggage.entries(), ...otherCopy.entries()]);
 
     // merge bother together and
 
@@ -265,7 +271,7 @@ class BaggageRepository implements InternalFeatureRepository {
     this.repo.addValueInterceptor(interceptor);
   }
 
-  valueInterceptorMatched(key: string): InterceptorValueMatch {
+  valueInterceptorMatched(key: string): InterceptorValueMatch | undefined {
     return this.repo.valueInterceptorMatched(key);
   }
 
@@ -319,7 +325,7 @@ export function featurehubMiddleware(repo: InternalFeatureRepository) {
       const baggage = req.header('baggage');
 
       if (baggage != null) {
-        const baggageMap = new Map<string, string | undefined>();
+        const baggageMap = new Map<string, string>();
 
         // we are expecting a single key/value pair, fhub=
         baggage.split(',')
@@ -334,7 +340,7 @@ export function featurehubMiddleware(repo: InternalFeatureRepository) {
                 if (parts.length === 2) {
                   baggageMap.set(parts[0], decodeURIComponent(parts[1]));
                 } else if (parts.length === 1) {
-                  baggageMap.set(parts[0], undefined);
+                  baggageMap.set(parts[0], '');
                 }
               });
           });

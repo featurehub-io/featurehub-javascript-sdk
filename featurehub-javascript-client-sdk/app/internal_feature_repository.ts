@@ -12,7 +12,7 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
 
   notify(state: SSEResultState, data: any);
 
-  valueInterceptorMatched(key: string): InterceptorValueMatch;
+  valueInterceptorMatched(key: string): InterceptorValueMatch | undefined;
 
   apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
         context: ClientContext): Applied;

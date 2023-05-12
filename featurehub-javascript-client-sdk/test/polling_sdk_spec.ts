@@ -11,7 +11,7 @@ import sinon = require('sinon');
 import { SinonFakeTimers } from 'sinon';
 
 
-describe('basic polling sdk works as expected', async () => {
+describe('basic polling sdk works as expected',  () => {
   let poller: SubstituteOf<PollingBase>;
   let repo: SubstituteOf<InternalFeatureRepository>;
   let config: SubstituteOf<FeatureHubConfig>;
@@ -31,9 +31,9 @@ describe('basic polling sdk works as expected', async () => {
   it('should accept attempt to poll only once when the interval is 0', async () => {
     const p = new FeatureHubPollingClient(repo, config, 0);
 
-    let url: string;
-    let freq: number;
-    let callback: FeaturesFunction;
+    let url: string | undefined = undefined;
+    let freq: number | undefined = undefined;
+    let callback: FeaturesFunction | undefined;
 
     poller.poll().resolves();
 
@@ -49,7 +49,7 @@ describe('basic polling sdk works as expected', async () => {
     expect(url).to.eq('http://localhost/features?apiKey=12344');
     expect(freq).to.eq(0);
 
-    callback([]);
+    callback!([]);
     repo.received(1).notify;
   });
 
@@ -73,7 +73,7 @@ describe('basic polling sdk works as expected', async () => {
     poller.received(1).poll();
   });
 
-  describe('with timers', async () => {
+  describe('with timers',  () => {
     let clock: SinonFakeTimers;
 
     before(function () {
@@ -88,6 +88,7 @@ describe('basic polling sdk works as expected', async () => {
       const p = new FeatureHubPollingClient(repo, config, 2000);
 
       poller.poll().resolves();
+      // @ts-ignore
       poller.frequency.returns(2000);
 
       FeatureHubPollingClient.pollingClientProvider = () => {
@@ -107,7 +108,7 @@ describe('basic polling sdk works as expected', async () => {
     });
   });
 
-  describe('setTimeout in operation', async () => {
+  describe('setTimeout in operation',  () => {
     let p: FeatureHubPollingClient;
 
     beforeEach(() => {

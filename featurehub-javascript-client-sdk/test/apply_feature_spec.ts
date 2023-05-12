@@ -19,16 +19,18 @@ describe('apply feature works as expected', () => {
   let pCalc: SubstituteOf<PercentageCalculator>;
   let matcher: SubstituteOf<MatcherRepository>;
   let app: ApplyFeature;
+  let ctx: SubstituteOf<ClientContext>;
 
   beforeEach(() => {
     pCalc = Substitute.for<PercentageCalculator>();
     matcher = Substitute.for<MatcherRepository>();
+    ctx = Substitute.for<ClientContext>();
 
     app = new ApplyFeature(pCalc, matcher);
   });
 
   it('should always return false when there is an undefined context', () => {
-    const found = app.apply([{} as FeatureRolloutStrategy], 'key', 'fid', undefined);
+    const found = app.apply([{} as FeatureRolloutStrategy], 'key', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -39,7 +41,7 @@ describe('apply feature works as expected', () => {
   });
 
   it('should be false when the rollout strategies are empty', () => {
-    const found = app.apply([], 'key', 'fid', Substitute.for<ClientContext>());
+    const found = app.apply([], 'key', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -48,7 +50,7 @@ describe('apply feature works as expected', () => {
   });
 
   it('should be false when the rollout strategies are null', () => {
-    const found = app.apply(undefined, 'key', 'fid', Substitute.for<ClientContext>());
+    const found = app.apply(undefined, 'key', 'fid', ctx);
 
     // tslint:disable-next-line:no-unused-expression
     expect(found.matched).to.be.false;
@@ -57,7 +59,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should be false if none of the rollout strategies match the context', () => {
-    const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttrs('warehouseId').returns([]);
     const found = app.apply([{
@@ -76,7 +77,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should not match the percentage but should match the field comparison', () => {
-    const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttrs('warehouseId').returns(['ponsonby']);
     const found = app.apply([{
@@ -97,8 +97,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should not match the field comparison if the value is different', () => {
-    const ctx = Substitute.for<ClientContext>();
-
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttrs('warehouseId').returns(['ponsonby']);
 
@@ -125,7 +123,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should extract the values out of the context when determining the value for percentage', () => {
-    const ctx = Substitute.for<ClientContext>();
     ctx.defaultPercentageKey().returns('user@email');
 
     expect(ApplyFeature.determinePercentageKey(ctx, [])).to.eq('user@email');
@@ -137,8 +134,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should process basic percentages properly', () => {
-    const ctx = Substitute.for<ClientContext>();
-
     ctx.defaultPercentageKey().returns('userkey');
     pCalc.determineClientPercentage('userkey', 'fid').returns(15);
 
@@ -156,8 +151,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should bounce bad percentages properly', () => {
-    const ctx = Substitute.for<ClientContext>();
-
     ctx.defaultPercentageKey().returns('userkey');
     pCalc.determineClientPercentage('userkey', 'fid').returns(21);
 
@@ -174,8 +167,6 @@ describe('apply feature works as expected', () => {
 
 
   it('should process pattern match percentages properly', () => {
-    const ctx = Substitute.for<ClientContext>();
-
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttrs('warehouseId').returns(['ponsonby']);
     pCalc.determineClientPercentage('userkey', 'fid').returns(15);
@@ -201,8 +192,6 @@ describe('apply feature works as expected', () => {
   });
 
   it('should fail pattern match percentages properly', () => {
-    const ctx = Substitute.for<ClientContext>();
-
     ctx.defaultPercentageKey().returns('userkey');
     ctx.getAttrs('warehouseId').returns([]);
     pCalc.determineClientPercentage('userkey', 'fid').returns(15);

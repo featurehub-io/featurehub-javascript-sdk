@@ -26,7 +26,7 @@ export abstract class PollingBase implements PollingService {
   protected _stopped = false;
   protected _header?: string;
   protected _shaHeader: string;
-  protected _etag: string;
+  protected _etag: string | undefined | null;
 
   protected constructor(url: string, frequency: number, callback: FeaturesFunction) {
     this.url = url;
@@ -56,7 +56,7 @@ export abstract class PollingBase implements PollingService {
    * Allow the cache control settings on the server override this polling _frequency
    * @param cacheHeader
    */
-  public parseCacheControl(cacheHeader: string | undefined) {
+  public parseCacheControl(cacheHeader: string | undefined | null) {
     const maxAge = cacheHeader?.match(/max-age=(\d+)/);
     if (maxAge) {
       const newFreq = parseInt(maxAge[1], 10);
@@ -197,9 +197,9 @@ export class FeatureHubPollingClient implements EdgeService {
   private readonly _options: BrowserOptions | NodejsOptions;
   private _startable: boolean;
   private readonly _config: FeatureHubConfig;
-  private _xHeader: string;
-  private _pollPromiseResolve: (value: (PromiseLike<void> | void)) => void;
-  private _pollPromiseReject: (reason?: any) => void;
+  private _xHeader: string | undefined;
+  private _pollPromiseResolve: ((value: (PromiseLike<void> | void)) => void) | undefined;
+  private _pollPromiseReject: ((reason?: any) => void) | undefined;
   private _pollingStarted = false;
   private _currentTimer: any;
 
@@ -331,7 +331,7 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _pollFunc() {
-    this._pollingService.poll()
+    this._pollingService!.poll()
       .then(() => {
         fhLog.trace('poll successful');
 
@@ -408,12 +408,12 @@ export class FeatureHubPollingClient implements EdgeService {
       const features = new Array<FeatureState>();
 
       environments.forEach(e => {
-        if (e.features.length > 0) {
+        if (e.features!.length > 0) {
           // set the environment id so each feature knows which environment it comes from
-          e.features.forEach(f => {
+          e.features!.forEach(f => {
             f.environmentId = e.id;
           });
-          features.push(...e.features);
+          features.push(...e.features!);
         }
       });
 

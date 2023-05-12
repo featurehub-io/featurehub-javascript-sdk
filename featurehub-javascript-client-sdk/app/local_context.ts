@@ -20,7 +20,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   constructor(environment: FeatureEnvironmentCollection, applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
 
-    environment.features.forEach((fs) => {
+    environment.features?.forEach((fs) => {
       const holder = new FeatureStateBaseHolder(this, fs.key);
       holder.setFeatureState(fs);
       this.features.set(fs.key, holder);
@@ -45,7 +45,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     matcher.repository(this);
   }
 
-  public valueInterceptorMatched(key: string): InterceptorValueMatch {
+  public valueInterceptorMatched(key: string): InterceptorValueMatch | undefined {
     for (const matcher of this._matchers) {
       const m = matcher.matched(key);
       if (m?.value) {
@@ -53,7 +53,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -117,7 +117,7 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   }
 
   public logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext) {
-    const featureStateAtCurrentTime = [];
+    const featureStateAtCurrentTime: Array<FeatureStateBaseHolder> = [];
 
     for (const fs of this.features.values()) {
       if (fs.isSet()) {
@@ -126,7 +126,8 @@ class LocalFeatureRepository implements InternalFeatureRepository {
       }
     }
 
-    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other, featureStateAtCurrentTime));
+    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other || new Map<string,string>(),
+      featureStateAtCurrentTime));
   }
 
   public hasFeature(key: string): undefined | FeatureStateHolder {

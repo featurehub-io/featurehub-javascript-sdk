@@ -9,7 +9,7 @@ import { expect } from 'chai';
 describe('Google analytics collector should output correct info', () => {
   it('we should provide all different types of features and the analytics should log all except JSON', async () => {
     const cid = 'cid';
-    let postedData: string = undefined;
+    let postedData: string | undefined = undefined;
 
     const apiClient = {
       cid: function (other: Map<string, string>) {

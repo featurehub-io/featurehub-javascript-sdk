@@ -55,12 +55,13 @@ class BooleanMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const val = 'true' === suppliedValue;
 
+    const values = attr.values || [];
     if (attr.conditional === RolloutStrategyAttributeConditional.Equals) {
-      return val === (attr.values[0].toString() === 'true');
+      return val === (values[0].toString() === 'true');
     }
 
     if (attr.conditional === RolloutStrategyAttributeConditional.NotEquals) {
-      return val !== (attr.values[0].toString() === 'true');
+      return val !== (values[0].toString() === 'true');
     }
 
     return false;
@@ -102,7 +103,7 @@ class StringMatcher implements StrategyMatcher {
   }
 
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return attr.values.filter((v) => v != null).map((v) => v.toString());
+    return (attr.values || []).filter((v) => v != null).map((v) => v.toString());
   }
 }
 
@@ -122,7 +123,7 @@ class DateMatcher extends StringMatcher {
   }
 
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return attr.values.filter((v) => v != null)
+    return (attr.values || []).filter((v) => v != null)
       .map((v) => (v instanceof Date) ? v.toISOString().substring(0, 10) : v.toString());
   }
 }
@@ -143,7 +144,7 @@ class DateTimeMatcher extends StringMatcher {
   }
 
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return attr.values.filter((v) => v != null)
+    return (attr.values || []).filter((v) => v != null)
       .map((v) => (v instanceof Date) ? (v.toISOString().substring(0, 19) + 'Z') : v.toString());
   }
 }
@@ -155,7 +156,7 @@ class NumberMatcher implements StrategyMatcher {
       const num = isFloat ? parseFloat(suppliedValue) : parseInt(suppliedValue, 10);
       const conv = (v) => isFloat ? parseFloat(v) : parseInt(v, 10);
 
-      const vals = attr.values.filter((v) => v != null).map((v) => v.toString());
+      const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
 
       // tslint:disable-next-line:switch-default
       switch (attr.conditional) {
@@ -192,7 +193,7 @@ class NumberMatcher implements StrategyMatcher {
 
 class SemanticVersionMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const vals = attr.values.filter((v) => v != null).map((v) => v.toString());
+    const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
 
     // tslint:disable-next-line:switch-default
     switch (attr.conditional) {
@@ -224,7 +225,7 @@ class SemanticVersionMatcher implements StrategyMatcher {
 
 class IPNetworkMatcher implements StrategyMatcher {
   match(ip: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const vals = attr.values.filter((v) => v != null);
+    const vals = (attr.values || []).filter((v) => v != null);
 
     // tslint:disable-next-line:switch-default
     switch (attr.conditional) {
@@ -274,24 +275,24 @@ export class ApplyFeature {
     this._matcherRepository = matcherRepository || new MatcherRegistry();
   }
 
-  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
-    context: ClientContext): Applied {
-    if (context != null && strategies != null && strategies.length > 0) {
-      let percentage: number = null;
-      let percentageKey: string = null;
+  public apply(strategies: Array<FeatureRolloutStrategy> = [], key: string, featureValueId: string,
+    context?: ClientContext): Applied {
+    if (context !== undefined && strategies.length) {
+      let percentage: number | null = null;
+      let percentageKey: string | null = null;
       const basePercentage = new Map<string, number>();
       const defaultPercentageKey = context.defaultPercentageKey();
 
       for (const rsi of strategies) {
         if (rsi.percentage !== 0 && (defaultPercentageKey != null ||
-          (rsi.percentageAttributes !== undefined && rsi.percentageAttributes.length > 0))) {
-          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes);
+          (rsi.percentageAttributes !== undefined && rsi.percentageAttributes.length))) {
+          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes!);
 
           if (!basePercentage.has(newPercentageKey)) {
             basePercentage.set(newPercentageKey, 0);
           }
 
-          const basePercentageVal = basePercentage.get(newPercentageKey);
+          const basePercentageVal = basePercentage.get(newPercentageKey)!;
 
           // if we have changed the key, or we have never calculated it, calculate it and set the
           // base percentage to null
@@ -304,8 +305,8 @@ export class ApplyFeature {
 
           // if the percentage is lower than the user's key +
           // id of feature value then apply it
-          if (percentage <= (useBasePercentage + rsi.percentage)) {
-            if (rsi.attributes != null && rsi.attributes.length > 0) {
+          if (percentage <= (useBasePercentage + rsi.percentage!)) {
+            if (rsi.attributes != null && rsi.attributes.length) {
               if (this.matchAttribute(context, rsi)) {
                 return new Applied(true, rsi.value);
               }
@@ -315,8 +316,8 @@ export class ApplyFeature {
           }
 
           // this was only a percentage and had no other attributes
-          if (rsi.attributes !== undefined && rsi.attributes.length > 0) {
-            basePercentage.set(percentageKey, basePercentage.get(percentageKey) + rsi.percentage);
+          if (rsi.attributes?.length) {
+            basePercentage.set(percentageKey, basePercentage.get(percentageKey)! + rsi.percentage!);
           }
         }
 
@@ -333,7 +334,7 @@ export class ApplyFeature {
 
   public static determinePercentageKey(context: ClientContext, percentageAttributes: Array<string>): string {
     if (percentageAttributes == null || percentageAttributes.length === 0) {
-      return context.defaultPercentageKey();
+      return context.defaultPercentageKey()!;
     }
 
     return percentageAttributes.map((pa) => context.getAttr(pa, '<none>')).join('$');
@@ -341,8 +342,8 @@ export class ApplyFeature {
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
     for (const attr of rsi.attributes) {
-      let suppliedValues = context.getAttrs(attr.fieldName);
-      if (suppliedValues.length == 0 && attr.fieldName.toLowerCase() === 'now') {
+      let suppliedValues = context.getAttrs(attr.fieldName!);
+      if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === 'now') {
         // tslint:disable-next-line:switch-default
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:

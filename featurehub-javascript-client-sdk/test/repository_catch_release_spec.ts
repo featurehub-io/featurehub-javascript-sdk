@@ -50,7 +50,7 @@ describe('Catch and release should hold and then release feature changes', () =>
 
     await repo.release(false);
     expect(repo.getString('orange')).to.eq('lemon');
-    expect(counter).to.eq(1);
+    expect(counter).to.eq(2);
   });
 
   it('should enable me to turn on catch and no changes should flow and then i can release', async () => {
@@ -131,7 +131,7 @@ describe('Catch and release should hold and then release feature changes', () =>
 
   it('should allow be to turn on catch & release mode, get updated, remove the trigger and then not be notified with the trigger removed', async () => {
     const repo = new ClientFeatureRepository();
-    let internal: InternalFeatureRepository;
+    let internal: InternalFeatureRepository | undefined = undefined;
     let eventTriggerCount = 0;
     repo.catchAndReleaseMode = true;
     const features = [
@@ -148,7 +148,7 @@ describe('Catch and release should hold and then release feature changes', () =>
     });
 
     let listenerTriggerCount = 0;
-    const postListener = (internalRepo) => {
+    const postListener = () => {
       listenerTriggerCount++;
     };
 

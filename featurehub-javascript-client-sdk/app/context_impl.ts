@@ -83,23 +83,23 @@ export abstract class BaseClientContext implements ClientContext {
     return this;
   }
 
-  getAttr(key: string, defaultValue?: string): string {
+  getAttr(key: string, defaultValue?: string): string | undefined {
     if (this._attributes.has(key)) {
-      return this._attributes.get(key)[0];
+      return this._attributes.get(key)![0];
     }
 
     return defaultValue;
   }
 
-  getAttrs(key: string): Array<string> | undefined {
+  getAttrs(key: string): Array<string> {
     if (this._attributes.has(key)) {
-      return this._attributes.get(key);
+      return this._attributes.get(key)!;
     }
 
     return [];
   }
 
-  defaultPercentageKey(): string {
+  defaultPercentageKey(): string | undefined {
     return this._attributes.has('session') ? this.getAttr('session') : this.getAttr('userkey');
   }
 
@@ -166,9 +166,9 @@ export abstract class BaseClientContext implements ClientContext {
 
 export class ServerEvalFeatureContext extends BaseClientContext {
   private readonly _edgeServiceSupplier: EdgeServiceSupplier;
-  private _currentEdge: EdgeService;
+  private _currentEdge: EdgeService | undefined;
   private _config?: FeatureHubConfig;
-  private _xHeader: string;
+  private _xHeader: string | undefined;
   private _clientCount = 0;
 
   constructor(repository: InternalFeatureRepository,
@@ -200,15 +200,17 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
         if (this._currentEdge != null && this._currentEdge.requiresReplacementOnHeaderChange()) {
           this._currentEdge.close();
-          this._currentEdge = null;
+          this._currentEdge = undefined;
         }
       }
 
-      if (this._currentEdge == null) {
+      if (this._currentEdge === undefined) {
         this._currentEdge = this._edgeServiceSupplier();
       }
 
-      await this._currentEdge.contextChange(this._xHeader);
+      if (this._currentEdge !== undefined) {
+        await this._currentEdge.contextChange(this._xHeader);
+      }
     } catch (e) {
       if (e)  {
         fhLog.error('Failed to connect to FeatureHHub Edge to refresh context', e);
@@ -228,7 +230,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
     }
   }
 
-  edgeService(): EdgeService {
+  edgeService(): EdgeService | undefined {
     return this._currentEdge;
   }
 
