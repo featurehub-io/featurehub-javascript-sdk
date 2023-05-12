@@ -35,7 +35,7 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub url="http://localhost:8085" apiKey="d94e2643-8b78-43da-9470-afc296293c9d/ej1h6pVCqPBVcTz8ebFxyD9yhgdkK59DMi0Z5Bgo" userKey={userKey()} pollInterval={5000}>
+    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey()} pollInterval={5000}>
       <Main />
     </FeatureHub>
   );

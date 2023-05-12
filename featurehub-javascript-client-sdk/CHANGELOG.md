@@ -1,3 +1,6 @@
+#### 1.3.0
+- This surfaces a fully statically typed API for Typescript clients who enforce it. Of particular interest
+is the places where `undefined` can be returned. 
 #### 1.2.0
 - Support for localstorage in a browser to cache the features
 - EdgeFeatureHubConfig will now hold onto only a single context for server evaluated keys. Once created

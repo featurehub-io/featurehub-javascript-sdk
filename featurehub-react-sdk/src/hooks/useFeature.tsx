@@ -7,14 +7,14 @@ import { FeatureStateHolder } from "featurehub-javascript-client-sdk";
  * NOTE: The key must be defined in your FeatureHub Admin Console.
  *
  * @param {string} key - the feature key
- * @returns {T} value - generic type of feature value (default boolean)
+ * @returns {T | undefined} value - generic type of feature value (default boolean)
  */
-function useFeature<T = boolean>(key: string): T {
+function useFeature<T = boolean>(key: string): T | undefined {
   const client = useFeatureHubClient();
-  const [value, setValue] = useState(client.feature<T>(key).value);
+  const [value, setValue] = useState(client.feature<T | undefined>(key).value);
 
   useEffect(() => {
-    const listener = (fsh: FeatureStateHolder<T>) => setValue(fsh.value);
+    const listener = (fsh: FeatureStateHolder<T | undefined>) => setValue(fsh.value);
 
     client.feature(key).addListener(listener);
 
