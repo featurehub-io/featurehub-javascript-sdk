@@ -127,7 +127,7 @@ FeatureUpdater.featureUpdaterProvider = () => new NodejsFeaturePostUpdater();
 
 class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
   cid(other: Map<string, string>): string {
-    return other.get('cid') || process.env.GA_CID;
+    return other.get('cid') || process.env.GA_CID || '';
   }
 
   postBatchUpdate(batchData: string): void {

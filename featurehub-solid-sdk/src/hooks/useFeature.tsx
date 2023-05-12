@@ -7,13 +7,13 @@ import useFeatureHub from "./useFeatureHub";
  * NOTE: The key must be defined in your FeatureHub Admin Console.
  *
  * @param {string} key - the feature key
- * @returns {T} value - generic type of feature value (default boolean)
+ * @returns {T | undefined} value - generic type of feature value (default boolean)
  */
-function useFeature<T = boolean>(key: string): Accessor<T> {
+function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
   const { client } = useFeatureHub();
 
   let listenerId: number;
-  const [value, setValue] = createSignal(client().feature<T>(key).value);
+  const [value, setValue] = createSignal(client().feature<T | undefined>(key).value);
 
   createEffect(
     on(ready, () => {
@@ -21,22 +21,22 @@ function useFeature<T = boolean>(key: string): Accessor<T> {
       if (!ready()) return;
 
       if (listenerId) {
-        client().feature<T>(key).removeListener(listenerId);
+        client().feature<T | undefined>(key).removeListener(listenerId);
       }
 
       listenerId = client()
-        .feature<T>(key)
+        .feature<T | undefined>(key)
         .addListener(() => {
           setValue(client().feature(key).value);
         });
 
       // Need this in order for Solid to pick up the initial value properly for some reason
-      setValue(() => client().feature<T>(key).value);
+      setValue(() => client().feature<T | undefined>(key).value);
     })
   );
 
   onCleanup(() => {
-    client().feature<T>(key).removeListener(listenerId);
+    client().feature<T | undefined>(key).removeListener(listenerId);
   });
 
   return value;

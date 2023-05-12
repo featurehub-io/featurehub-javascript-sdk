@@ -1,3 +1,7 @@
+#### 1.3.0
+- This surfaces a fully statically typed API for Typescript clients who enforce it. Of particular interest
+  is the places where `undefined` can be returned.
+- Uses the featurehub-javascript-client-sdk v 1.3.0
 #### 1.2.0
 - update dependency to use featurehub-javascript-client-sdk v 1.2.0
 - documentation update
