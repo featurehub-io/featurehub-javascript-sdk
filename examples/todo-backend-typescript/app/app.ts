@@ -4,7 +4,7 @@ import { ITodoApiController, Todo, TodoApiRouter } from "./generated-interface";
 import {
   ClientContext,
   EdgeFeatureHubConfig,
-  featurehubMiddleware,
+  featurehubMiddleware, FeatureHubPollingClient, FHLog,
   Readyness,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
@@ -19,12 +19,17 @@ if (process.env.FEATUREHUB_EDGE_URL === undefined || process.env.FEATUREHUB_CLIE
 //provide EDGE_URL, e.g. 'http://localhost:8553/'
 //provide API_KEY, e.g. default/ff8635ef-ed28-4cc3-8067-b9ffd8882100/lOopBkGPALBcI0p6AGpf4jAdUi2HxR0RkhYvV00i1XsMQLWkltaoFvEfs7uFsZaQ45kF5FmhGE7rWTSg'
 
-// fhLog.trace = (...args: any) => console.log(args);
+FHLog.fhLog.trace = (...args: any) => console.log(args);
 const fhConfig = new EdgeFeatureHubConfig(process.env.FEATUREHUB_EDGE_URL, process.env.FEATUREHUB_CLIENT_API_KEY);
 
 fhConfig.addReadinessListener((ready, firstTime) => {
 
 }, true);
+
+if (process.env.FEATUREHUB_POLLING_INTERVAL) {
+  fhConfig.edgeServiceProvider((repo, config) =>
+    new FeatureHubPollingClient(repo, config, parseInt(process.env.FEATUREHUB_POLLING_INTERVAL)));
+}
 
 // Add override to use polling client
 // const FREQUENCY = 5000; // 5 seconds

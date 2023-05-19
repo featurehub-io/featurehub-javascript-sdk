@@ -91,7 +91,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
   private readonly _options: BrowserOptions;
   private localStorageLastUrl: string | undefined;
 
-  // override this with a replacement if you need to
+  // override this with a replacement if you need to, for example to add any headers.
   static httpRequestor = () => {
     return new XMLHttpRequest();
   };
@@ -226,7 +226,7 @@ export class FeatureHubPollingClient implements EdgeService {
           (e) =>
             this.response(e));
 
-      fhLog.log(`featurehub: initialized polling client to ${this._url}`);
+      fhLog.trace(`featurehub: initialized polling client to ${this._url}`);
     }
   }
 

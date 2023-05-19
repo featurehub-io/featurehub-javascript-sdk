@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node ./node_modules/typescript/bin/tsc",
 		"link": "npm link featurehub-javascript-client-sdk featurehub-javascript-node-sdk",
+		"compile": "npm run link && npm run build",
     "test": "cucumber-js --require-module ts-node/register --require 'features/support/*.ts' --publish",
     "generate:specs": "openapi-generator-cli generate -g typescript-axios -i ../todo-api/todo-api.yaml -o ./src/client-axios"
   },

@@ -1,3 +1,4 @@
+@FEATURE_TITLE_TO_UPPERCASE_OFF
 Feature: Checks json feature
 
   @FEATURE_JSON_BAR

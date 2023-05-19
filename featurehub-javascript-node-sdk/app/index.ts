@@ -4,7 +4,7 @@ import {
   NodejsOptions,
   PollingBase,
   FeatureHubEventSourceClient,
-  PollingService, FeaturesFunction, FeatureEnvironmentCollection, EdgeFeatureHubConfig
+  PollingService, FeaturesFunction, FeatureEnvironmentCollection, EdgeFeatureHubConfig, FHLog, fhLog
 } from 'featurehub-javascript-client-sdk';
 import { URL } from 'url';
 import { RequestOptions } from 'https';
@@ -89,19 +89,34 @@ export class NodejsPollingService extends PollingBase implements PollingService 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
   new NodejsPollingService(opt, url, freq, callback);
 
-class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
+export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
+  public modifyRequestFunction: ModifyRequestFunction | undefined;
+
   post(url: string, update: FeatureStateUpdate): Promise<boolean> {
     const loc = new URL(url);
-    const cra = { protocol: loc.protocol, path: loc.pathname,
-      host: loc.hostname, method: 'PUT', port: loc.port, timeout: 3000,
+
+    const cra: RequestOptions = {
+      protocol: loc.protocol,
+      path: loc.pathname,
+      host: loc.hostname,
+      method: 'PUT',
+      port: loc.port,
+      timeout: 3000,
       headers: {
         'content-type': 'application/json'
       }
     };
+
+    // allows you to override it with any security or such
+    if (this.modifyRequestFunction) {
+      this.modifyRequestFunction(cra);
+    }
+
     const http = cra.protocol === 'http:' ? require('http') : require('https');
     return new Promise<boolean>((resolve) => {
       try {
         const req = http.request(cra, (res) => {
+          fhLog.trace('update result -> ', res.statusCode);
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(true);
           } else {
@@ -110,9 +125,11 @@ class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
         });
 
         req.on('error', () => {
+          fhLog.trace('update result -> error');
           resolve(false);
         });
 
+        FHLog.fhLog.trace('FeatureUpdater', cra, update);
         req.write(JSON.stringify(update));
         req.end();
       } catch (e) {
