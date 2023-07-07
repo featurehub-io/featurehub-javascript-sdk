@@ -11,7 +11,7 @@
   },
   "author": "FeatureHub.io",
   "dependencies": {
-    "@cucumber/cucumber": "^7.0.0",
+    "@cucumber/cucumber": "^7.3.2",
     "@openapitools/openapi-generator-cli": "^2.6.0",
     "@types/node": "^14.14.31",
 		"ts-node": "^10.9.1",
