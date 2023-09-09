@@ -36,6 +36,7 @@ export const responseToRecord = function (response: AxiosResponse) {
 };
 
 let requestId: number = 1;
+const reqIdPrefix = (process.env.REQUEST_ID_PREFIX || '');
 
 export class CustomWorld {
   private variable: number;
@@ -112,7 +113,7 @@ export class CustomWorld {
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
     (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
-      req.headers['Baggage'] = `cuke-req-id=${requestId}`;
+      req.headers['Baggage'] = `cuke-req-id=${reqIdPrefix}${requestId}`;
       requestId ++;
     }
     return updater;
