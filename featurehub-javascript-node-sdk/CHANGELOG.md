@@ -1,3 +1,5 @@
+#### 1.3.1
+- Edge case where a feature is retired and then unretired immediately, this _can_ cause the feature to stay deleted.
 #### 1.3.0
 - This surfaces a fully statically typed API for Typescript clients who enforce it. Of particular interest
   is the places where `undefined` can be returned.
