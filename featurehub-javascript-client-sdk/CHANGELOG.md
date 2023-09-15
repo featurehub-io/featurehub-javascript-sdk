@@ -1,3 +1,5 @@
+#### 1.3.2
+- Delete feature returns version zero which was being prevented from action by 1.3.1
 #### 1.3.1
 - Edge case where a feature is retired and then unretired immediately, this _can_ cause the feature to stay deleted.
 #### 1.3.0

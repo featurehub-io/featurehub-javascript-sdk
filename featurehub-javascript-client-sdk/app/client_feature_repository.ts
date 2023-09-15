@@ -367,9 +367,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private deleteFeature(featureState: FeatureState) {
     const holder = this.features.get(featureState.key);
 
-    // because of parallelism we can received retired features after they have been unretired
-    // so we need to check their versions
-    if (holder && ((featureState.version === undefined) || (featureState.version >= holder.version))) {
+    // because of parallelism we can receive retired features after they have been unretired
+    // so we need to check their versions. An actual deleted feature however will have a version of 0
+    // and a feature value created as retired will also have a version of zero.
+    if (holder && ((featureState.version === undefined) || (featureState.version === 0) || (featureState.version >= holder.version))) {
       holder.setFeatureState(undefined);
     }
   }
