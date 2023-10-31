@@ -1,4 +1,4 @@
-import { createContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   ClientContext,
   EdgeFeatureHubConfig,
@@ -31,7 +31,7 @@ type Props = {
   /** Interval (in milliseconds) to poll FeatureHub for updates. [default: 60 seconds] */
   readonly pollInterval?: number;
   /** The React application tree to inject the FeatureHub client into */
-  readonly children: JSX.Element;
+  readonly children: ReactNode;
 };
 
 /**
