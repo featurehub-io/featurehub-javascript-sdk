@@ -21,7 +21,7 @@ Welcome to the Javascript/Typescript SDK implementation for [FeatureHub.io](http
 This documentation covers both [featurehub-javascript-node-sdk](https://www.npmjs.com/featurehub-javascript-node-sdk) and [featurehub-javascript-client-sdk](https://www.npmjs.com/featurehub-javascript-client-sdk) and explains how you can use the FeatureHub SDK in Javascript or Typescript for applications like Node.js
 backend servers, Web front-ends (e.g. Vanilla, React, Angular) or Mobile apps (React Native, Ionic, etc.). 
 
-To control the feature flags from the FeatureHub Admin console, either use our [demo](https://demo.featurehub.io) version for evaluation or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
+To control the feature flags from the FeatureHub Admin console, either use FeatureHub SaaS cloud version [demo](https://app.featurehub.io) or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
 
 
 ## SDK installation
