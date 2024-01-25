@@ -1,7 +1,7 @@
 import {
   EdgeService,
   FeatureEnvironmentCollection,
-  FeatureState,
+  FeatureState, FeatureStateHolder,
   FeatureValueType,
   LocalClientContext,
   StrategyAttributeCountryName,
@@ -11,6 +11,8 @@ import {
 import { Substitute, Arg, SubstituteOf } from '@fluffy-spoon/substitute';
 import { ClientEvalFeatureContext, ServerEvalFeatureContext, InternalFeatureRepository } from '../app';
 import { expect } from 'chai';
+import {FeatureStateBaseHolder} from "../app/feature_state_holders";
+import {server} from "sinon";
 
 describe('Client context should be able to encode as expected', () => {
   let repo: SubstituteOf<InternalFeatureRepository>;
@@ -58,6 +60,13 @@ describe('Client context should be able to encode as expected', () => {
     await serverContext.userKey('DJElif')
       .sessionKey('VirtualBurningMan1').build();
     edge.received(1).close();
+    const fhSubst = Substitute.for<FeatureStateHolder<any>>();
+    repo.feature('joy').returns(fhSubst);
+    fhSubst.isSet().returns(false);
+    expect(serverContext.getFlag("joy", true)).to.be.true;
+    expect(serverContext.getString("joy", "loopypro")).to.eq("loopypro");
+    expect(serverContext.getJson('joy', {x:1})).to.deep.eq({x:1});
+    expect(serverContext.getRawJson('joy', 'raw-json')).to.eq('raw-json');
   });
 
   it('the client context should not trigger a context change or a not ready', async () => {

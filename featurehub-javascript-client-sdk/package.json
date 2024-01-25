@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-client-sdk",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "FeatureHub client/browser SDK",
   "author": "info@featurehub.io",
   "sideEffects": false,

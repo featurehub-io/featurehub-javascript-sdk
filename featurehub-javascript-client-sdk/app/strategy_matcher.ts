@@ -21,7 +21,7 @@ export class Murmur3PercentageCalculator implements PercentageCalculator {
   private readonly MAX_PERCENTAGE = 1000000;
 
   public determineClientPercentage(percentageText: string, featureId: string): number {
-    const result = murmur3(percentageText + featureId);
+    const result = murmur3(percentageText + featureId, 0);
     return Math.floor(result / Math.pow(2, 32) * this.MAX_PERCENTAGE);
   }
 }
