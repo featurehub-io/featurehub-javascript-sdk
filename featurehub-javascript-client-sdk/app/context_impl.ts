@@ -111,29 +111,39 @@ export abstract class BaseClientContext implements ClientContext {
     return  this.feature(name).isSet();
   }
 
-  getNumber(name: string): number | undefined {
-    return this.feature(name).getNumber();
+  getNumber(name: string, def?: number): number | undefined {
+    const fsh = this.feature(name);
+    return fsh.isSet() ? fsh.getNumber() : def;
   }
 
-  getString(name: string): string | undefined {
-    return this.feature(name).getString();
+  getString(name: string, def?: string): string | undefined {
+    const fsh = this.feature(name);
+    return fsh.isSet() ? fsh.getString() : def;
   }
 
-  getJson(name: string): any | undefined {
-    const val = this.feature(name).getRawJson();
-    return val === undefined ? undefined : JSON.parse(val);
+  getJson(name: string, def?: any): any | undefined {
+    const fsh = this.feature(name);
+    if (fsh.isSet()) {
+      const val = fsh.getRawJson();
+      return JSON.parse(val!);
+    } else {
+      return def;
+    }
   }
 
-  getRawJson(name: string): string | undefined {
-    return this.feature(name).getRawJson();
+  getRawJson(name: string, def?: string): string | undefined {
+    const fsh = this.feature(name);
+    return fsh.isSet() ? fsh.getRawJson() : def;
   }
 
-  getFlag(name: string): boolean | undefined {
-    return this.feature(name).getFlag();
+  getFlag(name: string, def?: boolean): boolean | undefined {
+    const fsh = this.feature(name);
+    return fsh.isSet() ? fsh.getBoolean() : def;
   }
 
-  getBoolean(name: string): boolean | undefined {
-    return this.feature(name).getBoolean();
+  getBoolean(name: string, def?: boolean): boolean | undefined {
+    const fsh = this.feature(name);
+    return fsh.isSet() ? fsh.getBoolean() : def;
   }
 
   abstract build(): Promise<ClientContext>;

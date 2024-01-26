@@ -3,11 +3,21 @@ import { FeatureState, FeatureValueType } from './models';
 import { ClientContext } from './client_context';
 import { InternalFeatureRepository } from './internal_feature_repository';
 import { ListenerUtils } from './listener_utils';
+import {fhLog} from "./feature_hub_config";
+
+interface ListenerTracker {
+  listener: FeatureListener;
+  holder: FeatureStateHolder;
+}
+
+interface ListenerOriginal {
+  value: any;
+}
 
 export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   protected internalFeatureState: FeatureState | undefined;
   protected _key: string;
-  protected listeners: Map<number, FeatureListener> = new Map<number, FeatureListener>();
+  protected listeners: Map<number, ListenerTracker> = new Map<number, ListenerTracker>();
   protected _repo: InternalFeatureRepository;
   protected _ctx: ClientContext | undefined;
   // eslint-disable-next-line no-use-before-define
@@ -76,9 +86,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     const pos = ListenerUtils.newListenerKey(this.listeners);
 
     if (this._ctx !== undefined) {
-      this.listeners.set(pos, () => listener(this));
+      this.listeners.set(pos, {
+        listener: () => listener(this), holder: this
+      } );
     } else {
-      this.listeners.set(pos, listener);
+      this.listeners.set(pos, {
+        listener: listener, holder: this
+      });
     }
 
     return pos;
@@ -127,13 +141,33 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     const existingValue = this._getValue();
     const existingLocked = this.locked;
 
+    // capture all the original values of the listeners
+    const listenerValues: Map<number, ListenerOriginal> = new Map<number, ListenerOriginal>();
+    this.listeners.forEach((value, key) => {
+      listenerValues.set(key, {
+        value: value.holder.value
+      })
+    });
+
     this.internalFeatureState = fs;
 
-    const changed = existingLocked !== this.featureState()?.l || existingValue !== this._getValue(fs?.type);
+    // the lock changing is not part of the contextual evaluation of values changing, and is constant across all listeners.
+    const changedLocked = existingLocked !== this.featureState()?.l;
+    // did at least the default value change, even if there are no listeners for the state?
+    let changed =  changedLocked || existingValue !== this._getValue(fs?.type);
 
-    if (changed) {
-      this.notifyListeners();
-    }
+    this.listeners.forEach((value, key) => {
+      const original = listenerValues.get(key);
+      if (changedLocked || original?.value !== value.holder.value) {
+        changed = true;
+
+        try {
+          value.listener(value.holder);
+        } catch (e) {
+          fhLog.error(`Failed to trigger listener`, e);
+        }
+      }
+    });
 
     return changed;
   }
@@ -163,13 +197,9 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   }
 
   triggerListeners(feature: FeatureStateHolder): void {
-    this.notifyListeners(feature);
-  }
-
-  protected notifyListeners(feature?: FeatureStateHolder): void {
     this.listeners.forEach((l) => {
       try {
-        l(feature || this);
+        l.listener(feature || this);
       } catch (e) {
         //
       } // don't care
