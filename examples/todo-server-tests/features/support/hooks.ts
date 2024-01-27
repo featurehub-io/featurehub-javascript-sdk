@@ -1,4 +1,4 @@
-import { CustomWorld } from './world';
+import {CustomWorld, makeid} from './world';
 
 const {Before, After} = require("@cucumber/cucumber");
 import {
@@ -14,6 +14,7 @@ Before(function(details: any) {
   if (process.env.DEBUG) {
     console.log(`------------- (started ${details?.pickle?.name})`);
   }
+  (this as CustomWorld).setScenarioId(makeid(30));
 });
 
 After(function(details: any) {
