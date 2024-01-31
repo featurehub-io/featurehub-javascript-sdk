@@ -285,7 +285,7 @@ export class ApplyFeature {
 
       for (const rsi of strategies) {
         if (rsi.percentage !== 0 && (defaultPercentageKey != null ||
-          (rsi.percentageAttributes !== undefined && rsi.percentageAttributes.length))) {
+          (rsi.percentageAttributes !== undefined && rsi.percentageAttributes?.length))) {
           const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes!);
 
           if (!basePercentage.has(newPercentageKey)) {
@@ -341,7 +341,7 @@ export class ApplyFeature {
   }
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
-    for (const attr of rsi.attributes) {
+    for (const attr of (rsi.attributes || [])) {
       let suppliedValues = context.getAttrs(attr.fieldName!);
       if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === 'now') {
         // tslint:disable-next-line:switch-default

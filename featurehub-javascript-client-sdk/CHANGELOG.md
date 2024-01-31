@@ -1,3 +1,6 @@
+#### 1.3.4
+- support for Extended Feature Properties from FHOS 1.8.0, see xxx insert documentation link.
+
 #### 1.3.3
 - listeners were not being fired when added to contexts that matched strategies. [bugfix](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/196) 
 - all the getX methods on the Context now have defaults, so you can say fhContext.getFlag("feature", false) and if it isn't set or doesn't exist, it will return false. This is an optional field so it doesn't break existing code. (feature)

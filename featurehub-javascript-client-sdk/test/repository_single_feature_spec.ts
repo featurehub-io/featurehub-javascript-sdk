@@ -18,7 +18,7 @@ describe('repository reacts to single feature changes as expected', () => {
 
     expect(repo.feature('pear').getVersion()).to.eq(0);
 
-    repo.notify(SSEResultState.Feature, { id: '1', key: 'pear', version: 1, type: FeatureValueType.String, value: 'now-set' });
+    repo.notify(SSEResultState.Feature, { id: '1', key: 'pear', version: 1, type: FeatureValueType.String, value: 'now-set', fp: { 'category': 'shoes', 'appName': 'cajon' } });
 
     const str = repo.feature<string>('pear').value;
     expect(str).to.eq('now-set');
@@ -26,6 +26,7 @@ describe('repository reacts to single feature changes as expected', () => {
     expect(repo.feature('pear').version).to.eq(1);
     expect(repo.feature('pear').getString()).to.eq('now-set');
     expect(repo.feature('pear').str).to.eq('now-set');
+    expect(repo.feature('pear').featureProperties).to.deep.eq({ 'category': 'shoes', 'appName': 'cajon' });
   });
 
   it('should specify undefined for unknown feature values', () => {

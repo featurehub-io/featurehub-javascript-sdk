@@ -3,7 +3,7 @@ import { expect } from 'chai';
 
 describe('if a feature is deleted it becomes undefined', () => {
   let repo: ClientFeatureRepository;
-  let features: Array<FeatureState>
+  let features: Array<FeatureState>;
 
   beforeEach(() => {
     repo = new ClientFeatureRepository();

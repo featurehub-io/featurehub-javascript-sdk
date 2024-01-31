@@ -356,8 +356,6 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
       const fState = holder.getFeatureState()!;
       if (fs.version! < fState.version!) {
         return false;
-      } else if (fs.version === fState.version && fs.value === fState.value) {
-        return false;
       }
     }
 

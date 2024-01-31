@@ -106,6 +106,7 @@ describe('apply feature works as expected', () => {
     matcher.findMatcher(Arg.any()).returns(sMatcher);
 
     const found = app.apply([{
+      id: 'x',
       value: 'sausage',
       attributes: [
         {
@@ -174,6 +175,7 @@ describe('apply feature works as expected', () => {
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
     const found = sApp.apply([{
+      id: 'x',
       value: 'sausage',
       percentage: 20,
       attributes: [
@@ -199,6 +201,7 @@ describe('apply feature works as expected', () => {
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
 
     const found = sApp.apply([{
+      id: 'x',
       value: 'sausage',
       percentage: 20,
       attributes: [
