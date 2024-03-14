@@ -22,6 +22,11 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     this.baggageValue = value;
   }
 
+  // feature properties are not included in baggage, they don't make logical sense.
+  get featureProperties(): Record<string, string> | undefined {
+      return undefined;
+  }
+
   isEnabled(): boolean {
     return this.getBoolean() === true;
   }

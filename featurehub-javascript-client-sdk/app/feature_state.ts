@@ -117,4 +117,6 @@ export interface FeatureStateHolder<T = any> {
   get type(): FeatureValueType | undefined;
 
   withContext(param: ClientContext): FeatureStateHolder;
+
+  get featureProperties(): Record<string,string> | undefined;
 }

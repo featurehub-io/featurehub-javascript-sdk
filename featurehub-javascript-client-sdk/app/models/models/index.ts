@@ -1,6 +1,8 @@
 export * from './application-version-info';
 export * from './base-rollout-strategy';
-export * from './base-rollout-strategy-attribute';
+export * from './base-rollout-strategy-all-of';
+export * from './base-strategy';
+export * from './base-uistrategy';
 export * from './feature-environment-collection';
 export * from './feature-rollout-strategy';
 export * from './feature-rollout-strategy-all-of';
@@ -9,6 +11,7 @@ export * from './feature-state';
 export * from './feature-state-update';
 export * from './feature-value-type';
 export * from './role-type';
+export * from './rollout-strategy-attribute';
 export * from './rollout-strategy-attribute-conditional';
 export * from './rollout-strategy-field-type';
 export * from './sseresult-state';

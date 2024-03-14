@@ -17,21 +17,15 @@
 /**
  * 
  * @export
- * @enum {string}
+ * @interface BaseRolloutStrategyAllOf
  */
-export enum RolloutStrategyAttributeConditional {
-    Equals = 'EQUALS',
-    EndsWith = 'ENDS_WITH',
-    StartsWith = 'STARTS_WITH',
-    Greater = 'GREATER',
-    GreaterEquals = 'GREATER_EQUALS',
-    Less = 'LESS',
-    LessEquals = 'LESS_EQUALS',
-    NotEquals = 'NOT_EQUALS',
-    Includes = 'INCLUDES',
-    Excludes = 'EXCLUDES',
-    Regex = 'REGEX'
+export interface BaseRolloutStrategyAllOf {
+    /**
+     * when we attach the RolloutStrategy for Dacha or SSE this lets us push the value out. Only visible in SDK and SSE Edge.
+     * @type {any}
+     * @memberof BaseRolloutStrategyAllOf
+     */
+    value?: any | null;
 }
-
 
 

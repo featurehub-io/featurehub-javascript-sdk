@@ -1,11 +1,12 @@
 .gitignore
 .npmignore
-.openapi-generator-ignore
 git_push.sh
 index.ts
 models/application-version-info.ts
-models/base-rollout-strategy-attribute.ts
+models/base-rollout-strategy-all-of.ts
 models/base-rollout-strategy.ts
+models/base-strategy.ts
+models/base-uistrategy.ts
 models/feature-environment-collection.ts
 models/feature-rollout-strategy-all-of.ts
 models/feature-rollout-strategy-attribute.ts
@@ -16,6 +17,7 @@ models/feature-value-type.ts
 models/index.ts
 models/role-type.ts
 models/rollout-strategy-attribute-conditional.ts
+models/rollout-strategy-attribute.ts
 models/rollout-strategy-field-type.ts
 models/sseresult-state.ts
 models/strategy-attribute-country-name.ts

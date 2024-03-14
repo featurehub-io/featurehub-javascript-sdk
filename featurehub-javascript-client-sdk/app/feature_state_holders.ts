@@ -3,7 +3,7 @@ import { FeatureState, FeatureValueType } from './models';
 import { ClientContext } from './client_context';
 import { InternalFeatureRepository } from './internal_feature_repository';
 import { ListenerUtils } from './listener_utils';
-import {fhLog} from "./feature_hub_config";
+import { fhLog } from './feature_hub_config';
 
 interface ListenerTracker {
   listener: FeatureListener;
@@ -88,7 +88,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     if (this._ctx !== undefined) {
       this.listeners.set(pos, {
         listener: () => listener(this), holder: this
-      } );
+      });
     } else {
       this.listeners.set(pos, {
         listener: listener, holder: this
@@ -146,7 +146,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     this.listeners.forEach((value, key) => {
       listenerValues.set(key, {
         value: value.holder.value
-      })
+      });
     });
 
     this.internalFeatureState = fs;
@@ -164,7 +164,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
         try {
           value.listener(value.holder);
         } catch (e) {
-          fhLog.error(`Failed to trigger listener`, e);
+          fhLog.error('Failed to trigger listener', e);
         }
       }
     });
@@ -292,5 +292,9 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
   get value(): T {
     return this._getValue(this.getType(), true);
+  }
+
+  get featureProperties(): Record<string, string> | undefined {
+    return this.featureState()?.fp ?? undefined;
   }
 }

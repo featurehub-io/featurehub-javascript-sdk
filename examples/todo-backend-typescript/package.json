@@ -6,8 +6,8 @@
   "license": "MIT",
   "scripts": {
     "build": "node_modules/.bin/tsc",
-    "link": "npm link featurehub-javascript-client-sdk featurehub-javascript-node-sdk",
-		"compile": "npm run link && npm run build",
+    "setup": "npm link featurehub-javascript-client-sdk featurehub-javascript-node-sdk",
+    "compile": "npm run setup && npm run build",
     "start": "npm run build && node --trace-deprecation --trace-warnings dist/app.js",
     "run": "npm run build && node --trace-deprecation --trace-warnings dist/app.js"
   },

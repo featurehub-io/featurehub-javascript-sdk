@@ -16,23 +16,23 @@ import {
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
   SSEResultState
-} from "../app";
-import {Arg, Substitute, SubstituteOf} from "@fluffy-spoon/substitute";
-import {FeatureStateBaseHolder} from "../app/feature_state_holders";
-import {expect} from "chai";
-import {Applied, ApplyFeature} from "../app/strategy_matcher";
+} from '../app';
+import { Arg, Substitute, SubstituteOf } from '@fluffy-spoon/substitute';
+import { FeatureStateBaseHolder } from '../app/feature_state_holders';
+import { expect } from 'chai';
+import { Applied, ApplyFeature } from '../app/strategy_matcher';
 
 class TestingContext extends BaseClientContext {
   build(): Promise<ClientContext> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   feature(name: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   close(): void {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   constructor(repository: InternalFeatureRepository) {
@@ -44,11 +44,11 @@ class FakeInternalRepository implements InternalFeatureRepository {
   private applier = new ApplyFeature();
 
   notReady(): void {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   notify(state: SSEResultState, data: any) {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   valueInterceptorMatched(key: string): InterceptorValueMatch {
@@ -60,78 +60,78 @@ class FakeInternalRepository implements InternalFeatureRepository {
   }
 
   readyness: Readyness = Readyness.Ready;
-  catchAndReleaseMode: boolean = false;
+  catchAndReleaseMode = false;
 
   logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext) {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   hasFeature(key: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   feature(key: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   getFeatureState<T = any>(key: string): FeatureStateHolder<T> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   release(disableCatchAndRelease?: boolean): Promise<void> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   simpleFeatures(): Map<string, string> {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   getFlag(key: string): boolean {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   getString(key: string): string {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   getJson(key: string): string {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   getNumber(key: string): number {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   isSet(key: string): boolean {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   addValueInterceptor(interceptor: FeatureStateValueInterceptor): void {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   addReadynessListener(listener: ReadynessListener): number {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   removeReadinessListener(listener: number | ReadynessListener) {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   addAnalyticCollector(collector: AnalyticsCollector): void {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): number {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
   removePostLoadNewFeatureStateAvailableListener(listener: number | PostLoadNewFeatureStateAvailableListener) {
-    throw new Error("Method not implemented.");
+    throw new Error('Method not implemented.');
   }
 
 }
@@ -183,8 +183,8 @@ describe('When checking for listeners triggering on strategy changes', () => {
 
     expect(listener1Result).to.not.be.undefined;
     expect(listener2Result).to.not.be.undefined;
-    let l1Result = listener1Result as FeatureStateHolder<boolean>;
-    let l2Result = listener2Result as FeatureStateHolder<boolean>;
+    const l1Result = listener1Result as FeatureStateHolder<boolean>;
+    const l2Result = listener2Result as FeatureStateHolder<boolean>;
     expect(l1Result?.flag).to.be.false;
     expect(l2Result?.flag).to.be.true;
     expect(listener2TriggerCounter).to.eq(1);
