@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { Substitute } from '@fluffy-spoon/substitute';
 import { expect } from 'chai';
 import { FeatureHubRepository, w3cBaggageHeader } from '../app';

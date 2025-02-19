@@ -57,24 +57,24 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+  public addPostLoadNewFeatureStateAvailableListener(_: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
     return 0;
   }
 
-  public removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+  public removePostLoadNewFeatureStateAvailableListener(_: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
   }
 
   public addReadynessListener(listener: ReadynessListener): number {
     return this.addReadinessListener(listener);
   }
 
-  public addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
+  public addReadinessListener(listener: ReadynessListener, _?: boolean): number {
     listener(Readyness.Ready, true);
 
     return 0;
   }
 
-  public removeReadinessListener(listener: ReadynessListener | number) {
+  public removeReadinessListener(_: ReadynessListener | number) {
   }
 
   notReady(): void {

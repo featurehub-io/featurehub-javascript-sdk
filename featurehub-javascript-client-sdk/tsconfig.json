@@ -7,7 +7,7 @@
     "sourceMap": true,
     "module": "CommonJS",
     "outDir": "dist",
-		"strict": true,
+    "strict": true,
     "newLine": "lf",
     "noEmitOnError": true,
     "esModuleInterop": true,

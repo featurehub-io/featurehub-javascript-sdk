@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { expect } from 'chai';
 import { FeatureEnvironmentCollection, FeatureState, FeatureValueType, LocalClientContext } from '../app';
 

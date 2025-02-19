@@ -14,10 +14,21 @@ export interface PollingService {
 
   stop(): void;
 
+  // the promise returned is a fake promise, it is the responsibility of the outer caller to start the
+  // poll again once this attribute header has changed
   attributeHeader(header: string): Promise<void>;
+
+  busy: boolean;
 }
 
 export type FeaturesFunction = (environments: Array<FeatureEnvironmentCollection>) => void;
+export type PromiseLikeFunction = (value: void | PromiseLike<void>) => void;
+export type RejectLikeFunction = (response?: any) => void;
+
+interface PromiseLikeData {
+  resolve: PromiseLikeFunction;
+  reject: RejectLikeFunction;
+}
 
 export abstract class PollingBase implements PollingService {
   protected url: string;
@@ -27,19 +38,24 @@ export abstract class PollingBase implements PollingService {
   protected _header?: string;
   protected _shaHeader: string;
   protected _etag: string | undefined | null;
+  protected _busy = false;
+  protected _outstandingPromises : Array<PromiseLikeData> = [];
 
   protected constructor(url: string, frequency: number, callback: FeaturesFunction) {
     this.url = url;
     this._frequency = frequency;
     this._shaHeader = '0';
     this._callback = callback;
+    this._busy = false;
   }
 
   attributeHeader(header: string): Promise<void> {
     this._header = header;
     this._shaHeader = (header === undefined || header.length === 0) ? '0' :
       base64.encode(new sha256().update(header).digest(), true, false);
-    return this.poll();
+    return new Promise((resolve) => {
+      resolve();
+    });
   }
 
   public stop(): void {
@@ -73,6 +89,22 @@ export abstract class PollingBase implements PollingService {
     return new Promise(((resolve) => {
       resolve();
     }));
+  }
+
+  public get busy() {
+    return this._busy;
+  }
+
+  protected resolveOutstanding() : void {
+    const outstanding = [... this._outstandingPromises];
+    this._outstandingPromises = [];
+    outstanding.forEach(e => e.resolve());
+  }
+
+  public rejectOutstanding(result?: any) {
+    const outstanding = [... this._outstandingPromises];
+    this._outstandingPromises = [];
+    outstanding.forEach(e => e.reject(result));
   }
 }
 
@@ -126,7 +158,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
           if (data.e) { // save space with short name
             this._callback(data.e as Array<FeatureEnvironmentCollection>);
           }
-        } catch (ignored) {
+        } catch (_) {
           // ignore exception
         }
       }
@@ -134,11 +166,18 @@ export class BrowserPollingService extends PollingBase implements PollingService
   }
 
   public poll(): Promise<void> {
+    if (this._busy) {
+      return new Promise((resolve, reject) => {
+        this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
+      });
+    }
+
     if (this._stopped) {
       return new Promise((resolve) => {
         resolve();
       });
     }
+
     return new Promise((resolve, reject) => {
       const calculatedUrl = `${this.url}&contextSha=${this._shaHeader}`;
 
@@ -168,16 +207,22 @@ export class BrowserPollingService extends PollingBase implements PollingService
             const environments = JSON.parse(req.responseText) as Array<FeatureEnvironmentCollection>;
             try {
               BrowserPollingService.localStorageRequestor().setItem(this.url, JSON.stringify({ e: environments }));
-            } catch (e) {
+            } catch (_) {
               fhLog.error('featurehub: unable to cache features');
             }
             this._callback(environments);
 
             this._stopped = (req.status === 236);
+            this._busy = false;
+            this.resolveOutstanding();
             resolve();
           } else if (req.status == 304) { // no change
+            this._busy = false;
+            this.resolveOutstanding();
             resolve();
           } else {
+            this._busy = false;
+            this.rejectOutstanding(req.status);
             reject(req.status);
           }
         }
@@ -187,7 +232,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
 }
 
 export type PollingClientProvider = (options: BrowserOptions, url: string,
-                                     frequency: number, callback: FeaturesFunction) => PollingBase;
+                                     frequency: number, callback: FeaturesFunction) => PollingService;
 
 export class FeatureHubPollingClient implements EdgeService {
   private readonly _frequency: number;
@@ -200,7 +245,6 @@ export class FeatureHubPollingClient implements EdgeService {
   private _xHeader: string | undefined;
   private _pollPromiseResolve: ((value: (PromiseLike<void> | void)) => void) | undefined;
   private _pollPromiseReject: ((reason?: any) => void) | undefined;
-  private _pollingStarted = false;
   private _currentTimer: any;
 
   public static pollingClientProvider: PollingClientProvider = (opt, url, freq, callback) =>
@@ -278,7 +322,7 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   public poll(): Promise<void> {
-    if (this._pollPromiseResolve !== undefined || this._pollingStarted) {
+    if (this._pollPromiseResolve !== undefined || this._pollingService?.busy) {
       return new Promise<void>((resolve) => resolve());
     }
 
@@ -306,7 +350,7 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   public get active() : boolean {
-    return this._pollingStarted || this._currentTimer !== undefined;
+    return this._pollingService?.busy || this._currentTimer !== undefined;
   }
 
   public get awaitingFirstSuccess(): boolean {
@@ -314,7 +358,7 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _restartTimer() {
-    if (this._pollingService === undefined || this._pollingStarted || !this._startable) {
+    if (this._pollingService === undefined || this._pollingService?.busy || !this._startable) {
       return;
     }
 
@@ -324,8 +368,6 @@ export class FeatureHubPollingClient implements EdgeService {
       clearTimeout(this._currentTimer);
       this._currentTimer = undefined;
     }
-
-    this._pollingStarted = true;
 
     this._pollFunc();
   }
@@ -351,9 +393,6 @@ export class FeatureHubPollingClient implements EdgeService {
       })
       .catch((status) => {
         fhLog.trace('poll failed', status);
-        // ready to poll again at the right interval
-        this._pollingStarted = false;
-
         if (status === 404 || status == 400) {
           if (status == 404) {
             fhLog.error('The API Key provided does not exist, stopping polling.');
@@ -386,14 +425,11 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _readyNextPoll() {
-    // ready to poll again at the right interval (tests need this here)
-    this._pollingStarted = false;
-
     if (this._pollingService && this._pollingService.frequency > 0) { // in case we got a 404, and it was shut down
       fhLog.trace('starting timer for poll', this._pollingService.frequency);
       this._currentTimer = setTimeout(() => this._restartTimer(),  this._pollingService.frequency);
     } else {
-      fhLog.trace('no polling service or 0 frequence, stopping polling.',
+      fhLog.trace('no polling service or 0 frequency, stopping polling.',
         this._pollingService === undefined,
         this._pollingService?.frequency);
     }

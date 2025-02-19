@@ -1,3 +1,7 @@
+#### 1.4.0
+- polling functionality changed to ensure double polling doesn't happen when the context is changed, but as node
+relies on client-sdk, we have to bump the versions. 
+
 #### 1.3.4
 - support for Extended Feature Properties from FHOS 1.8.0, see xxx insert documentation link.
 

@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { expect } from 'chai';
 import { Substitute, SubstituteOf, } from '@fluffy-spoon/substitute';
 import { EdgeFeatureHubConfig, EdgeService, InternalFeatureRepository } from '../app';

@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { ClientContext, ClientFeatureRepository, FeatureValueType, SSEResultState } from '../app';
 import { expect } from 'chai';
 import { Substitute } from '@fluffy-spoon/substitute';

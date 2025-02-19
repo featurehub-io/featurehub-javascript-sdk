@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { ClientFeatureRepository, FeatureState, FeatureValueType, SSEResultState } from '../app';
 import { expect } from 'chai';
 

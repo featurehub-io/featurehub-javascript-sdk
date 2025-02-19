@@ -200,7 +200,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     this.listeners.forEach((l) => {
       try {
         l.listener(feature || this);
-      } catch (e) {
+      } catch (_) {
         //
       } // don't care
     });

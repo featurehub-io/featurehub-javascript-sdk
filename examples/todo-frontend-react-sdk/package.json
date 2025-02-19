@@ -7,11 +7,13 @@
     "start": "vite",
     "dev": "vite",
     "build": "tsc && vite build",
+    "link": "npm link featurehub-javascript-client-sdk",
     "preview": "vite preview",
     "install-sdk": "npm --prefix ../../featurehub-react-sdk run build && rm -rf node_modules && npm i"
   },
   "dependencies": {
     "featurehub-react-sdk": "file:../../featurehub-react-sdk",
+    "featurehub-javascript-client-sdk": "file:../../featurehub-javascript-client-sdk",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

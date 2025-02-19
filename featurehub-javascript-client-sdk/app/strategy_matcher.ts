@@ -117,7 +117,7 @@ class DateMatcher extends StringMatcher {
       }
 
       return super.match(parsedDate.toISOString().substring(0, 10), attr);
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
@@ -138,7 +138,7 @@ class DateTimeMatcher extends StringMatcher {
       }
 
       return super.match(parsedDate.toISOString().substring(0, 19) + 'Z', attr);
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
@@ -183,7 +183,7 @@ class NumberMatcher implements StrategyMatcher {
         case RolloutStrategyAttributeConditional.Regex:
           return vals.findIndex((v) => suppliedValue.match(v)) >= 0;
       }
-    } catch (e) {
+    } catch (_) {
       return false;
     }
 
@@ -284,9 +284,8 @@ export class ApplyFeature {
       const defaultPercentageKey = context.defaultPercentageKey();
 
       for (const rsi of strategies) {
-        if (rsi.percentage !== 0 && (defaultPercentageKey != null ||
-          (rsi.percentageAttributes !== undefined && rsi.percentageAttributes?.length))) {
-          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes!);
+        if (rsi.percentage !== 0 && (defaultPercentageKey || (rsi.percentageAttributes?.length))) {
+          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes);
 
           if (!basePercentage.has(newPercentageKey)) {
             basePercentage.set(newPercentageKey, 0);
@@ -332,8 +331,8 @@ export class ApplyFeature {
     return new Applied(false, null);
   }
 
-  public static determinePercentageKey(context: ClientContext, percentageAttributes: Array<string>): string {
-    if (percentageAttributes == null || percentageAttributes.length === 0) {
+  public static determinePercentageKey(context: ClientContext, percentageAttributes: Array<string> | undefined | null): string {
+    if (!percentageAttributes || percentageAttributes.length === 0) {
       return context.defaultPercentageKey()!;
     }
 
