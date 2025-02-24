@@ -24,7 +24,7 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
 
   // feature properties are not included in baggage, they don't make logical sense.
   get featureProperties(): Record<string, string> | undefined {
-      return undefined;
+    return undefined;
   }
 
   isEnabled(): boolean {
@@ -36,11 +36,11 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  addListener(listener: FeatureListener<T>): FeatureListenerHandle {
+  addListener(_: FeatureListener<T>): FeatureListenerHandle {
     return 0;
   }
 
-  removeListener(handle: FeatureListener<T> | FeatureListenerHandle) {
+  removeListener(_: FeatureListener<T> | FeatureListenerHandle) {
   }
 
   getBoolean(): boolean | undefined {
@@ -157,7 +157,7 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     if (!json) return {};
     try {
       return JSON.parse(json);
-    } catch (e) {
+    } catch (_) {
       return {};
     }
   }

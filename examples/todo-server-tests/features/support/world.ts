@@ -1,4 +1,4 @@
-import globalAxios, { AxiosResponse } from "axios";
+import globalAxios, {AxiosResponse, InternalAxiosRequestConfig} from "axios";
 import {
   FeatureStateUpdate,
   FeatureUpdater,
@@ -46,6 +46,19 @@ export class CustomWorld {
 
   constructor() {
     this.variable = 0;
+    if (process.env.LOUD) {
+      globalAxios.interceptors.request.use((reqConfig: InternalAxiosRequestConfig) => {
+        const req = {
+          type: 'request',
+          headers: reqConfig.headers,
+          method: reqConfig.method,
+          data: reqConfig.data,
+          url: reqConfig.url,
+        };
+        console.log({level: 'verbose', message: 'request', http: JSON.stringify(req, undefined, 2)});
+        return reqConfig;
+      }, (error) => Promise.reject(error));
+    }
     globalAxios.interceptors.response.use((resp: AxiosResponse) => {
       const responseToLog = responseToRecord(resp);
       if (responseToLog !== undefined) {

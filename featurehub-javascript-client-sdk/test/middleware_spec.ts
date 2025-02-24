@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { Substitute } from '@fluffy-spoon/substitute';
 import { featurehubMiddleware, FeatureStateHolder, FeatureValueType, InternalFeatureRepository } from '../app';
 import { expect } from 'chai';

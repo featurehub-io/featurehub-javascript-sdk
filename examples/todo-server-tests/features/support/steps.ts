@@ -24,7 +24,7 @@ Then("my list of todos should contain {string}", async function (todoDescription
     await waitForExpect(async () => {
         const {responseData, todo} = await extracted.call(this);
         console.log('compare', todo, responseData);
-        expect(todo, `Expected ${todoDescription} but found in the response: ${responseData[0].title}`).to.exist;
+        expect(todo, `Expected ${todoDescription} but found in the response: ${responseData[0]?.title}`).to.exist;
     }, 20000, 1000);
 });
 

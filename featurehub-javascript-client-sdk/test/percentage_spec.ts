@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 import { expect } from 'chai';
 import { Murmur3PercentageCalculator } from '../app/strategy_matcher';
 

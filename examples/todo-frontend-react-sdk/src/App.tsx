@@ -84,6 +84,8 @@ function Main() {
 
         <button onClick={() => setCount(count + 1)}>Count: {count}</button>
 
+        <button onClick={() => { fhContext.userKey(Math.random().toString()); fhContext.build(); }}>Change user key</button>
+
         <p>The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText}`}</code></p>
         <p>The value of <code>text_colour</code> feature is <code>{textColour}</code></p>
 

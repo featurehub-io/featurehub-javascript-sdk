@@ -1,25 +1,33 @@
+/* tslint:disable */
+/* eslint-disable */
 import { expect } from 'chai';
 import { Substitute, SubstituteOf, } from '@fluffy-spoon/substitute';
 import {
   FeatureHubConfig,
   FeatureHubPollingClient,
-  FeaturesFunction,
+  FeaturesFunction, fhLog, FHLog,
   InternalFeatureRepository,
-  PollingBase
+  PollingBase, PollingService
 } from '../app';
 import sinon = require('sinon');
 import { SinonFakeTimers } from 'sinon';
 
 
 describe('basic polling sdk works as expected',  () => {
-  let poller: SubstituteOf<PollingBase>;
+  let poller: SubstituteOf<PollingService>;
   let repo: SubstituteOf<InternalFeatureRepository>;
   let config: SubstituteOf<FeatureHubConfig>;
 
   beforeEach(() => {
     poller = Substitute.for<PollingBase>();
+    // @ts-ignore
+    poller.busy.returns(false);
 
     FeatureHubPollingClient.pollingClientProvider = () => poller;
+
+    FHLog.fhLog.trace = (...args: any[]) => {
+      console.log('FeatureHub/Trace: ', ...args);
+    };
 
     repo = Substitute.for<InternalFeatureRepository>();
     config = Substitute.for<FeatureHubConfig>();
@@ -36,6 +44,8 @@ describe('basic polling sdk works as expected',  () => {
     let callback: FeaturesFunction | undefined;
 
     poller.poll().resolves();
+    // @ts-ignore
+    // poller.busy.returns(false);
 
     FeatureHubPollingClient.pollingClientProvider = (opt, url1, freq1, callback1) => {
       url = url1;
@@ -142,16 +152,23 @@ describe('basic polling sdk works as expected',  () => {
       class StubPoller extends PollingBase {
         constructor() {
           super('', 200, () => {});
+          this._busy = false;
         }
+
         poll(): Promise<void> {
           counter++;
+          this._busy = true;
+
+          fhLog.trace(`counter is ${counter} ${p.awaitingFirstSuccess} ${p.active}`);
 
           if (counter <= 2) {
             expect(p.awaitingFirstSuccess).to.be.true;
             expect(p.active).to.be.true;
           }
 
+          this._busy = false;
           if (counter == 1) {
+            fhLog.trace('rejecting with 503');
             return Promise.reject(503);
           }
 
