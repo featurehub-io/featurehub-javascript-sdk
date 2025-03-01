@@ -1,10 +1,20 @@
 import {
   FeatureHubPollingClient,
-  FeatureStateUpdate, FeatureUpdatePostManager, FeatureUpdater, GoogleAnalyticsApiClient, GoogleAnalyticsCollector,
+  FeatureStateUpdate,
+  FeatureUpdatePostManager,
+  FeatureUpdater,
+  GoogleAnalyticsApiClient,
+  GoogleAnalyticsCollector,
   NodejsOptions,
   PollingBase,
   FeatureHubEventSourceClient,
-  PollingService, FeaturesFunction, FeatureEnvironmentCollection, EdgeFeatureHubConfig, FHLog, fhLog
+  PollingService,
+  FeaturesFunction,
+  FeatureEnvironmentCollection,
+  EdgeFeatureHubConfig,
+  FHLog,
+  fhLog,
+  PromiseLikeFunction, RejectLikeFunction
 } from 'featurehub-javascript-client-sdk';
 import { URL } from 'url';
 import { RequestOptions } from 'https';
@@ -16,6 +26,11 @@ export * from 'featurehub-javascript-client-sdk';
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
   return new ES(url, dict);
 };
+
+interface PromiseLikeData {
+  resolve: PromiseLikeFunction;
+  reject: RejectLikeFunction;
+}
 
 export type ModifyRequestFunction = (options: RequestOptions) => void;
 
@@ -32,9 +47,17 @@ export class NodejsPollingService extends PollingBase implements PollingService 
   }
 
   public poll(): Promise<void> {
+    if (this._busy) {
+      return new Promise((resolve, reject) => {
+        this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
+      });
+    }
+
     if (this._stopped) {
       return new Promise((resolve) => resolve());
     }
+
+    this._busy = true;
 
     return new Promise(((resolve, reject) => {
       const http = this.uri.protocol === 'http:' ? require('http') : require('https');
@@ -71,10 +94,16 @@ export class NodejsPollingService extends PollingBase implements PollingService 
             this._etag = res.headers.etag;
             this._callback(JSON.parse(data) as Array<FeatureEnvironmentCollection>);
             this._stopped = (res.statusCode === 236);
+            this._busy = false;
+            this.resolveOutstanding();
             resolve();
           } else if (res.statusCode == 304) {
+            this._busy = false;
+            this.resolveOutstanding();
             resolve();
           } else {
+            this._busy = false;
+            this.rejectOutstanding(req.status);
             reject(res.statusCode);
           }
         });

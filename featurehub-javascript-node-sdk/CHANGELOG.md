@@ -1,3 +1,6 @@
+#### 1.4.0
+- polling functionality changed to ensure double polling doesn't happen when the context is changed, but as node
+  relies on client-sdk, we have to bump the versions.
 #### 1.3.3
 - listeners were not being fired when added to contexts that matched strategies. [bugfix](https://github.com/featurehub-io/featurehub-javascript-sdk/issues/196)
 - all the getX methods on the Context now have defaults, so you can say fhContext.getFlag("feature", false) and if it isn't set or doesn't exist, it will return false. This is an optional field so it doesn't break existing code. (feature)
