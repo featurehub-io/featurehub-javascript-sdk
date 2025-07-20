@@ -22,6 +22,7 @@ export * from './featurehub_repository';
 export * from './edge_featurehub_config';
 export * from './featurehub_eventsource';
 export * from './local_context';
+export * from './feature_state_holders';
 
 export class FeatureHub {
   private static inBrowser: boolean = (typeof window !== 'undefined' && typeof document !== 'undefined');
