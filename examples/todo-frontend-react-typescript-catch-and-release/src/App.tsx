@@ -46,13 +46,13 @@ class TodoData {
 }
 
 class ConfigData {
-  todoServerBaseUrl: string;
-  fhEdgeUrl: string;
-  fhApiKey: string;
+  todoServerBaseUrl: string = "";
+  fhEdgeUrl: string = "";
+  fhApiKey: string = "";
 }
 
 class App extends React.Component<{}, { todos: TodoData }> {
-  private titleInput: HTMLInputElement;
+  private titleInput!: HTMLInputElement;
 
   constructor() {
     super([]);
