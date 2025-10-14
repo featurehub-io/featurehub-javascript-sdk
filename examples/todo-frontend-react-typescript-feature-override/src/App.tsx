@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Configuration, TodoServiceApi, Todo } from "./api";
 import "./App.css";
-import globalAxios, { AxiosRequestConfig } from "axios";
+import globalAxios from "axios";
 import {
   ClientContext,
   EdgeFeatureHubConfig,
@@ -38,23 +38,23 @@ class TodoData {
 }
 
 class ConfigData {
-  todoServerBaseUrl: string;
-  fhEdgeUrl: string;
-  fhApiKey: string;
+  todoServerBaseUrl: string = "";
+  fhEdgeUrl: string = "";
+  fhApiKey: string = "";
 }
 
 globalAxios.interceptors.request.use(
-  function (config: AxiosRequestConfig) {
+  function (config: any) {
     if (fhConfig !== undefined) {
       // this requires  a  server evaluation key
       const baggage = w3cBaggageHeader({
         repo: fhConfig.repository(),
-        header: config.headers.Baggage,
+        header: (config.headers as any).Baggage,
       });
       // const baggage = w3cBaggageHeader({});
       if (baggage) {
         console.log("baggage is ", baggage);
-        config.headers.Baggage = baggage;
+        (config.headers as any).Baggage = baggage;
       } else {
         console.log("no baggage");
       }
@@ -68,8 +68,8 @@ globalAxios.interceptors.request.use(
 );
 
 class App extends React.Component<{}, { todos: TodoData }> {
-  private titleInput: HTMLInputElement;
-  private userName: HTMLInputElement;
+  private titleInput!: HTMLInputElement;
+  private userName!: HTMLInputElement;
 
   constructor() {
     super([]);
@@ -86,8 +86,8 @@ class App extends React.Component<{}, { todos: TodoData }> {
     const config = (await globalAxios.request({ url: "featurehub-config.json" }))
       .data as ConfigData;
     fhConfig = new EdgeFeatureHubConfig(config.fhEdgeUrl, config.fhApiKey);
-    window["fhConfig"] = fhConfig;
-    window["repository"] = fhConfig.repository();
+    (window as any)["fhConfig"] = fhConfig;
+    (window as any)["repository"] = fhConfig.repository();
 
     // change to the polling client so there is a difference in the keys seen by the UI vs the backend
     fhConfig.edgeServiceProvider((repo, cfg) => new FeatureHubPollingClient(repo, cfg, 10000));
