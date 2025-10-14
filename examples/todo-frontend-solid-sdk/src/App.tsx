@@ -5,7 +5,8 @@ import logoVite from "./vite.svg";
 import styles from "./App.module.css";
 import { FeatureHub, useFeature } from "featurehub-solid-sdk";
 
-const SAMPLE_TEXT = "This is some random text content which may have its case-sensitivity modified.";
+const SAMPLE_TEXT =
+  "This is some random text content which may have its case-sensitivity modified.";
 
 /*
   DEVELOPER NOTE:
@@ -82,7 +83,8 @@ function Main() {
           <button onClick={() => setCount(count() + 1)}>Count: {count()}</button>
 
           <p>
-            The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText()}`}</code>
+            The value of <code>uppercase_text</code> feature is{" "}
+            <code>{`${shouldUpperCaseText()}`}</code>
           </p>
           <p>
             The value of <code>text_colour</code> feature is <code>{textColour()}</code>

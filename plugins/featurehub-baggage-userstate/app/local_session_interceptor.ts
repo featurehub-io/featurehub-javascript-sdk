@@ -1,9 +1,14 @@
-
 // this is a user centric repository, it overlays the featurehub repository
 // and lets the user override non-locked features
 // it stores data in the localSession
 
-import { FeatureHubRepository, FeatureValueType, FeatureStateValueInterceptor, InterceptorValueMatch, fhLog } from 'featurehub-repository';
+import {
+  FeatureHubRepository,
+  FeatureValueType,
+  FeatureStateValueInterceptor,
+  InterceptorValueMatch,
+  fhLog,
+} from "featurehub-repository";
 
 export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
   private repo: FeatureHubRepository;
@@ -21,13 +26,15 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
 
     if (this._storage && !this._alreadySetListener) {
       this._alreadySetListener = true;
-      this._window.addEventListener('storage', (e: StorageEvent) => LocalSessionInterceptor.storageChangedListener(e, this.repo));
+      this._window.addEventListener("storage", (e: StorageEvent) =>
+        LocalSessionInterceptor.storageChangedListener(e, this.repo),
+      );
     }
   }
 
   setUrl(url: string): void {
     if (this._storage) {
-      this._storage.setItem('fh_url', url);
+      this._storage.setItem("fh_url", url);
     }
   }
 
@@ -36,7 +43,7 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
       const feature = this.repo.feature(key);
 
       if (feature.getType() === FeatureValueType.Boolean && value === undefined) {
-        throw new Error('Cannot set boolean feature flag to null');
+        throw new Error("Cannot set boolean feature flag to null");
       }
 
       const nullCheck = this._storage[LocalSessionInterceptor._nullName(key)];
@@ -46,15 +53,25 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
       // listener doesn't trigger too early. It can trigger after the second
       // change so it will if necessary force a state change.
       if (value === undefined) {
-        this._storage.setItem(LocalSessionInterceptor._nullName(key), 'null');
+        this._storage.setItem(LocalSessionInterceptor._nullName(key), "null");
         this._storage.removeItem(LocalSessionInterceptor._valueName(key));
-        this._window.dispatchEvent(new StorageEvent('storage',
-                                              {oldValue: val, newValue: value, key: LocalSessionInterceptor._valueName(key)}));
+        this._window.dispatchEvent(
+          new StorageEvent("storage", {
+            oldValue: val,
+            newValue: value,
+            key: LocalSessionInterceptor._valueName(key),
+          }),
+        );
       } else {
         this._storage.setItem(LocalSessionInterceptor._valueName(key), value);
         this._storage.removeItem(LocalSessionInterceptor._nullName(key));
-        this._window.dispatchEvent(new StorageEvent('storage',
-                                              {oldValue: val, newValue: value, key: LocalSessionInterceptor._valueName(key)}) as StorageEvent);
+        this._window.dispatchEvent(
+          new StorageEvent("storage", {
+            oldValue: val,
+            newValue: value,
+            key: LocalSessionInterceptor._valueName(key),
+          }) as StorageEvent,
+        );
       }
     }
   }
@@ -77,12 +94,12 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
     return undefined;
   }
 
-  private static _nullName(key: string): string  {
+  private static _nullName(key: string): string {
     return `fh_null_${key}`;
   }
 
   private static _valueName(key: string): string {
-    return`fh_value_${key}`;
+    return `fh_value_${key}`;
   }
 
   private static storageChangedListener(e: StorageEvent, repo: FeatureHubRepository) {
@@ -96,14 +113,14 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor {
     }
 
     if (repo === undefined) {
-      fhLog.error('repo is undefined for the storage change listener.');
+      fhLog.error("repo is undefined for the storage change listener.");
       return;
     }
 
-    if (e.key.startsWith('fh_null_')) {
-      key = e.key.substring('fh_null_'.length);
-    } else if (e.key.startsWith('fh_value_')) {
-      key = e.key.substring('fh_value_'.length);
+    if (e.key.startsWith("fh_null_")) {
+      key = e.key.substring("fh_null_".length);
+    } else if (e.key.startsWith("fh_value_")) {
+      key = e.key.substring("fh_value_".length);
     }
 
     if (key !== undefined && e.oldValue !== e.newValue) {

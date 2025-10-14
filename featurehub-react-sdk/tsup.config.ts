@@ -1,8 +1,8 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from "tsup";
 
 export default defineConfig((options) => ({
   name: "featurehub-react-sdk",
-  entry: ['src/index.ts'],
+  entry: ["src/index.ts"],
   format: ["esm", "cjs"],
   bundle: true,
   clean: true,
@@ -10,4 +10,4 @@ export default defineConfig((options) => ({
   sourcemap: true,
   splitting: true,
   minify: !options.watch,
-}))
+}));

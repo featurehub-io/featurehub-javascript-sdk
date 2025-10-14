@@ -11,13 +11,14 @@
     "example": "examples"
   },
   "scripts": {
-    "format": "prettier --write .",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
     "prepare": "husky install"
   },
   "devDependencies": {
     "husky": "^8.0.1",
     "lint-staged": "^13.0.3",
-    "prettier": "2.7.1"
+    "prettier": "3.6.2"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"

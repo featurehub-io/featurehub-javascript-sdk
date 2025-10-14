@@ -12,7 +12,7 @@ function useFeatureHubClient(): ClientContext {
 
   if (!featureHub) {
     throw new Error(
-      "Cannot get FeatureHub client inside of component not wrapped by the <FeatureHub> component!"
+      "Cannot get FeatureHub client inside of component not wrapped by the <FeatureHub> component!",
     );
   }
 

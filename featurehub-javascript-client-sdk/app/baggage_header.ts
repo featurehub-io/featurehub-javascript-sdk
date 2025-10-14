@@ -1,10 +1,13 @@
-import { FeatureHubRepository } from './featurehub_repository';
+import { FeatureHubRepository } from "./featurehub_repository";
 
 function createBaseBaggageHeader(header?: string) {
-  let newHeader = '';
+  let newHeader = "";
 
   if (header) {
-    newHeader = header.split(',').filter(p => !p.startsWith('fhub')).join(',');
+    newHeader = header
+      .split(",")
+      .filter((p) => !p.startsWith("fhub"))
+      .join(",");
   }
 
   return newHeader;
@@ -13,9 +16,9 @@ function createBaseBaggageHeader(header?: string) {
 function createBaggageHeader(features: string, newHeader: string) {
   if (features.length > 0) {
     if (newHeader.length > 0) {
-      return newHeader + ',fhub=' + features;
+      return newHeader + ",fhub=" + features;
     } else {
-      return 'fhub=' + features;
+      return "fhub=" + features;
     }
   } else if (newHeader.length > 0) {
     return newHeader;
@@ -26,25 +29,27 @@ function createBaggageHeader(features: string, newHeader: string) {
 
 export interface BaggageHeader {
   repo?: FeatureHubRepository;
-  values?: Map<string, string|undefined>;
+  values?: Map<string, string | undefined>;
   header?: string;
 }
 
 // allows for consistency between client and server
-export function w3cBaggageHeader({ repo, values, header }: BaggageHeader): string|undefined {
+export function w3cBaggageHeader({ repo, values, header }: BaggageHeader): string | undefined {
   const newHeader = createBaseBaggageHeader(header);
 
   let features: string;
   if (values) {
     features = encodeURIComponent(
       Array.from(values)
-        .map(e => e[0] + '=' + (e[1] ? encodeURIComponent(e[1]) : ''))
-        .join(','));
+        .map((e) => e[0] + "=" + (e[1] ? encodeURIComponent(e[1]) : ""))
+        .join(","),
+    );
   } else if (repo) {
     features = encodeURIComponent(
       Array.from(repo.simpleFeatures().entries())
-        .map(e => e[0] + '=' + (e[1] ? encodeURIComponent(e[1]) : ''))
-        .join(','));
+        .map((e) => e[0] + "=" + (e[1] ? encodeURIComponent(e[1]) : ""))
+        .join(","),
+    );
   } else {
     return undefined;
   }

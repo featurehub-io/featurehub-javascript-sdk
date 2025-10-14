@@ -1,22 +1,28 @@
 /* tslint:disable */
 /* eslint-disable */
-import { Substitute } from '@fluffy-spoon/substitute';
-import { featurehubMiddleware, FeatureStateHolder, FeatureValueType, InternalFeatureRepository } from '../app';
-import { expect } from 'chai';
+import { Substitute } from "@fluffy-spoon/substitute";
+import {
+  featurehubMiddleware,
+  FeatureStateHolder,
+  FeatureValueType,
+  InternalFeatureRepository,
+} from "../app";
+import { expect } from "chai";
 
-describe('middleware decodes and provides face to repository', () => {
+describe("middleware decodes and provides face to repository", () => {
   before(() => {
-    process.env.FEATUREHUB_ACCEPT_BAGGAGE = 'true';
+    process.env.FEATUREHUB_ACCEPT_BAGGAGE = "true";
   });
 
   after(() => {
-    process.env.FEATUREHUB_ACCEPT_BAGGAGE = '';
+    process.env.FEATUREHUB_ACCEPT_BAGGAGE = "";
   });
 
-  it('baggage repository is decoded correctly and provides face', () => {
-    const baggageHeader = 'current-baggage,fhub=FEATURE_STRING%3Dblah*%2526%253Dblah%2CFEATURE_NUMBER%3D17%2CFEATURE_BOOLEAN%3Dtrue%2CUNDEF%3D';
+  it("baggage repository is decoded correctly and provides face", () => {
+    const baggageHeader =
+      "current-baggage,fhub=FEATURE_STRING%3Dblah*%2526%253Dblah%2CFEATURE_NUMBER%3D17%2CFEATURE_BOOLEAN%3Dtrue%2CUNDEF%3D";
     const req: any = {
-      header: () => baggageHeader
+      header: () => baggageHeader,
     };
 
     const fhRepo = Substitute.for<InternalFeatureRepository>();
@@ -24,12 +30,12 @@ describe('middleware decodes and provides face to repository', () => {
     const sHolder = Substitute.for<FeatureStateHolder>();
     sHolder.getType().returns(FeatureValueType.String);
     sHolder.isLocked().returns(false);
-    fhRepo.hasFeature('FEATURE_STRING').returns(sHolder);
+    fhRepo.hasFeature("FEATURE_STRING").returns(sHolder);
 
     const bHolder = Substitute.for<FeatureStateHolder>();
     bHolder.getType().returns(FeatureValueType.Boolean);
     bHolder.isLocked().returns(false);
-    fhRepo.hasFeature('FEATURE_BOOLEAN').returns(bHolder);
+    fhRepo.hasFeature("FEATURE_BOOLEAN").returns(bHolder);
 
     const mw = featurehubMiddleware(fhRepo);
 
@@ -47,25 +53,26 @@ describe('middleware decodes and provides face to repository', () => {
     // tslint:disable-next-line:no-unused-expression
     expect(nextCalled).to.be.true;
     const repo: InternalFeatureRepository = req.featureHub;
-    expect(repo.feature('FEATURE_STRING').getString()).to.eq('blah*&=blah');
-    expect(repo.feature('FEATURE_STRING').str).to.eq('blah*&=blah');
-    expect(repo.feature('FEATURE_BOOLEAN').getBoolean()).to.eq(true);
-    expect(repo.feature('FEATURE_BOOLEAN').flag).to.eq(true);
+    expect(repo.feature("FEATURE_STRING").getString()).to.eq("blah*&=blah");
+    expect(repo.feature("FEATURE_STRING").str).to.eq("blah*&=blah");
+    expect(repo.feature("FEATURE_BOOLEAN").getBoolean()).to.eq(true);
+    expect(repo.feature("FEATURE_BOOLEAN").flag).to.eq(true);
   });
 
-  it('features that are locked cannot be overridden', () => {
-    const baggageHeader = 'current-baggage,fhub=FEATURE_STRING%3Dblah*%2526%253Dblah%2CFEATURE_NUMBER%3D17%2CFEATURE_BOOLEAN%3Dtrue%2CUNDEF%3D';
+  it("features that are locked cannot be overridden", () => {
+    const baggageHeader =
+      "current-baggage,fhub=FEATURE_STRING%3Dblah*%2526%253Dblah%2CFEATURE_NUMBER%3D17%2CFEATURE_BOOLEAN%3Dtrue%2CUNDEF%3D";
     const req: any = {
-      header: () => baggageHeader
+      header: () => baggageHeader,
     };
 
     const fhRepo = Substitute.for<InternalFeatureRepository>();
 
     const sHolder = Substitute.for<FeatureStateHolder>();
     sHolder.getType().returns(FeatureValueType.String);
-    sHolder.getString().returns('pistachio');
+    sHolder.getString().returns("pistachio");
     sHolder.isLocked().returns(true);
-    fhRepo.hasFeature('FEATURE_STRING').returns(sHolder);
+    fhRepo.hasFeature("FEATURE_STRING").returns(sHolder);
 
     const mw = featurehubMiddleware(fhRepo);
 
@@ -76,6 +83,6 @@ describe('middleware decodes and provides face to repository', () => {
     mw(req, resp, next);
 
     const repo: InternalFeatureRepository = req.featureHub;
-    expect(repo.feature('FEATURE_STRING').getString()).to.eq('pistachio');
+    expect(repo.feature("FEATURE_STRING").getString()).to.eq("pistachio");
   });
 });

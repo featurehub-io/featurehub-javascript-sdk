@@ -1,9 +1,9 @@
 /* eslint-disable */
-import { EdgeService } from './edge_service';
-import { FeatureHubConfig, fhLog } from './feature_hub_config';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { SSEResultState } from './models';
-import { Readyness } from './featurehub_repository';
+import { EdgeService } from "./edge_service";
+import { FeatureHubConfig, fhLog } from "./feature_hub_config";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { SSEResultState } from "./models";
+import { Readyness } from "./featurehub_repository";
 
 export declare class EventSource {
   static readonly CLOSED: number;
@@ -31,7 +31,11 @@ export declare class EventSource {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export declare namespace EventSource {
-  enum ReadyState { CONNECTING = 0, OPEN = 1, CLOSED = 2 }
+  enum ReadyState {
+    CONNECTING = 0,
+    OPEN = 1,
+    CLOSED = 2,
+  }
 
   interface EventSourceInitDict {
     withCredentials?: boolean;
@@ -44,7 +48,10 @@ export declare namespace EventSource {
   }
 }
 
-export type EventSourceProvider = (url: string, eventSourceInitDict?: EventSource.EventSourceInitDict) => EventSource;
+export type EventSourceProvider = (
+  url: string,
+  eventSourceInitDict?: EventSource.EventSourceInitDict,
+) => EventSource;
 
 export class FeatureHubEventSourceClient implements EdgeService {
   private eventSource: EventSource | undefined;
@@ -55,11 +62,12 @@ export class FeatureHubEventSourceClient implements EdgeService {
   private _stopped: boolean = false;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
-    const realUrl = dict?.headers && dict.headers['x-featurehub'] ?
-      url + '?xfeaturehub=' + encodeURI(dict.headers['x-featurehub']) : url;
+    const realUrl =
+      dict?.headers && dict.headers["x-featurehub"]
+        ? url + "?xfeaturehub=" + encodeURI(dict.headers["x-featurehub"])
+        : url;
     return new EventSource(realUrl, dict);
   };
-
 
   constructor(config: FeatureHubConfig, repository: InternalFeatureRepository) {
     this._config = config;
@@ -79,43 +87,54 @@ export class FeatureHubEventSourceClient implements EdgeService {
     const options: any = {};
     if (this._header) {
       options.headers = {
-        'x-featurehub': this._header
+        "x-featurehub": this._header,
       };
     }
 
-    fhLog.trace('listening at ', this._config.url());
+    fhLog.trace("listening at ", this._config.url());
 
     this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(this._config.url(), options);
 
-    for (const name of [SSEResultState.Features, SSEResultState.Feature, SSEResultState.DeleteFeature,
-      SSEResultState.Bye, SSEResultState.Failure, SSEResultState.Ack,
-      SSEResultState.Config]) {
+    for (const name of [
+      SSEResultState.Features,
+      SSEResultState.Feature,
+      SSEResultState.DeleteFeature,
+      SSEResultState.Bye,
+      SSEResultState.Failure,
+      SSEResultState.Ack,
+      SSEResultState.Config,
+    ]) {
       const fName = name.toString();
-      this.eventSource.addEventListener(fName,
-        e => {
-          try {
-            const data = JSON.parse((e as any).data);
-            fhLog.trace(`received ${fName}`, data);
-            if (fName === SSEResultState.Config) {
-              this.processConfig(data);
-            } else {
-              this._repository.notify(name, data);
-            }
-          } catch (e) {
-            fhLog.error('SSE: Failed to understand result', e);
+      this.eventSource.addEventListener(fName, (e) => {
+        try {
+          const data = JSON.parse((e as any).data);
+          fhLog.trace(`received ${fName}`, data);
+          if (fName === SSEResultState.Config) {
+            this.processConfig(data);
+          } else {
+            this._repository.notify(name, data);
           }
-        });
+        } catch (e) {
+          fhLog.error("SSE: Failed to understand result", e);
+        }
+      });
     }
 
     this.eventSource.onerror = (e: any) => {
       if (!this._stopped) {
         // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
-        if (this._repository.readyness !== Readyness.Ready || (e.status && (e.status > 504 || (e.status >= 400 && e.status < 500) ))) {
-          fhLog.error('Connection failed and repository not in ready state indicating persistent failure', e);
-          this._repository.notify (SSEResultState.Failure, null);
+        if (
+          this._repository.readyness !== Readyness.Ready ||
+          (e.status && (e.status > 504 || (e.status >= 400 && e.status < 500)))
+        ) {
+          fhLog.error(
+            "Connection failed and repository not in ready state indicating persistent failure",
+            e,
+          );
+          this._repository.notify(SSEResultState.Failure, null);
           this.close();
         } else {
-          fhLog.trace('refreshing connection in case of staleness', e);
+          fhLog.trace("refreshing connection in case of staleness", e);
         }
       }
     };
@@ -158,7 +177,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
   }
 
   private processConfig(data: any) {
-    if (data['edge.stale']) {
+    if (data["edge.stale"]) {
       this._stopped = true;
       this.close();
 
@@ -167,7 +186,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
         this._staleEnvironmentTimeoutId = undefined;
         this._stopped = false;
         this.init();
-      }, data['edge.stale'] * 1000);
+      }, data["edge.stale"] * 1000);
     }
   }
 }

@@ -17,16 +17,9 @@
     "moduleResolution": "node"
   },
   "include": [
-    "app/**/*",
-//		"test/**/*"
+    "app/**/*"
+    //		"test/**/*"
   ],
-  "types": [
-    "node",
-    "mocha"
-  ],
-  "exclude": [
-    "node_modules",
-    "target/dist"
-  ]
-
+  "types": ["node", "mocha"],
+  "exclude": ["node_modules", "target/dist"]
 }

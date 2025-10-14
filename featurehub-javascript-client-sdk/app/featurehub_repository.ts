@@ -1,14 +1,14 @@
-import { ClientContext } from './client_context';
-import { FeatureStateHolder } from './feature_state';
-import { FeatureStateValueInterceptor } from './interceptors';
-import { AnalyticsCollector } from './analytics';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { CatchReleaseListenerHandler, ReadinessListenerHandle } from './feature_hub_config';
+import { ClientContext } from "./client_context";
+import { FeatureStateHolder } from "./feature_state";
+import { FeatureStateValueInterceptor } from "./interceptors";
+import { AnalyticsCollector } from "./analytics";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 
 export enum Readyness {
-  NotReady = 'NotReady',
-  Ready = 'Ready',
-  Failed = 'Failed'
+  NotReady = "NotReady",
+  Ready = "Ready",
+  Failed = "Failed",
 }
 
 export interface ReadynessListener {
@@ -75,14 +75,17 @@ export interface FeatureHubRepository {
    * if you register your readiness listener before initialising the repository so you don't get an immediate NotReady
    * trigger.
    */
-  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle;
+  addReadinessListener(
+    listener: ReadynessListener,
+    ignoreNotReadyOnRegister?: boolean,
+  ): ReadinessListenerHandle;
 
   /**
    * Removes an identified readiness listener or does nothing if it doesn't exist.
    *
    * @param listener
    */
-  removeReadinessListener(listener: ReadynessListener|ReadinessListenerHandle);
+  removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle);
 
   /**
    * Adds an analytics collector so that requests to record the feature state will be sent there.
@@ -97,11 +100,15 @@ export interface FeatureHubRepository {
    *
    * @param listener
    */
-  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener) : CatchReleaseListenerHandler;
+  addPostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener,
+  ): CatchReleaseListenerHandler;
 
   /**
    * Remove the catch/release handler.
    * @param listener
    */
-  removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler);
+  removePostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler,
+  );
 }

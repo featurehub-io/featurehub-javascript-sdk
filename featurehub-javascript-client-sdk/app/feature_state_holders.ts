@@ -1,9 +1,9 @@
-import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from './feature_state';
-import { FeatureState, FeatureValueType } from './models';
-import { ClientContext } from './client_context';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { ListenerUtils } from './listener_utils';
-import { fhLog } from './feature_hub_config';
+import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
+import { FeatureState, FeatureValueType } from "./models";
+import { ClientContext } from "./client_context";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { ListenerUtils } from "./listener_utils";
+import { fhLog } from "./feature_hub_config";
 
 interface ListenerTracker {
   listener: FeatureListener;
@@ -23,7 +23,11 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   // eslint-disable-next-line no-use-before-define
   protected parentHolder: FeatureStateBaseHolder | undefined;
 
-  constructor(repository: InternalFeatureRepository, key: string, existingHolder?: FeatureStateBaseHolder) {
+  constructor(
+    repository: InternalFeatureRepository,
+    key: string,
+    existingHolder?: FeatureStateBaseHolder,
+  ) {
     if (existingHolder !== null && existingHolder !== undefined) {
       this.listeners = existingHolder.listeners;
     }
@@ -87,11 +91,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
     if (this._ctx !== undefined) {
       this.listeners.set(pos, {
-        listener: () => listener(this), holder: this
+        listener: () => listener(this),
+        holder: this,
       });
     } else {
       this.listeners.set(pos, {
-        listener: listener, holder: this
+        listener: listener,
+        holder: this,
       });
     }
 
@@ -145,7 +151,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     const listenerValues: Map<number, ListenerOriginal> = new Map<number, ListenerOriginal>();
     this.listeners.forEach((value, key) => {
       listenerValues.set(key, {
-        value: value.holder.value
+        value: value.holder.value,
       });
     });
 
@@ -154,7 +160,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     // the lock changing is not part of the contextual evaluation of values changing, and is constant across all listeners.
     const changedLocked = existingLocked !== this.featureState()?.l;
     // did at least the default value change, even if there are no listeners for the state?
-    let changed =  changedLocked || existingValue !== this._getValue(fs?.type);
+    let changed = changedLocked || existingValue !== this._getValue(fs?.type);
 
     this.listeners.forEach((value, key) => {
       const original = listenerValues.get(key);
@@ -164,7 +170,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
         try {
           value.listener(value.holder);
         } catch (e) {
-          fhLog.error('Failed to trigger listener', e);
+          fhLog.error("Failed to trigger listener", e);
         }
       }
     });
@@ -241,12 +247,17 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     }
 
     const featureState = this.featureState();
-    if (!featureState || (featureState.type !== type)) {
+    if (!featureState || featureState.type !== type) {
       return undefined;
     }
 
     if (this._ctx != null && featureState.strategies?.length) {
-      const matched = this._repo.apply(featureState!.strategies || [], this._key, featureState.id, this._ctx);
+      const matched = this._repo.apply(
+        featureState!.strategies || [],
+        this._key,
+        featureState.id,
+        this._ctx,
+      );
 
       if (matched.matched) {
         return this._castType(type, matched.value, parseJson);
@@ -262,14 +273,14 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     }
 
     if (type === FeatureValueType.Boolean) {
-      return typeof value === 'boolean' ? value : ('true' === value.toString());
+      return typeof value === "boolean" ? value : "true" === value.toString();
     } else if (type === FeatureValueType.String) {
       return value.toString();
     } else if (type === FeatureValueType.Number) {
-      if (typeof value === 'number') {
+      if (typeof value === "number") {
         return value;
       }
-      if (value.includes('.')) {
+      if (value.includes(".")) {
         return parseFloat(value);
       }
 

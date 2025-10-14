@@ -1,4 +1,3 @@
-
 export interface Todo {
   /**
    *
@@ -27,13 +26,13 @@ export interface Todo {
 }
 
 class TodoLocalApi {
-  private sessionKey = '_featurehub_todos';
+  private sessionKey = "_featurehub_todos";
 
   public addTodo(todo: Todo, options?: any): Array<Todo> {
     const todos = this.listTodos();
 
     if (todo?.id === undefined) {
-      todo.id = Math.round((Math.random() * 1000000)).toString();
+      todo.id = Math.round(Math.random() * 1000000).toString();
     }
 
     todos.push(todo);
@@ -100,14 +99,13 @@ class TodoLocalApi {
   }
 
   private find(todos: Array<Todo>, id: string): number {
-
     let found = -1;
     let index = 0;
     while (found === -1 && index < todos.length) {
       if (todos[index].id === id) {
         found = index;
       }
-      index ++;
+      index++;
     }
     return found;
   }

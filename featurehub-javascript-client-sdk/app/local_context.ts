@@ -1,14 +1,23 @@
-import { AnalyticsCollector } from './analytics';
-import { ClientContext } from './client_context';
-import { BaseClientContext } from './context_impl';
-import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener } from './featurehub_repository';
-import { FeatureStateHolder } from './feature_state';
-import { FeatureStateBaseHolder } from './feature_state_holders';
-import { FeatureStateValueInterceptor, InterceptorValueMatch } from './interceptors';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { FeatureEnvironmentCollection, FeatureValueType, FeatureRolloutStrategy, SSEResultState } from './models';
-import { Applied, ApplyFeature } from './strategy_matcher';
-import { CatchReleaseListenerHandler } from './feature_hub_config';
+import { AnalyticsCollector } from "./analytics";
+import { ClientContext } from "./client_context";
+import { BaseClientContext } from "./context_impl";
+import {
+  PostLoadNewFeatureStateAvailableListener,
+  Readyness,
+  ReadynessListener,
+} from "./featurehub_repository";
+import { FeatureStateHolder } from "./feature_state";
+import { FeatureStateBaseHolder } from "./feature_state_holders";
+import { FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import {
+  FeatureEnvironmentCollection,
+  FeatureValueType,
+  FeatureRolloutStrategy,
+  SSEResultState,
+} from "./models";
+import { Applied, ApplyFeature } from "./strategy_matcher";
+import { CatchReleaseListenerHandler } from "./feature_hub_config";
 
 class LocalFeatureRepository implements InternalFeatureRepository {
   // indexed by key as that what the user cares about
@@ -27,8 +36,12 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     });
   }
 
-  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
-    context: ClientContext): Applied {
+  public apply(
+    strategies: Array<FeatureRolloutStrategy>,
+    key: string,
+    featureValueId: string,
+    context: ClientContext,
+  ): Applied {
     return this._applyFeature.apply(strategies, key, featureValueId, context);
   }
 
@@ -57,12 +70,15 @@ class LocalFeatureRepository implements InternalFeatureRepository {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public addPostLoadNewFeatureStateAvailableListener(_: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+  public addPostLoadNewFeatureStateAvailableListener(
+    _: PostLoadNewFeatureStateAvailableListener,
+  ): CatchReleaseListenerHandler {
     return 0;
   }
 
-  public removePostLoadNewFeatureStateAvailableListener(_: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
-  }
+  public removePostLoadNewFeatureStateAvailableListener(
+    _: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler,
+  ) {}
 
   public addReadynessListener(listener: ReadynessListener): number {
     return this.addReadinessListener(listener);
@@ -74,14 +90,11 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     return 0;
   }
 
-  public removeReadinessListener(_: ReadynessListener | number) {
-  }
+  public removeReadinessListener(_: ReadynessListener | number) {}
 
-  notReady(): void {
-  }
+  notReady(): void {}
 
-  public async broadcastReadynessState() {
-  }
+  public async broadcastReadynessState() {}
 
   public addAnalyticCollector(collector: AnalyticsCollector): void {
     this.analyticsCollectors.push(collector);
@@ -91,11 +104,14 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     const vals = new Map<string, string | undefined>();
 
     this.features.forEach((value, key) => {
-      if (value.getKey()) { // only include value features
+      if (value.getKey()) {
+        // only include value features
         let val: any;
-        switch (value.getType()) {// we need to pick up any overrides
+        switch (
+          value.getType() // we need to pick up any overrides
+        ) {
           case FeatureValueType.Boolean:
-            val = value.getBoolean() ? 'true' : 'false';
+            val = value.getBoolean() ? "true" : "false";
             break;
           case FeatureValueType.String:
             val = value.getString();
@@ -121,13 +137,15 @@ class LocalFeatureRepository implements InternalFeatureRepository {
 
     for (const fs of this.features.values()) {
       if (fs.isSet()) {
-        const fsVal: FeatureStateBaseHolder = ctx == null ? fs : fs.withContext(ctx) as FeatureStateBaseHolder;
+        const fsVal: FeatureStateBaseHolder =
+          ctx == null ? fs : (fs.withContext(ctx) as FeatureStateBaseHolder);
         featureStateAtCurrentTime.push(fsVal.analyticsCopy());
       }
     }
 
-    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other || new Map<string,string>(),
-      featureStateAtCurrentTime));
+    this.analyticsCollectors.forEach((ac) =>
+      ac.logEvent(action, other || new Map<string, string>(), featureStateAtCurrentTime),
+    );
   }
 
   public hasFeature(key: string): undefined | FeatureStateHolder {

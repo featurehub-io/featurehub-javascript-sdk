@@ -4,7 +4,7 @@ import {
   EdgeServiceProvider,
   FeatureHubPollingClient,
   Readyness,
-  FeatureHub as fh
+  FeatureHub as fh,
 } from "featurehub-javascript-client-sdk";
 import {
   Accessor,
@@ -15,7 +15,7 @@ import {
   createSignal,
   JSXElement,
   on,
-  onCleanup
+  onCleanup,
 } from "solid-js";
 
 // Global ready signal
@@ -33,8 +33,8 @@ export const FeatureHubContext = createContext<UseFeatureHub>(
   // @ts-ignore
   null, // this will be assigned by the FeatureHub component
   {
-    name: "FeatureHub"
-  }
+    name: "FeatureHub",
+  },
 );
 
 type Props = {
@@ -129,7 +129,7 @@ const FeatureHub: Component<Props> = (props): JSXElement => {
           setReady(true);
         }
       }
-    })
+    }),
   );
 
   onCleanup(() => {

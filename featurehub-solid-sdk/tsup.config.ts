@@ -1,14 +1,14 @@
-import { defineConfig } from 'tsup'
+import { defineConfig } from "tsup";
 
 export default defineConfig((options) => ({
   name: "featurehub-solid-sdk",
-  entry: ['src/index.ts'],
+  entry: ["src/index.ts"],
   format: ["esm"],
   plugins: [],
   outExtension() {
     return {
       js: `.jsx`,
-    }
+    };
   },
   bundle: true,
   clean: true,
@@ -16,4 +16,4 @@ export default defineConfig((options) => ({
   sourcemap: true,
   splitting: true,
   minify: !options.watch,
-}))
+}));

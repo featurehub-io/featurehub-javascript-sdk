@@ -1,14 +1,10 @@
-reporter: 'spec'
+reporter: "spec"
 recursive: true
-require:
-  [
-    'ts-node/register',
-    'mocha',
-  ]
+require: ["ts-node/register", "mocha"]
 extension: [ts]
 timeout: 5000
 retries: 0
 inline-diffs: true
 watch-files:
-  - 'test/**/*.ts'
-  - 'app/**/*.ts'
+  - "test/**/*.ts"
+  - "app/**/*.ts"

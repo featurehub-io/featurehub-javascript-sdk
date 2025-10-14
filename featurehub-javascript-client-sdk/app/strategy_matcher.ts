@@ -2,16 +2,15 @@ import {
   FeatureRolloutStrategy,
   FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
-  RolloutStrategyFieldType
-} from './models';
+  RolloutStrategyFieldType,
+} from "./models";
 
-
-import compareSemver from 'semver-compare';
-import { Netmask } from 'netmask';
+import compareSemver from "semver-compare";
+import { Netmask } from "netmask";
 
 // this library is not node specific
-import { v3 as murmur3 } from 'murmurhash';
-import { ClientContext } from './client_context';
+import { v3 as murmur3 } from "murmurhash";
+import { ClientContext } from "./client_context";
 
 export interface PercentageCalculator {
   determineClientPercentage(percentageText: string, featureId: string): number;
@@ -22,7 +21,7 @@ export class Murmur3PercentageCalculator implements PercentageCalculator {
 
   public determineClientPercentage(percentageText: string, featureId: string): number {
     const result = murmur3(percentageText + featureId, 0);
-    return Math.floor(result / Math.pow(2, 32) * this.MAX_PERCENTAGE);
+    return Math.floor((result / Math.pow(2, 32)) * this.MAX_PERCENTAGE);
   }
 }
 
@@ -53,15 +52,15 @@ class FallthroughMatcher implements StrategyMatcher {
 
 class BooleanMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const val = 'true' === suppliedValue;
+    const val = "true" === suppliedValue;
 
     const values = attr.values || [];
     if (attr.conditional === RolloutStrategyAttributeConditional.Equals) {
-      return val === (values[0].toString() === 'true');
+      return val === (values[0].toString() === "true");
     }
 
     if (attr.conditional === RolloutStrategyAttributeConditional.NotEquals) {
-      return val !== (values[0].toString() === 'true');
+      return val !== (values[0].toString() === "true");
     }
 
     return false;
@@ -69,7 +68,6 @@ class BooleanMatcher implements StrategyMatcher {
 }
 
 class StringMatcher implements StrategyMatcher {
-
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = this.attrToStringValues(attr);
 
@@ -123,8 +121,9 @@ class DateMatcher extends StringMatcher {
   }
 
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return (attr.values || []).filter((v) => v != null)
-      .map((v) => (v instanceof Date) ? v.toISOString().substring(0, 10) : v.toString());
+    return (attr.values || [])
+      .filter((v) => v != null)
+      .map((v) => (v instanceof Date ? v.toISOString().substring(0, 10) : v.toString()));
   }
 }
 
@@ -137,24 +136,25 @@ class DateTimeMatcher extends StringMatcher {
         return false;
       }
 
-      return super.match(parsedDate.toISOString().substring(0, 19) + 'Z', attr);
+      return super.match(parsedDate.toISOString().substring(0, 19) + "Z", attr);
     } catch (_) {
       return false;
     }
   }
 
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return (attr.values || []).filter((v) => v != null)
-      .map((v) => (v instanceof Date) ? (v.toISOString().substring(0, 19) + 'Z') : v.toString());
+    return (attr.values || [])
+      .filter((v) => v != null)
+      .map((v) => (v instanceof Date ? v.toISOString().substring(0, 19) + "Z" : v.toString()));
   }
 }
 
 class NumberMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
-      const isFloat = suppliedValue.indexOf('.') >= 0;
+      const isFloat = suppliedValue.indexOf(".") >= 0;
       const num = isFloat ? parseFloat(suppliedValue) : parseInt(suppliedValue, 10);
-      const conv = (v) => isFloat ? parseFloat(v) : parseInt(v, 10);
+      const conv = (v) => (isFloat ? parseFloat(v) : parseInt(v, 10));
 
       const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
 
@@ -263,7 +263,6 @@ export class MatcherRegistry implements MatcherRepository {
 
     return new FallthroughMatcher();
   }
-
 }
 
 export class ApplyFeature {
@@ -275,8 +274,12 @@ export class ApplyFeature {
     this._matcherRepository = matcherRepository || new MatcherRegistry();
   }
 
-  public apply(strategies: Array<FeatureRolloutStrategy> = [], key: string, featureValueId: string,
-    context?: ClientContext): Applied {
+  public apply(
+    strategies: Array<FeatureRolloutStrategy> = [],
+    key: string,
+    featureValueId: string,
+    context?: ClientContext,
+  ): Applied {
     if (context !== undefined && strategies.length) {
       let percentage: number | null = null;
       let percentageKey: string | null = null;
@@ -284,8 +287,11 @@ export class ApplyFeature {
       const defaultPercentageKey = context.defaultPercentageKey();
 
       for (const rsi of strategies) {
-        if (rsi.percentage !== 0 && (defaultPercentageKey || (rsi.percentageAttributes?.length))) {
-          const newPercentageKey = ApplyFeature.determinePercentageKey(context, rsi.percentageAttributes);
+        if (rsi.percentage !== 0 && (defaultPercentageKey || rsi.percentageAttributes?.length)) {
+          const newPercentageKey = ApplyFeature.determinePercentageKey(
+            context,
+            rsi.percentageAttributes,
+          );
 
           if (!basePercentage.has(newPercentageKey)) {
             basePercentage.set(newPercentageKey, 0);
@@ -297,14 +303,18 @@ export class ApplyFeature {
           // base percentage to null
           if (percentage === null || newPercentageKey !== percentageKey) {
             percentageKey = newPercentageKey;
-            percentage = this._percentageCalculator.determineClientPercentage(percentageKey, featureValueId);
+            percentage = this._percentageCalculator.determineClientPercentage(
+              percentageKey,
+              featureValueId,
+            );
           }
 
-          const useBasePercentage = (rsi.attributes === undefined || rsi.attributes.length === 0) ? basePercentageVal : 0;
+          const useBasePercentage =
+            rsi.attributes === undefined || rsi.attributes.length === 0 ? basePercentageVal : 0;
 
           // if the percentage is lower than the user's key +
           // id of feature value then apply it
-          if (percentage <= (useBasePercentage + rsi.percentage!)) {
+          if (percentage <= useBasePercentage + rsi.percentage!) {
             if (rsi.attributes != null && rsi.attributes.length) {
               if (this.matchAttribute(context, rsi)) {
                 return new Applied(true, rsi.value);
@@ -320,9 +330,13 @@ export class ApplyFeature {
           }
         }
 
-        if ((rsi.percentage === 0 || rsi.percentage === undefined) && rsi.attributes !== undefined
-          && rsi.attributes.length > 0 &&
-          this.matchAttribute(context, rsi)) { // nothing to do with a percentage
+        if (
+          (rsi.percentage === 0 || rsi.percentage === undefined) &&
+          rsi.attributes !== undefined &&
+          rsi.attributes.length > 0 &&
+          this.matchAttribute(context, rsi)
+        ) {
+          // nothing to do with a percentage
           return new Applied(true, rsi.value);
         }
       }
@@ -331,18 +345,21 @@ export class ApplyFeature {
     return new Applied(false, null);
   }
 
-  public static determinePercentageKey(context: ClientContext, percentageAttributes: Array<string> | undefined | null): string {
+  public static determinePercentageKey(
+    context: ClientContext,
+    percentageAttributes: Array<string> | undefined | null,
+  ): string {
     if (!percentageAttributes || percentageAttributes.length === 0) {
       return context.defaultPercentageKey()!;
     }
 
-    return percentageAttributes.map((pa) => context.getAttr(pa, '<none>')).join('$');
+    return percentageAttributes.map((pa) => context.getAttr(pa, "<none>")).join("$");
   }
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
-    for (const attr of (rsi.attributes || [])) {
+    for (const attr of rsi.attributes || []) {
       let suppliedValues = context.getAttrs(attr.fieldName!);
-      if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === 'now') {
+      if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === "now") {
         // tslint:disable-next-line:switch-default
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
@@ -366,7 +383,9 @@ export class ApplyFeature {
         return false;
       }
 
-      const match = suppliedValues.find(sv => this._matcherRepository.findMatcher(attr).match(sv, attr));
+      const match = suppliedValues.find((sv) =>
+        this._matcherRepository.findMatcher(attr).match(sv, attr),
+      );
 
       if (!match) {
         return false;

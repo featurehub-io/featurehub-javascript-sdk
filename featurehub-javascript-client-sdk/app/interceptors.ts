@@ -1,4 +1,4 @@
-import { InternalFeatureRepository } from './internal_feature_repository';
+import { InternalFeatureRepository } from "./internal_feature_repository";
 
 export class InterceptorValueMatch {
   public value: string | undefined;

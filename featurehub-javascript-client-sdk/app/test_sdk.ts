@@ -1,6 +1,6 @@
-import { FeatureStateUpdate } from './models';
+import { FeatureStateUpdate } from "./models";
 // prevents circular deps
-import { FeatureHubConfig } from './feature_hub_config';
+import { FeatureHubConfig } from "./feature_hub_config";
 
 export interface FeatureUpdatePostManager {
   post(url: string, update: FeatureStateUpdate): Promise<boolean>;
@@ -10,10 +10,10 @@ class BrowserFeaturePostUpdater implements FeatureUpdatePostManager {
   post(url: string, update: FeatureStateUpdate): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
       const req = new XMLHttpRequest();
-      req.open('PUT', url);
-      req.setRequestHeader('Content-type', 'application/json');
+      req.open("PUT", url);
+      req.setRequestHeader("Content-type", "application/json");
       req.send(JSON.stringify(update));
-      req.onreadystatechange  = function () {
+      req.onreadystatechange = function () {
         if (req.readyState === 4) {
           resolve(req.status >= 200 && req.status < 300);
         }
@@ -28,7 +28,8 @@ export class FeatureUpdater {
   private sdkUrl: string;
   public readonly manager: FeatureUpdatePostManager;
 
-  public static featureUpdaterProvider: FeatureUpdaterProvider = () => new BrowserFeaturePostUpdater();
+  public static featureUpdaterProvider: FeatureUpdaterProvider = () =>
+    new BrowserFeaturePostUpdater();
 
   constructor(config: FeatureHubConfig) {
     this.sdkUrl = config.url();
@@ -37,6 +38,6 @@ export class FeatureUpdater {
   }
 
   public updateKey(key: string, update: FeatureStateUpdate): Promise<boolean> {
-    return this.manager.post(this.sdkUrl + '/' + key, update);
+    return this.manager.post(this.sdkUrl + "/" + key, update);
   }
 }
