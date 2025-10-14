@@ -48,13 +48,13 @@
     "@fluffy-spoon/substitute": "^1.208.0",
     "@types/chai": "^4.2.18",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^12.20.12",
+    "@types/node": "^22.18.10",
     "chai": "^4.2.0",
     "mocha": "^9.2.0",
-    "typescript": "4.5.4",
+    "typescript": "5.9.3",
     "ts-node": "^10.0.0",
     "eslint": "^8.0.0",
-    "eslint-plugin-filenames-simple": "0.7.0",
+    "eslint-plugin-filenames-simple": "0.9.0",
     "@typescript-eslint/eslint-plugin": "^5.26.0",
     "@typescript-eslint/parser": "^5.26.0",
     "@typescript-eslint/typescript-estree": "^5.26.0"
@@ -64,6 +64,6 @@
     "featurehub-javascript-client-sdk": "^1.4.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

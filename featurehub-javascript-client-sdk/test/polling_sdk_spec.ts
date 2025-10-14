@@ -1,19 +1,21 @@
 /* tslint:disable */
 /* eslint-disable */
-import { expect } from 'chai';
-import { Substitute, SubstituteOf, } from '@fluffy-spoon/substitute';
+import { expect } from "chai";
+import { Substitute, SubstituteOf } from "@fluffy-spoon/substitute";
 import {
   FeatureHubConfig,
   FeatureHubPollingClient,
-  FeaturesFunction, fhLog, FHLog,
+  FeaturesFunction,
+  fhLog,
+  FHLog,
   InternalFeatureRepository,
-  PollingBase, PollingService
-} from '../app';
-import sinon = require('sinon');
-import { SinonFakeTimers } from 'sinon';
+  PollingBase,
+  PollingService,
+} from "../app";
+import * as sinon from "sinon";
+import { SinonFakeTimers } from "sinon";
 
-
-describe('basic polling sdk works as expected',  () => {
+describe("basic polling sdk works as expected", () => {
   let poller: SubstituteOf<PollingService>;
   let repo: SubstituteOf<InternalFeatureRepository>;
   let config: SubstituteOf<FeatureHubConfig>;
@@ -26,17 +28,16 @@ describe('basic polling sdk works as expected',  () => {
     FeatureHubPollingClient.pollingClientProvider = () => poller;
 
     FHLog.fhLog.trace = (...args: any[]) => {
-      console.log('FeatureHub/Trace: ', ...args);
+      console.log("FeatureHub/Trace: ", ...args);
     };
 
     repo = Substitute.for<InternalFeatureRepository>();
     config = Substitute.for<FeatureHubConfig>();
-    config.getHost().returns('http://localhost/');
-    config.getApiKeys().returns(['12344']);
+    config.getHost().returns("http://localhost/");
+    config.getApiKeys().returns(["12344"]);
   });
 
-
-  it('should accept attempt to poll only once when the interval is 0', async () => {
+  it("should accept attempt to poll only once when the interval is 0", async () => {
     const p = new FeatureHubPollingClient(repo, config, 0);
 
     let url: string | undefined = undefined;
@@ -56,14 +57,14 @@ describe('basic polling sdk works as expected',  () => {
 
     await p.poll();
 
-    expect(url).to.eq('http://localhost/features?apiKey=12344');
+    expect(url).to.eq("http://localhost/features?apiKey=12344");
     expect(freq).to.eq(0);
 
     callback!([]);
     repo.received(1).notify;
   });
 
-  it('should stop and be not startable if it receives a 404', async () => {
+  it("should stop and be not startable if it receives a 404", async () => {
     const p = new FeatureHubPollingClient(repo, config, 0);
 
     poller.poll().rejects(404);
@@ -74,7 +75,10 @@ describe('basic polling sdk works as expected',  () => {
 
     let success: boolean | undefined = undefined;
 
-    await p.poll().then(() => success = true).catch(() => success = false);
+    await p
+      .poll()
+      .then(() => (success = true))
+      .catch(() => (success = false));
 
     expect(success).to.be.false;
     expect(p.canStart).to.be.false;
@@ -83,7 +87,7 @@ describe('basic polling sdk works as expected',  () => {
     poller.received(1).poll();
   });
 
-  describe('with timers',  () => {
+  describe("with timers", () => {
     let clock: SinonFakeTimers;
 
     before(function () {
@@ -94,7 +98,7 @@ describe('basic polling sdk works as expected',  () => {
       clock.restore();
     });
 
-    it('should attempt a re-poll after 2 seconds', async function () {
+    it("should attempt a re-poll after 2 seconds", async function () {
       const p = new FeatureHubPollingClient(repo, config, 2000);
 
       poller.poll().resolves();
@@ -106,7 +110,7 @@ describe('basic polling sdk works as expected',  () => {
       };
 
       await p.poll();
-      console.log('tick');
+      console.log("tick");
       clock.tick(2020);
       clock.runAll();
       p.close();
@@ -118,7 +122,7 @@ describe('basic polling sdk works as expected',  () => {
     });
   });
 
-  describe('setTimeout in operation',  () => {
+  describe("setTimeout in operation", () => {
     let p: FeatureHubPollingClient;
 
     beforeEach(() => {
@@ -129,7 +133,7 @@ describe('basic polling sdk works as expected',  () => {
       p.close();
     });
 
-    it('should attempt to poll the polling client if the header changes, and not if it doesnt', async function () {
+    it("should attempt to poll the polling client if the header changes, and not if it doesnt", async function () {
       poller.poll().resolves();
       config.clientEvaluated().returns(false);
 
@@ -137,21 +141,21 @@ describe('basic polling sdk works as expected',  () => {
         return poller;
       };
 
-      await p.contextChange('burp');
+      await p.contextChange("burp");
       expect(p.active);
-      await p.contextChange('burp'); // no change
-      poller.received(1).attributeHeader('burp');
-      await p.contextChange('burp1'); // change
-      poller.received(1).attributeHeader('burp');
-      poller.received(1).attributeHeader('burp1');
+      await p.contextChange("burp"); // no change
+      poller.received(1).attributeHeader("burp");
+      await p.contextChange("burp1"); // change
+      poller.received(1).attributeHeader("burp");
+      poller.received(1).attributeHeader("burp1");
     });
 
-    it('should not finish awaiting until 503, and return fail on close', async () => {
+    it("should not finish awaiting until 503, and return fail on close", async () => {
       let counter = 0;
 
       class StubPoller extends PollingBase {
         constructor() {
-          super('', 200, () => {});
+          super("", 200, () => {});
           this._busy = false;
         }
 
@@ -168,7 +172,7 @@ describe('basic polling sdk works as expected',  () => {
 
           this._busy = false;
           if (counter == 1) {
-            fhLog.trace('rejecting with 503');
+            fhLog.trace("rejecting with 503");
             return Promise.reject(503);
           }
 
@@ -184,11 +188,13 @@ describe('basic polling sdk works as expected',  () => {
 
       let success: boolean | undefined = undefined;
 
-      await p.poll().then(() => success = true).catch(() => success = false);
+      await p
+        .poll()
+        .then(() => (success = true))
+        .catch(() => (success = false));
 
       expect(success).to.be.true;
       expect(counter).to.eq(2);
     });
   });
-
 });

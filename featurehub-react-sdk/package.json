@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-		"link": "npm link featurehub-javascript-client-sdk",
+    "link": "npm link featurehub-javascript-client-sdk",
     "format": "prettier --write ./**/*.{js,ts,tsx,md,json}",
     "build": "tsup --sourcemap",
     "watch": "tsup --watch",
@@ -26,15 +26,15 @@
     "react": "^18.2.0"
   },
   "devDependencies": {
-    "@types/node": "^18.11.18",
+    "@types/node": "^22.18.10",
     "@types/react": "18.0.26",
     "@typescript-eslint/eslint-plugin": "^5.48.2",
     "@typescript-eslint/parser": "^5.48.2",
     "eslint": "^8.32.0",
-    "eslint-plugin-react": "^7.32.1",
+    "eslint-plugin-react": "^7.37.5",
     "prettier": "^2.8.3",
-    "tsup": "6.5.0",
-    "typescript": "^4.9.4"
+    "tsup": "8.5.0",
+    "typescript": "^5.9.3"
   },
   "author": "info@featurehub.io",
   "license": "MIT",
