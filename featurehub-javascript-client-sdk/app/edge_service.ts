@@ -1,4 +1,3 @@
-
 export interface EdgeService {
   contextChange(header: string): Promise<void>;
   clientEvaluated(): boolean;

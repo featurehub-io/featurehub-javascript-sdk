@@ -1,5 +1,5 @@
-import { FeatureValueType } from './models';
-import { ClientContext } from './client_context';
+import { FeatureValueType } from "./models";
+import { ClientContext } from "./client_context";
 
 // these two depend on each other
 
@@ -118,5 +118,5 @@ export interface FeatureStateHolder<T = any> {
 
   withContext(param: ClientContext): FeatureStateHolder;
 
-  get featureProperties(): Record<string,string> | undefined;
+  get featureProperties(): Record<string, string> | undefined;
 }

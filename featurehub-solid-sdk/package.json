@@ -31,7 +31,6 @@
     "babel-preset-solid": "^1.9.9",
     "eslint": "^8.31.0",
     "eslint-plugin-solid": "^0.14.5",
-    "prettier": "2.8.2",
     "tsup": "8.5.0",
     "typescript": "^5.9.3"
   },

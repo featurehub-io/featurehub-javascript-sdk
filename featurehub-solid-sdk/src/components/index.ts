@@ -1,1 +1,1 @@
-export { default as FeatureHub } from "./FeatureHub"
+export { default as FeatureHub } from "./FeatureHub";

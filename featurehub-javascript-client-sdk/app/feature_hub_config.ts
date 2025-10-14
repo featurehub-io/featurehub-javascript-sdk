@@ -1,13 +1,16 @@
-import { EdgeService } from './edge_service';
-import { ClientContext } from './client_context';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { AnalyticsCollector } from './analytics';
-import { FeatureStateValueInterceptor } from './interceptors';
-import { FeatureHubRepository, Readyness, ReadynessListener } from './featurehub_repository';
-import { FeatureStateHolder } from './feature_state';
+import { EdgeService } from "./edge_service";
+import { ClientContext } from "./client_context";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { AnalyticsCollector } from "./analytics";
+import { FeatureStateValueInterceptor } from "./interceptors";
+import { FeatureHubRepository, Readyness, ReadynessListener } from "./featurehub_repository";
+import { FeatureStateHolder } from "./feature_state";
 
-// eslint-disable-next-line no-use-before-define
-export type EdgeServiceProvider = (repository: InternalFeatureRepository, config: FeatureHubConfig) => EdgeService;
+export type EdgeServiceProvider = (
+  repository: InternalFeatureRepository,
+  // eslint-disable-next-line no-use-before-define
+  config: FeatureHubConfig,
+) => EdgeService;
 export type EdgeServiceSupplier = () => EdgeService;
 
 export type FHLogMethod = (...args: any[]) => void;
@@ -19,11 +22,11 @@ export class FHLog {
   public static fhLog = new FHLog();
 
   public log: FHLogMethod = (...args: any[]) => {
-    console.log('FeatureHub/Log: ', ...args);
+    console.log("FeatureHub/Log: ", ...args);
   };
 
   public error: FHLogMethod = (...args: any[]) => {
-    console.error('FeatureHub/Error: ', ...args);
+    console.error("FeatureHub/Error: ", ...args);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,13 +35,10 @@ export class FHLog {
   };
 
   public quiet(): void {
-    FHLog.fhLog.log = () => {
-    };
-    FHLog.fhLog.error = () => {
-    };
+    FHLog.fhLog.log = () => {};
+    FHLog.fhLog.error = () => {};
 
-    FHLog.fhLog.trace = () => {
-    };
+    FHLog.fhLog.trace = () => {};
   }
 }
 
@@ -115,7 +115,10 @@ export interface FeatureHubConfig {
    * if you register your readiness listener before initialising the repository so you don't get an immediate NotReady
    * trigger.
    */
-  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle;
+  addReadinessListener(
+    listener: ReadynessListener,
+    ignoreNotReadyOnRegister?: boolean,
+  ): ReadinessListenerHandle;
   removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle);
 
   // add an analytics collector

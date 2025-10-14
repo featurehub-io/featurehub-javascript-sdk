@@ -3,15 +3,19 @@
 ///
 /// For this we are using the W3C Baggage standard for future supportability
 
-import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener } from './featurehub_repository';
-import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from './feature_state';
-import { FeatureValueType, FeatureRolloutStrategy, SSEResultState } from './models';
-import { FeatureStateValueInterceptor, InterceptorValueMatch } from './interceptors';
-import { ClientContext } from './client_context';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { Applied } from './strategy_matcher';
-import { AnalyticsCollector } from './analytics';
-import { CatchReleaseListenerHandler, ReadinessListenerHandle } from './feature_hub_config';
+import {
+  PostLoadNewFeatureStateAvailableListener,
+  Readyness,
+  ReadynessListener,
+} from "./featurehub_repository";
+import { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
+import { FeatureValueType, FeatureRolloutStrategy, SSEResultState } from "./models";
+import { FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
+import { ClientContext } from "./client_context";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { Applied } from "./strategy_matcher";
+import { AnalyticsCollector } from "./analytics";
+import { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 
 class BaggageHolder<T = any> implements FeatureStateHolder<T> {
   protected readonly existing: FeatureStateHolder;
@@ -40,15 +44,16 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     return 0;
   }
 
-  removeListener(_: FeatureListener<T> | FeatureListenerHandle) {
-  }
+  removeListener(_: FeatureListener<T> | FeatureListenerHandle) {}
 
   getBoolean(): boolean | undefined {
     if (this.existing.isLocked()) {
       return this.existing.getBoolean();
     }
 
-    return this.existing.getType() === FeatureValueType.Boolean ? ('true' === this.baggageValue) : undefined;
+    return this.existing.getType() === FeatureValueType.Boolean
+      ? "true" === this.baggageValue
+      : undefined;
   }
 
   getFlag(): boolean | undefined {
@@ -65,7 +70,7 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     }
 
     if (this.existing.getType() === FeatureValueType.Number && this.baggageValue !== undefined) {
-      if (this.baggageValue.includes('.')) {
+      if (this.baggageValue.includes(".")) {
         return parseFloat(this.baggageValue);
       } else {
         // tslint:disable-next-line:radix
@@ -188,7 +193,12 @@ class BaggageRepository implements InternalFeatureRepository {
     this.baggage = baggage;
   }
 
-  public apply(strategies: FeatureRolloutStrategy[], key: string, featureValueId: string, context: ClientContext): Applied {
+  public apply(
+    strategies: FeatureRolloutStrategy[],
+    key: string,
+    featureValueId: string,
+    context: ClientContext,
+  ): Applied {
     return this.repo.apply(strategies, key, featureValueId, context);
   }
 
@@ -246,8 +256,10 @@ class BaggageRepository implements InternalFeatureRepository {
 
   logAnalyticsEvent(action: string, other?: Map<string, string>) {
     const otherCopy = other ? other : new Map<string, string>();
-    const baggageCopy = new Map<string, string>(
-      [...this.baggage.entries(), ...otherCopy.entries()]);
+    const baggageCopy = new Map<string, string>([
+      ...this.baggage.entries(),
+      ...otherCopy.entries(),
+    ]);
 
     // merge bother together and
 
@@ -284,7 +296,10 @@ class BaggageRepository implements InternalFeatureRepository {
     return this.repo.addReadinessListener(listener);
   }
 
-  addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle {
+  addReadinessListener(
+    listener: ReadynessListener,
+    ignoreNotReadyOnRegister?: boolean,
+  ): ReadinessListenerHandle {
     return this.repo.addReadinessListener(listener, ignoreNotReadyOnRegister);
   }
 
@@ -304,11 +319,15 @@ class BaggageRepository implements InternalFeatureRepository {
     this.repo.catchAndReleaseMode = value;
   }
 
-  addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+  addPostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener,
+  ): CatchReleaseListenerHandler {
     return this.repo.addPostLoadNewFeatureStateAvailableListener(listener);
   }
 
-  removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+  removePostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler,
+  ) {
     this.repo.removePostLoadNewFeatureStateAvailableListener(listener);
   }
 
@@ -322,32 +341,31 @@ class BaggageRepository implements InternalFeatureRepository {
 }
 
 export function featurehubMiddleware(repo: InternalFeatureRepository) {
-
   return (req: any, res: any, next: any) => {
     let reqRepo: InternalFeatureRepository = repo;
 
     if (process.env.FEATUREHUB_ACCEPT_BAGGAGE !== undefined) {
-      const baggage = req.header('baggage');
+      const baggage = req.header("baggage");
 
       if (baggage != null) {
         const baggageMap = new Map<string, string>();
 
         // we are expecting a single key/value pair, fhub=
-        baggage.split(',')
-          .map(b => b.trim())
-          .filter(b => b.startsWith('fhub='))
-          .forEach(b => {
+        baggage
+          .split(",")
+          .map((b) => b.trim())
+          .filter((b) => b.startsWith("fhub="))
+          .forEach((b) => {
             //
             const fhub = decodeURIComponent(b.substring(5));
-            fhub.split(',')
-              .forEach(feature => {
-                const parts = feature.split('=');
-                if (parts.length === 2) {
-                  baggageMap.set(parts[0], decodeURIComponent(parts[1]));
-                } else if (parts.length === 1) {
-                  baggageMap.set(parts[0], '');
-                }
-              });
+            fhub.split(",").forEach((feature) => {
+              const parts = feature.split("=");
+              if (parts.length === 2) {
+                baggageMap.set(parts[0], decodeURIComponent(parts[1]));
+              } else if (parts.length === 1) {
+                baggageMap.set(parts[0], "");
+              }
+            });
           });
 
         if (baggageMap.size > 0) {

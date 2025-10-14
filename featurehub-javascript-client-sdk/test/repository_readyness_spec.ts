@@ -6,19 +6,19 @@ import {
   FeatureState,
   FeatureValueType,
   Readyness,
-  SSEResultState
-} from '../app';
-import { expect } from 'chai';
+  SSEResultState,
+} from "../app";
+import { expect } from "chai";
 
-describe('Readiness listeners should fire on appropriate events', () => {
+describe("Readiness listeners should fire on appropriate events", () => {
   let repo: ClientFeatureRepository;
 
   beforeEach(() => {
     repo = new ClientFeatureRepository();
   });
 
-  it('should allow us to set readiness on the config', () => {
-    const fhConfig = new EdgeFeatureHubConfig('http://localhost:8080', '123*123');
+  it("should allow us to set readiness on the config", () => {
+    const fhConfig = new EdgeFeatureHubConfig("http://localhost:8080", "123*123");
     fhConfig.repository(repo);
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;
@@ -31,7 +31,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(readinessTrigger).to.eq(1);
 
     const features = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true },
+      { id: "1", key: "banana", version: 1, type: FeatureValueType.Boolean, value: true },
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -49,8 +49,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(lastReadiness).to.eq(Readyness.Ready);
   });
 
-  it('should start not ready, receive a list of features and become ready and on failure be failed', () => {
-
+  it("should start not ready, receive a list of features and become ready and on failure be failed", () => {
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;
     repo.addReadinessListener((state) => {
@@ -62,7 +61,13 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(readinessTrigger).to.eq(1);
 
     const features = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
+      {
+        id: "1",
+        key: "banana",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -77,7 +82,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(readinessTrigger).to.eq(3);
   });
 
-  it('we should be able to be ready and then be still ready on a bye', () => {
+  it("we should be able to be ready and then be still ready on a bye", () => {
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;
     repo.addReadinessListener((state) => {
@@ -85,7 +90,13 @@ describe('Readiness listeners should fire on appropriate events', () => {
       return readinessTrigger++;
     });
     const features = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
+      {
+        id: "1",
+        key: "banana",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
     ];
 
     repo.notify(SSEResultState.Features, features);
@@ -95,7 +106,7 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(readinessTrigger).to.eq(2);
   });
 
-  it('should allow us to register disinterest in the initial notready status', () => {
+  it("should allow us to register disinterest in the initial notready status", () => {
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;
 
@@ -110,7 +121,13 @@ describe('Readiness listeners should fire on appropriate events', () => {
     expect(readinessTrigger).to.eq(0);
 
     const features = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true } as FeatureState,
+      {
+        id: "1",
+        key: "banana",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
     ];
 
     repo.notify(SSEResultState.Features, features);

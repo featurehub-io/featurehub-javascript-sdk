@@ -1,8 +1,12 @@
-import { FeatureStateHolder } from './feature_state';
-import { FeatureValueType } from './models';
+import { FeatureStateHolder } from "./feature_state";
+import { FeatureValueType } from "./models";
 
 export interface AnalyticsCollector {
-  logEvent(action: string, other: Map<string, string>, featureStateAtCurrentTime: Array<FeatureStateHolder>);
+  logEvent(
+    action: string,
+    other: Map<string, string>,
+    featureStateAtCurrentTime: Array<FeatureStateHolder>,
+  );
 }
 
 export interface GoogleAnalyticsApiClient {
@@ -13,12 +17,12 @@ export interface GoogleAnalyticsApiClient {
 
 class BrowserGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
   cid(other: Map<string, string>): string {
-    return other.get('cid') || '';
+    return other.get("cid") || "";
   }
 
   postBatchUpdate(batchData: string): void {
     const req = new XMLHttpRequest();
-    req.open('POST', 'https://www.google-analytics.com/batch');
+    req.open("POST", "https://www.google-analytics.com/batch");
     req.send(batchData);
   }
 }
@@ -30,12 +34,12 @@ export class GoogleAnalyticsCollector implements AnalyticsCollector {
   private _cid: string | undefined;
   private apiClient: GoogleAnalyticsApiClient;
 
-  public static googleAnalyticsClientProvider: GoogleAnalyticsApiClientProvider =
-    () => new BrowserGoogleAnalyticsApiClient();
+  public static googleAnalyticsClientProvider: GoogleAnalyticsApiClientProvider = () =>
+    new BrowserGoogleAnalyticsApiClient();
 
   constructor(uaKey: string, cid?: string, apiClient?: GoogleAnalyticsApiClient) {
     if (uaKey == null) {
-      throw new Error('UA must be set');
+      throw new Error("UA must be set");
     }
 
     this.uaKey = uaKey;
@@ -52,23 +56,35 @@ export class GoogleAnalyticsCollector implements AnalyticsCollector {
     this._cid = value;
   }
 
-  public logEvent(action: string, other: Map<string, string>,
-    featureStateAtCurrentTime: Array<FeatureStateHolder>): void {
+  public logEvent(
+    action: string,
+    other: Map<string, string>,
+    featureStateAtCurrentTime: Array<FeatureStateHolder>,
+  ): void {
     const finalCid = this._cid ?? this.apiClient.cid(other);
     if (finalCid === undefined) {
       return; // cannot log this event
     }
 
-    const ev = (other !== undefined && other !== null
-      && other.get('gaValue') !== undefined) ? ('&ev=' + encodeURI(other.get('gaValue') || '')) : '';
-    const baseForEachLine = 'v=1&tid=' + this.uaKey
-      + '&cid=' + finalCid + '&t=event&ec=FeatureHub%20Event&ea=' + encodeURI(action) + ev + '&el=';
+    const ev =
+      other !== undefined && other !== null && other.get("gaValue") !== undefined
+        ? "&ev=" + encodeURI(other.get("gaValue") || "")
+        : "";
+    const baseForEachLine =
+      "v=1&tid=" +
+      this.uaKey +
+      "&cid=" +
+      finalCid +
+      "&t=event&ec=FeatureHub%20Event&ea=" +
+      encodeURI(action) +
+      ev +
+      "&el=";
 
-    let postString = '';
+    let postString = "";
     featureStateAtCurrentTime.forEach((f) => {
-      let line : string | undefined = undefined;
+      let line: string | undefined = undefined;
       if (f.getType() === FeatureValueType.Boolean) {
-        line = f.getBoolean() === true ? 'on' : 'off';
+        line = f.getBoolean() === true ? "on" : "off";
       } else if (f.getType() === FeatureValueType.String) {
         line = f.getString();
       } else if (f.getType() === FeatureValueType.Number) {
@@ -76,8 +92,8 @@ export class GoogleAnalyticsCollector implements AnalyticsCollector {
       }
 
       if (line !== null && line !== undefined) {
-        line = encodeURI(f.getKey() + ' : ' + line);
-        postString = postString + baseForEachLine + line + '\n';
+        line = encodeURI(f.getKey() + " : " + line);
+        postString = postString + baseForEachLine + line + "\n";
       }
     });
 

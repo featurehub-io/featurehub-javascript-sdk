@@ -1,15 +1,16 @@
 /* tslint:disable */
 /* eslint-disable */
 import {
-  ClientFeatureRepository, EdgeFeatureHubConfig,
+  ClientFeatureRepository,
+  EdgeFeatureHubConfig,
   FeatureState,
   FeatureStateHolder,
   FeatureValueType,
-  SSEResultState
-} from '../app';
-import { expect } from 'chai';
+  SSEResultState,
+} from "../app";
+import { expect } from "chai";
 
-describe('We should be able to log an analytics event', () => {
+describe("We should be able to log an analytics event", () => {
   let repo: ClientFeatureRepository;
   let firedAction: string | undefined;
   let firedOther: Map<string, string> | undefined;
@@ -22,60 +23,66 @@ describe('We should be able to log an analytics event', () => {
     firedFeatures = undefined;
 
     repo.addAnalyticCollector({
-      logEvent: function (action: string, other: Map<string, string>,
-        featureStateAtCurrentTime: Array<FeatureStateHolder>) {
+      logEvent: function (
+        action: string,
+        other: Map<string, string>,
+        featureStateAtCurrentTime: Array<FeatureStateHolder>,
+      ) {
         firedAction = action;
         firedOther = other;
         firedFeatures = featureStateAtCurrentTime;
-      }
+      },
     });
   });
 
-  it('should allow us to fire analytics events via the config into the repo', () => {
+  it("should allow us to fire analytics events via the config into the repo", () => {
     repo = new ClientFeatureRepository();
-    const fhConfig = new EdgeFeatureHubConfig('http://localhost:8080', '123*123');
+    const fhConfig = new EdgeFeatureHubConfig("http://localhost:8080", "123*123");
     fhConfig.repository(repo);
     fhConfig.addAnalyticCollector({
-      logEvent: function (action: string, other: Map<string, string>,
-        featureStateAtCurrentTime: Array<FeatureStateHolder>) {
+      logEvent: function (
+        action: string,
+        other: Map<string, string>,
+        featureStateAtCurrentTime: Array<FeatureStateHolder>,
+      ) {
         firedAction = action;
         firedOther = other;
         firedFeatures = featureStateAtCurrentTime;
-      }
+      },
     });
-    repo.logAnalyticsEvent('name');
+    repo.logAnalyticsEvent("name");
     expect(firedFeatures?.length).to.eq(0);
-    expect(firedAction).to.eq('name');
+    expect(firedAction).to.eq("name");
     // tslint:disable-next-line:no-unused-expression
     expect(firedOther?.size).to.eq(0);
   });
 
-  it('Should enable us to log an event with no other and no features', () => {
-    repo.logAnalyticsEvent('name');
+  it("Should enable us to log an event with no other and no features", () => {
+    repo.logAnalyticsEvent("name");
     expect(firedFeatures?.length).to.eq(0);
-    expect(firedAction).to.eq('name');
+    expect(firedAction).to.eq("name");
     // tslint:disable-next-line:no-unused-expression
     expect(firedOther?.size).to.eq(0);
   });
 
-  it('should carry through the other field', () => {
+  it("should carry through the other field", () => {
     const other = new Map();
-    other.set('ga', 'value');
-    repo.logAnalyticsEvent('name', other);
+    other.set("ga", "value");
+    repo.logAnalyticsEvent("name", other);
     expect(firedFeatures?.length).to.eq(0);
-    expect(firedAction).to.eq('name');
+    expect(firedAction).to.eq("name");
     // tslint:disable-next-line:no-unused-expression
     expect(firedOther).to.eq(other);
   });
 
-  it('should snapshot the features', () => {
+  it("should snapshot the features", () => {
     const features: Array<FeatureState> = [
-      { id: '1', key: 'banana', version: 1, type: FeatureValueType.Boolean, value: true },
+      { id: "1", key: "banana", version: 1, type: FeatureValueType.Boolean, value: true },
     ];
 
     repo.notify(SSEResultState.Features, features);
 
-    repo.logAnalyticsEvent('name');
+    repo.logAnalyticsEvent("name");
 
     expect(firedFeatures?.length).to.eq(1);
     const fs = firedFeatures![0];
@@ -83,6 +90,6 @@ describe('We should be able to log an analytics event', () => {
     expect(fs.isSet()).to.be.true;
     // tslint:disable-next-line:no-unused-expression
     expect(fs.getBoolean()).to.be.true;
-    expect(fs.getKey()).to.eq('banana');
+    expect(fs.getKey()).to.eq("banana");
   });
 });

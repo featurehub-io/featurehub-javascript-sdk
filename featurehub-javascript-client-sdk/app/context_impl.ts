@@ -1,14 +1,14 @@
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { EdgeServiceSupplier, FeatureHubConfig, fhLog } from './feature_hub_config';
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { EdgeServiceSupplier, FeatureHubConfig, fhLog } from "./feature_hub_config";
 import {
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
-} from './models';
-import { FeatureStateHolder } from './feature_state';
-import { EdgeService } from './edge_service';
-import { FeatureHubRepository } from './featurehub_repository';
-import { ClientContext } from './client_context';
+} from "./models";
+import { FeatureStateHolder } from "./feature_state";
+import { EdgeService } from "./edge_service";
+import { FeatureHubRepository } from "./featurehub_repository";
+import { ClientContext } from "./client_context";
 
 export abstract class BaseClientContext implements ClientContext {
   protected readonly _repository: InternalFeatureRepository;
@@ -19,32 +19,32 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   userKey(value: string): ClientContext {
-    this._attributes.set('userkey', [value]);
+    this._attributes.set("userkey", [value]);
     return this;
   }
 
   sessionKey(value: string): ClientContext {
-    this._attributes.set('session', [value]);
+    this._attributes.set("session", [value]);
     return this;
   }
 
   country(value: StrategyAttributeCountryName): ClientContext {
-    this._attributes.set('country', [value]);
+    this._attributes.set("country", [value]);
     return this;
   }
 
   device(value: StrategyAttributeDeviceName): ClientContext {
-    this._attributes.set('device', [value]);
+    this._attributes.set("device", [value]);
     return this;
   }
 
   platform(value: StrategyAttributePlatformName): ClientContext {
-    this._attributes.set('platform', [value]);
+    this._attributes.set("platform", [value]);
     return this;
   }
 
   version(version: string): ClientContext {
-    this._attributes.set('version', [version]);
+    this._attributes.set("version", [version]);
     return this;
   }
 
@@ -100,7 +100,7 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   defaultPercentageKey(): string | undefined {
-    return this._attributes.has('session') ? this.getAttr('session') : this.getAttr('userkey');
+    return this._attributes.has("session") ? this.getAttr("session") : this.getAttr("userkey");
   }
 
   isEnabled(name: string): boolean {
@@ -108,7 +108,7 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   isSet(name: string): boolean {
-    return  this.feature(name).isSet();
+    return this.feature(name).isSet();
   }
 
   getNumber(name: string, def?: number): number | undefined {
@@ -160,14 +160,14 @@ export abstract class BaseClientContext implements ClientContext {
 
   logAnalyticsEvent(action: string, other?: Map<string, string>, user?: string): void {
     if (user == null) {
-      user = this.getAttr('userkey');
+      user = this.getAttr("userkey");
     }
     if (user != null) {
       if (other == null) {
         other = new Map<string, string>();
       }
 
-      other.set('cid', user);
+      other.set("cid", user);
     }
 
     this._repository.logAnalyticsEvent(action, other);
@@ -181,8 +181,11 @@ export class ServerEvalFeatureContext extends BaseClientContext {
   private _xHeader: string | undefined;
   private _clientCount = 0;
 
-  constructor(repository: InternalFeatureRepository,
-    edgeServiceSupplier: EdgeServiceSupplier, config?: FeatureHubConfig) {
+  constructor(
+    repository: InternalFeatureRepository,
+    edgeServiceSupplier: EdgeServiceSupplier,
+    config?: FeatureHubConfig,
+  ) {
     super(repository);
 
     this._edgeServiceSupplier = edgeServiceSupplier;
@@ -200,9 +203,10 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
   async build(): Promise<ClientContext> {
     try {
-      const newHeader = Array.from(this._attributes.entries()).map((key,
-      ) =>
-        key[0] + '=' + encodeURIComponent(key[1].join(','))).sort().join(',');
+      const newHeader = Array.from(this._attributes.entries())
+        .map((key) => key[0] + "=" + encodeURIComponent(key[1].join(",")))
+        .sort()
+        .join(",");
 
       if (newHeader !== this._xHeader) {
         this._xHeader = newHeader;
@@ -222,8 +226,8 @@ export class ServerEvalFeatureContext extends BaseClientContext {
         await this._currentEdge.contextChange(this._xHeader);
       }
     } catch (e) {
-      if (e)  {
-        fhLog.error('Failed to connect to FeatureHHub Edge to refresh context', e);
+      if (e) {
+        fhLog.error("Failed to connect to FeatureHHub Edge to refresh context", e);
       }
     }
 
@@ -232,10 +236,10 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
   close(): void {
     if (this._clientCount <= 1 && this._config !== undefined) {
-      fhLog.trace('closing because client count is ', this._clientCount);
+      fhLog.trace("closing because client count is ", this._clientCount);
       this._config.close(); // tell the config to close us down
     } else if (this._currentEdge) {
-      fhLog.trace('closing because directly requested close.');
+      fhLog.trace("closing because directly requested close.");
       this._currentEdge.close();
     }
   }
@@ -260,13 +264,15 @@ export class ClientEvalFeatureContext extends BaseClientContext {
 
   // eslint-disable-next-line require-await
   async build(): Promise<ClientContext> {
-    this._edgeService.poll()?.then(() => {}).catch(() => {}); // in case it hasn't already been initialized
+    this._edgeService
+      .poll()
+      ?.then(() => {})
+      .catch(() => {}); // in case it hasn't already been initialized
 
     return this;
   }
 
   close(): void {
-
     this._edgeService.close();
   }
 
@@ -277,5 +283,4 @@ export class ClientEvalFeatureContext extends BaseClientContext {
   feature(name: string): FeatureStateHolder {
     return this._repository.feature(name).withContext(this);
   }
-
 }

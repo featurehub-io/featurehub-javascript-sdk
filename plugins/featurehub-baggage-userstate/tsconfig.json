@@ -15,17 +15,7 @@
     "declaration": true,
     "moduleResolution": "node"
   },
-  "include": [
-    "app/**/*",
-    "spec/**/*"
-  ],
-  "types": [
-    "node",
-    "mocha"
-  ],
-  "exclude": [
-    "node_modules",
-    "target/dist"
-  ]
-
+  "include": ["app/**/*", "spec/**/*"],
+  "types": ["node", "mocha"],
+  "exclude": ["node_modules", "target/dist"]
 }

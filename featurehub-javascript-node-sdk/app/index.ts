@@ -14,14 +14,15 @@ import {
   EdgeFeatureHubConfig,
   FHLog,
   fhLog,
-  PromiseLikeFunction, RejectLikeFunction
-} from 'featurehub-javascript-client-sdk';
-import { URL } from 'url';
-import { RequestOptions } from 'https';
+  PromiseLikeFunction,
+  RejectLikeFunction,
+} from "featurehub-javascript-client-sdk";
+import { URL } from "url";
+import { RequestOptions } from "https";
 
-const ES = require('eventsource');
+const ES = require("eventsource");
 
-export * from 'featurehub-javascript-client-sdk';
+export * from "featurehub-javascript-client-sdk";
 
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
   return new ES(url, dict);
@@ -59,15 +60,18 @@ export class NodejsPollingService extends PollingBase implements PollingService 
 
     this._busy = true;
 
-    return new Promise(((resolve, reject) => {
-      const http = this.uri.protocol === 'http:' ? require('http') : require('https');
-      let data = '';
-      const headers = this._header === undefined ? {} : {
-        'x-featurehub': this._header
-      };
+    return new Promise((resolve, reject) => {
+      const http = this.uri.protocol === "http:" ? require("http") : require("https");
+      let data = "";
+      const headers =
+        this._header === undefined
+          ? {}
+          : {
+              "x-featurehub": this._header,
+            };
 
       if (this._etag) {
-        headers['if-none-match'] = this._etag;
+        headers["if-none-match"] = this._etag;
       }
 
       // we are not specifying the type as it forces us to bring in one of http or https
@@ -76,10 +80,10 @@ export class NodejsPollingService extends PollingBase implements PollingService 
         host: this.uri.host,
         hostname: this.uri.hostname,
         port: this.uri.port,
-        method: 'GET',
+        method: "GET",
         path: this.uri.pathname + this.uri.search + `&contextSha=${this._shaHeader}`,
         headers: headers,
-        timeout: this._options.timeout || 8000
+        timeout: this._options.timeout || 8000,
       };
 
       if (this.modifyRequestFunction) {
@@ -87,13 +91,13 @@ export class NodejsPollingService extends PollingBase implements PollingService 
       }
 
       const req = http.request(reqOptions, (res) => {
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          this.parseCacheControl(res.headers['cache-control']);
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          this.parseCacheControl(res.headers["cache-control"]);
           if (res.statusCode === 200 || res.statusCode === 236) {
             this._etag = res.headers.etag;
             this._callback(JSON.parse(data) as Array<FeatureEnvironmentCollection>);
-            this._stopped = (res.statusCode === 236);
+            this._stopped = res.statusCode === 236;
             this._busy = false;
             this.resolveOutstanding();
             resolve();
@@ -110,9 +114,8 @@ export class NodejsPollingService extends PollingBase implements PollingService 
       });
 
       req.end();
-    }));
+    });
   }
-
 }
 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
@@ -128,12 +131,12 @@ export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
       protocol: loc.protocol,
       path: loc.pathname,
       host: loc.hostname,
-      method: 'PUT',
+      method: "PUT",
       port: loc.port,
       timeout: 3000,
       headers: {
-        'content-type': 'application/json'
-      }
+        "content-type": "application/json",
+      },
     };
 
     // allows you to override it with any security or such
@@ -141,11 +144,11 @@ export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
       this.modifyRequestFunction(cra);
     }
 
-    const http = cra.protocol === 'http:' ? require('http') : require('https');
+    const http = cra.protocol === "http:" ? require("http") : require("https");
     return new Promise<boolean>((resolve) => {
       try {
         const req = http.request(cra, (res) => {
-          fhLog.trace('update result -> ', res.statusCode);
+          fhLog.trace("update result -> ", res.statusCode);
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(true);
           } else {
@@ -153,12 +156,12 @@ export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
           }
         });
 
-        req.on('error', () => {
-          fhLog.trace('update result -> error');
+        req.on("error", () => {
+          fhLog.trace("update result -> error");
           resolve(false);
         });
 
-        FHLog.fhLog.trace('FeatureUpdater', cra, update);
+        FHLog.fhLog.trace("FeatureUpdater", cra, update);
         req.write(JSON.stringify(update));
         req.end();
       } catch (e) {
@@ -166,20 +169,19 @@ export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
       }
     });
   }
-
 }
 
 FeatureUpdater.featureUpdaterProvider = () => new NodejsFeaturePostUpdater();
 
 class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
   cid(other: Map<string, string>): string {
-    return other.get('cid') || process.env.GA_CID || '';
+    return other.get("cid") || process.env.GA_CID || "";
   }
 
   postBatchUpdate(batchData: string): void {
-    const req = require('https').request({
-      host: 'www.google-analytics.com',
-      path: 'batch'
+    const req = require("https").request({
+      host: "www.google-analytics.com",
+      path: "batch",
     });
     req.write(batchData);
     req.end();
@@ -187,4 +189,5 @@ class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
 }
 
 GoogleAnalyticsCollector.googleAnalyticsClientProvider = () => new NodejsGoogleAnalyticsApiClient();
-EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) => new FeatureHubEventSourceClient(config, repository);
+EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) =>
+  new FeatureHubEventSourceClient(config, repository);

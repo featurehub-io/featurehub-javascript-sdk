@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
-import { FeatureHub, useFeature } from 'featurehub-react-sdk'
+import { useEffect, useState } from "react";
+import reactLogo from "./assets/react.svg";
+import "./App.css";
+import { FeatureHub, useFeature } from "featurehub-react-sdk";
 
-const SAMPLE_TEXT = "This is some random text content which may have its case-sensitivity modified."
+const SAMPLE_TEXT =
+  "This is some random text content which may have its case-sensitivity modified.";
 
 /*
   DEVELOPER NOTE:
@@ -21,12 +22,12 @@ function App() {
   useEffect(() => {
     setTimeout(() => {
       // Set username after arbitrary delay to make sure FeatureHub component reconfigures its internals properly.
-      setUserKey("john.doe")
-    }, 1000)
-  }, [])
+      setUserKey("john.doe");
+    }, 1000);
+  }, []);
 
   return (
-     /*
+    /*
         To run a local instance of FeatureHub for testing, run either of the following commands:
         - docker run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
         - podman run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
@@ -34,15 +35,10 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub
-      url='http://localhost:8085'
-      apiKey=''
-      userKey={userKey}
-      pollInterval={5000}
-    >
+    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey} pollInterval={5000}>
       <Main />
     </FeatureHub>
-  )
+  );
 }
 
 function Main() {
@@ -60,11 +56,11 @@ function Main() {
 
   const shouldUpperCaseText = useFeature("uppercase_text");
   const textColour = useFeature<string>("text_colour");
-  const [displayText, setDisplayText] = useState(SAMPLE_TEXT)
+  const [displayText, setDisplayText] = useState(SAMPLE_TEXT);
 
   useEffect(() => {
     setDisplayText(shouldUpperCaseText ? SAMPLE_TEXT.toUpperCase() : SAMPLE_TEXT);
-  }, [shouldUpperCaseText])
+  }, [shouldUpperCaseText]);
 
   return (
     <div className="App">
@@ -84,19 +80,29 @@ function Main() {
 
         <button onClick={() => setCount(count + 1)}>Count: {count}</button>
 
-        <button onClick={() => { fhContext.userKey(Math.random().toString()); fhContext.build(); }}>Change user key</button>
+        <button
+          onClick={() => {
+            fhContext.userKey(Math.random().toString());
+            fhContext.build();
+          }}
+        >
+          Change user key
+        </button>
 
-        <p>The value of <code>uppercase_text</code> feature is <code>{`${shouldUpperCaseText}`}</code></p>
-        <p>The value of <code>text_colour</code> feature is <code>{textColour}</code></p>
+        <p>
+          The value of <code>uppercase_text</code> feature is{" "}
+          <code>{`${shouldUpperCaseText}`}</code>
+        </p>
+        <p>
+          The value of <code>text_colour</code> feature is <code>{textColour}</code>
+        </p>
 
-        <p style={{ color: textColour} }>This paragraph color should be {textColour}</p>
+        <p style={{ color: textColour }}>This paragraph color should be {textColour}</p>
         <p>{displayText}</p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <p className="read-the-docs">Click on the Vite and React logos to learn more</p>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

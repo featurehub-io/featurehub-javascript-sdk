@@ -28,11 +28,10 @@
   "devDependencies": {
     "@types/node": "^22.18.10",
     "@types/react": "18.0.26",
-    "@typescript-eslint/eslint-plugin": "^5.48.2",
-    "@typescript-eslint/parser": "^5.48.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
     "eslint": "^8.32.0",
     "eslint-plugin-react": "^7.37.5",
-    "prettier": "^2.8.3",
     "tsup": "8.5.0",
     "typescript": "^5.9.3"
   },

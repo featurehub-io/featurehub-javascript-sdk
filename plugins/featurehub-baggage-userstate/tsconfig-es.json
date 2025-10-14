@@ -3,5 +3,5 @@
   "compilerOptions": {
     "module": "ES2020",
     "outDir": "lib"
-  },
+  }
 }

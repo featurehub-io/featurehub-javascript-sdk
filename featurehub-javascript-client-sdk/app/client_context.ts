@@ -1,10 +1,10 @@
 import {
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
-  StrategyAttributePlatformName
-} from './models';
-import { FeatureStateHolder } from './feature_state';
-import { FeatureHubRepository } from './featurehub_repository';
+  StrategyAttributePlatformName,
+} from "./models";
+import { FeatureStateHolder } from "./feature_state";
+import { FeatureHubRepository } from "./featurehub_repository";
 
 export interface ClientContext {
   userKey(value: string): ClientContext;
@@ -57,5 +57,3 @@ export interface ClientContext {
 export interface ConfigChangedListener {
   (config: ClientContext);
 }
-
-

@@ -1,17 +1,21 @@
-import { FeatureStateBaseHolder } from './feature_state_holders';
-import { FeatureStateValueInterceptor, InterceptorValueMatch } from './interceptors';
+import { FeatureStateBaseHolder } from "./feature_state_holders";
+import { FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
 
-import { FeatureStateHolder } from './feature_state';
+import { FeatureStateHolder } from "./feature_state";
 
-import { AnalyticsCollector } from './analytics';
+import { AnalyticsCollector } from "./analytics";
 // leave this here, prevents circular deps
-import { FeatureRolloutStrategy, FeatureState, FeatureValueType, SSEResultState } from './models';
-import { ClientContext } from './client_context';
-import { Applied, ApplyFeature } from './strategy_matcher';
-import { InternalFeatureRepository } from './internal_feature_repository';
-import { CatchReleaseListenerHandler, fhLog, ReadinessListenerHandle } from './feature_hub_config';
-import { PostLoadNewFeatureStateAvailableListener, Readyness, ReadynessListener } from './featurehub_repository';
-import { ListenerUtils } from './listener_utils';
+import { FeatureRolloutStrategy, FeatureState, FeatureValueType, SSEResultState } from "./models";
+import { ClientContext } from "./client_context";
+import { Applied, ApplyFeature } from "./strategy_matcher";
+import { InternalFeatureRepository } from "./internal_feature_repository";
+import { CatchReleaseListenerHandler, fhLog, ReadinessListenerHandle } from "./feature_hub_config";
+import {
+  PostLoadNewFeatureStateAvailableListener,
+  Readyness,
+  ReadynessListener,
+} from "./featurehub_repository";
+import { ListenerUtils } from "./listener_utils";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState = false;
@@ -19,11 +23,17 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private features = new Map<string, FeatureStateBaseHolder>();
   private analyticsCollectors = new Array<AnalyticsCollector>();
   private readynessState: Readyness = Readyness.NotReady;
-  private _readinessListeners: Map<number, ReadynessListener> = new Map<number, ReadynessListener>();
+  private _readinessListeners: Map<number, ReadynessListener> = new Map<
+    number,
+    ReadynessListener
+  >();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
-  private _newFeatureStateAvailableListeners: Map<number, PostLoadNewFeatureStateAvailableListener> = new Map<number, PostLoadNewFeatureStateAvailableListener>();
+  private _newFeatureStateAvailableListeners: Map<
+    number,
+    PostLoadNewFeatureStateAvailableListener
+  > = new Map<number, PostLoadNewFeatureStateAvailableListener>();
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
@@ -32,8 +42,12 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._applyFeature = applyFeature || new ApplyFeature();
   }
 
-  public apply(strategies: Array<FeatureRolloutStrategy>, key: string, featureValueId: string,
-    context: ClientContext): Applied {
+  public apply(
+    strategies: Array<FeatureRolloutStrategy>,
+    key: string,
+    featureValueId: string,
+    context: ClientContext,
+  ): Applied {
     return this._applyFeature.apply(strategies, key, featureValueId, context);
   }
 
@@ -56,35 +70,39 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
             this.broadcastReadynessState(false);
           }
           break;
-        case SSEResultState.Feature: {
-          const fs = data as FeatureState;
+        case SSEResultState.Feature:
+          {
+            const fs = data as FeatureState;
 
-          if (this._catchAndReleaseMode) {
-            this._catchUpdatedFeatures([fs], false);
-          } else {
-            if (this.featureUpdate(fs)) {
-              this.triggerNewStateAvailable();
+            if (this._catchAndReleaseMode) {
+              this._catchUpdatedFeatures([fs], false);
+            } else {
+              if (this.featureUpdate(fs)) {
+                this.triggerNewStateAvailable();
+              }
             }
           }
-        }
           break;
-        case SSEResultState.Features: {
-          const features = (data as []).filter((f:any) => f?.key !== undefined).map((f : any) => f as FeatureState);
-          if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
-            this._catchUpdatedFeatures(features, true);
-          } else {
-            let updated = false;
-            features.forEach((f) => updated = this.featureUpdate(f) || updated);
-            this._checkForDeletedFeatures(features);
-            this.readynessState = Readyness.Ready;
-            if (!this.hasReceivedInitialState) {
-              this.hasReceivedInitialState = true;
-              this.broadcastReadynessState(true);
-            } else if (updated) {
-              this.triggerNewStateAvailable();
+        case SSEResultState.Features:
+          {
+            const features = (data as [])
+              .filter((f: any) => f?.key !== undefined)
+              .map((f: any) => f as FeatureState);
+            if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
+              this._catchUpdatedFeatures(features, true);
+            } else {
+              let updated = false;
+              features.forEach((f) => (updated = this.featureUpdate(f) || updated));
+              this._checkForDeletedFeatures(features);
+              this.readynessState = Readyness.Ready;
+              if (!this.hasReceivedInitialState) {
+                this.hasReceivedInitialState = true;
+                this.broadcastReadynessState(true);
+              } else if (updated) {
+                this.triggerNewStateAvailable();
+              }
             }
           }
-        }
           break;
         default:
           break;
@@ -103,7 +121,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _checkForDeletedFeatures(features: FeatureState[]) {
     const featureMatch = new Map(this.features);
 
-    features.forEach(f => featureMatch.delete(f.key));
+    features.forEach((f) => featureMatch.delete(f.key));
 
     if (featureMatch.size > 0) {
       for (const k of featureMatch.keys()) {
@@ -129,7 +147,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return undefined;
   }
 
-  public addPostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener): CatchReleaseListenerHandler {
+  public addPostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener,
+  ): CatchReleaseListenerHandler {
     const pos = ListenerUtils.newListenerKey(this._newFeatureStateAvailableListeners);
 
     this._newFeatureStateAvailableListeners.set(pos, listener);
@@ -141,7 +161,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return pos;
   }
 
-  public removePostLoadNewFeatureStateAvailableListener(listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler) {
+  public removePostLoadNewFeatureStateAvailableListener(
+    listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler,
+  ) {
     ListenerUtils.removeListener(this._newFeatureStateAvailableListeners, listener);
   }
 
@@ -149,12 +171,18 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.addReadinessListener(listener);
   }
 
-  public addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): ReadinessListenerHandle {
+  public addReadinessListener(
+    listener: ReadynessListener,
+    ignoreNotReadyOnRegister?: boolean,
+  ): ReadinessListenerHandle {
     const pos = ListenerUtils.newListenerKey(this._readinessListeners);
 
     this._readinessListeners.set(pos, listener);
 
-    if (!ignoreNotReadyOnRegister || (ignoreNotReadyOnRegister && this.readynessState != Readyness.NotReady)) {
+    if (
+      !ignoreNotReadyOnRegister ||
+      (ignoreNotReadyOnRegister && this.readynessState != Readyness.NotReady)
+    ) {
       // always let them know what it is in case its already ready
       listener(this.readynessState, this.hasReceivedInitialState);
     }
@@ -183,11 +211,14 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     const vals = new Map<string, string | undefined>();
 
     this.features.forEach((value, key) => {
-      if (value.exists) { // only include valid features
+      if (value.exists) {
+        // only include valid features
         let val: any;
-        switch (value.getType()) {// we need to pick up any overrides
+        switch (
+          value.getType() // we need to pick up any overrides
+        ) {
           case FeatureValueType.Boolean:
-            val = value.flag ? 'true' : 'false';
+            val = value.flag ? "true" : "false";
             break;
           case FeatureValueType.String:
             val = value.str;
@@ -213,13 +244,15 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
     for (const fs of this.features.values()) {
       if (fs.isSet()) {
-        const fsVal: FeatureStateBaseHolder = ctx == null ? fs : fs.withContext(ctx) as FeatureStateBaseHolder;
+        const fsVal: FeatureStateBaseHolder =
+          ctx == null ? fs : (fs.withContext(ctx) as FeatureStateBaseHolder);
         featureStateAtCurrentTime.push(fsVal.analyticsCopy());
       }
     }
 
-    this.analyticsCollectors.forEach((ac) => ac.logEvent(action, other || new Map<string, string>(),
-      featureStateAtCurrentTime));
+    this.analyticsCollectors.forEach((ac) =>
+      ac.logEvent(action, other || new Map<string, string>(), featureStateAtCurrentTime),
+    );
   }
 
   public hasFeature(key: string): undefined | FeatureStateHolder {
@@ -255,7 +288,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   // eslint-disable-next-line require-await
   public async release(disableCatchAndRelease?: boolean): Promise<void> {
-    while (this._catchReleaseStates.size > 0 || this._catchReleaseCheckForDeletesOnRelease !== undefined) {
+    while (
+      this._catchReleaseStates.size > 0 ||
+      this._catchReleaseCheckForDeletesOnRelease !== undefined
+    ) {
       const states = [...this._catchReleaseStates.values()];
       this._catchReleaseStates.clear(); // remove all existing items
       states.forEach((fs) => this.featureUpdate(fs));
@@ -303,8 +339,12 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     if (features && features.length > 0) {
       features.forEach((f) => {
         const existingFeature = this.features.get(f.key);
-        if (!existingFeature || !existingFeature.exists || (existingFeature.getKey()
-          && f.version! > (existingFeature.getFeatureState()?.version || -1))) {
+        if (
+          !existingFeature ||
+          !existingFeature.exists ||
+          (existingFeature.getKey() &&
+            f.version! > (existingFeature.getFeatureState()?.version || -1))
+        ) {
           const fs = this._catchReleaseStates.get(f.id);
           if (fs == null) {
             this._catchReleaseStates.set(f.id, f);
@@ -326,12 +366,12 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   private triggerNewStateAvailable(): void {
     if (this.hasReceivedInitialState && this._newFeatureStateAvailableListeners.size > 0) {
-      if (!this._catchAndReleaseMode || (this._catchReleaseStates.size > 0)) {
+      if (!this._catchAndReleaseMode || this._catchReleaseStates.size > 0) {
         this._newFeatureStateAvailableListeners.forEach((l) => {
           try {
             l(this);
           } catch (e) {
-            fhLog.log('failed', e);
+            fhLog.log("failed", e);
           }
         });
       }
@@ -368,7 +408,12 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     // because of parallelism we can receive retired features after they have been unretired
     // so we need to check their versions. An actual deleted feature however will have a version of 0
     // and a feature value created as retired will also have a version of zero.
-    if (holder && ((featureState.version === undefined) || (featureState.version === 0) || (featureState.version >= holder.version))) {
+    if (
+      holder &&
+      (featureState.version === undefined ||
+        featureState.version === 0 ||
+        featureState.version >= holder.version)
+    ) {
       holder.setFeatureState(undefined);
     }
   }

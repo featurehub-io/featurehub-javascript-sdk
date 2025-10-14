@@ -10,7 +10,7 @@ function useFeatureHub(): UseFeatureHub {
 
   if (!featureHub) {
     throw new Error(
-      "Error invoking useFeatureHub! Make sure your component is wrapped by the top-level <FeatureHub> component!"
+      "Error invoking useFeatureHub! Make sure your component is wrapped by the top-level <FeatureHub> component!",
     );
   }
 

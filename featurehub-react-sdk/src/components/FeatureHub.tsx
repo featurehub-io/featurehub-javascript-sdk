@@ -5,7 +5,8 @@ import {
   FeatureHubPollingClient,
   ReadinessListenerHandle,
   Readyness,
-  FeatureHub as fh, FeatureHubConfig
+  FeatureHub as fh,
+  FeatureHubConfig,
 } from "featurehub-javascript-client-sdk";
 
 export type UseFeatureHub = {
@@ -51,14 +52,15 @@ export default function FeatureHub({
   userKey,
   username,
   pollInterval = 60000,
-  children
+  children,
 }: Props): JSX.Element {
   useMemo(() => {
     // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
     // Noticed that React has a tendency to create two with the nature of the render cycles
     // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
     console.info("FeatureHub React SDK: Creating config.");
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = ((repo, c) => new FeatureHubPollingClient(repo, c, pollInterval));
+    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repo, c) =>
+      new FeatureHubPollingClient(repo, c, pollInterval);
     const config = EdgeFeatureHubConfig.config(url, apiKey);
     const context = config.newContext();
     fh.set(config, context);

@@ -1,20 +1,20 @@
-import * as React from 'react';
-import { Configuration, TodoServiceApi, Todo } from './api';
-import './App.css';
-import globalAxios, { AxiosRequestConfig } from 'axios';
+import * as React from "react";
+import { Configuration, TodoServiceApi, Todo } from "./api";
+import "./App.css";
+import globalAxios, { AxiosRequestConfig } from "axios";
 import {
   ClientContext,
   EdgeFeatureHubConfig,
   Readyness,
   w3cBaggageHeader,
   FeatureHubPollingClient,
-} from 'featurehub-javascript-client-sdk';
+} from "featurehub-javascript-client-sdk";
 
 let todoApi: TodoServiceApi;
 let initialized = false;
 let fhConfig: EdgeFeatureHubConfig;
 let fhClient: ClientContext;
-let userName = 'fred';
+let userName = "fred";
 
 class TodoData {
   todos: Array<Todo>;
@@ -24,7 +24,7 @@ class TodoData {
 
   constructor(todos?: Array<Todo>, buttonColour?: string, ready?: boolean) {
     this.todos = todos || [];
-    this.buttonColour = buttonColour || 'blue';
+    this.buttonColour = buttonColour || "blue";
     this.ready = ready || false;
   }
 
@@ -35,7 +35,6 @@ class TodoData {
   changeTodos(todos: Array<Todo>): TodoData {
     return new TodoData(todos, this.buttonColour, this.ready);
   }
-
 }
 
 class ConfigData {
@@ -44,23 +43,29 @@ class ConfigData {
   fhApiKey: string;
 }
 
-globalAxios.interceptors.request.use(function (config: AxiosRequestConfig) {
-  if (fhConfig !== undefined) {
-    // this requires  a  server evaluation key
-    const baggage = w3cBaggageHeader({repo: fhConfig.repository(), header: config.headers.Baggage});
-    // const baggage = w3cBaggageHeader({});
-    if (baggage) {
-      console.log('baggage is ', baggage);
-      config.headers.Baggage = baggage;
-    } else {
-      console.log('no baggage');
+globalAxios.interceptors.request.use(
+  function (config: AxiosRequestConfig) {
+    if (fhConfig !== undefined) {
+      // this requires  a  server evaluation key
+      const baggage = w3cBaggageHeader({
+        repo: fhConfig.repository(),
+        header: config.headers.Baggage,
+      });
+      // const baggage = w3cBaggageHeader({});
+      if (baggage) {
+        console.log("baggage is ", baggage);
+        config.headers.Baggage = baggage;
+      } else {
+        console.log("no baggage");
+      }
     }
-  }
-  return config;
-}, function (error: any) {
-  // Do something with request error
-  return Promise.reject(error);
-});
+    return config;
+  },
+  function (error: any) {
+    // Do something with request error
+    return Promise.reject(error);
+  },
+);
 
 class App extends React.Component<{}, { todos: TodoData }> {
   private titleInput: HTMLInputElement;
@@ -78,14 +83,14 @@ class App extends React.Component<{}, { todos: TodoData }> {
     if (fhConfig !== undefined) {
       return;
     }
-    const config = (await globalAxios.request({url: 'featurehub-config.json'})).data as ConfigData;
+    const config = (await globalAxios.request({ url: "featurehub-config.json" }))
+      .data as ConfigData;
     fhConfig = new EdgeFeatureHubConfig(config.fhEdgeUrl, config.fhApiKey);
-    window['fhConfig'] = fhConfig;
-    window['repository'] = fhConfig.repository();
+    window["fhConfig"] = fhConfig;
+    window["repository"] = fhConfig.repository();
 
     // change to the polling client so there is a difference in the keys seen by the UI vs the backend
-    fhConfig.edgeServiceProvider((repo, cfg) =>
-      new FeatureHubPollingClient(repo, cfg, 10000));
+    fhConfig.edgeServiceProvider((repo, cfg) => new FeatureHubPollingClient(repo, cfg, 10000));
     // if we were using the featurehub-baggage-userstate dependency, we would add this to allow overrides via GUI
 
     // const ls = new LocalSessionInterceptor();
@@ -100,12 +105,10 @@ class App extends React.Component<{}, { todos: TodoData }> {
       if (!initialized) {
         if (readiness === Readyness.Ready) {
           initialized = true;
-          const color = fhClient.getString('SUBMIT_COLOR_BUTTON');
-          this.setState({todos: this.state.todos.changeColor(color)});
-
+          const color = fhClient.getString("SUBMIT_COLOR_BUTTON");
+          this.setState({ todos: this.state.todos.changeColor(color) });
         }
       }
-
     }, true);
 
     // Uncomment this if you want to use rollout strategy with a country rule
@@ -114,14 +117,13 @@ class App extends React.Component<{}, { todos: TodoData }> {
     //     .build();
 
     // connect to the backend server
-    todoApi = new TodoServiceApi(new Configuration({basePath: config.todoServerBaseUrl}));
+    todoApi = new TodoServiceApi(new Configuration({ basePath: config.todoServerBaseUrl }));
     this._loadInitialData(); // let this happen in background
 
     // react to incoming feature changes in real-time
-    fhClient.feature('SUBMIT_COLOR_BUTTON').addListener(fs => {
-      this.setState({todos: this.state.todos.changeColor(fs.getString())});
+    fhClient.feature("SUBMIT_COLOR_BUTTON").addListener((fs) => {
+      this.setState({ todos: this.state.todos.changeColor(fs.getString()) });
     });
-
   }
 
   async componentDidMount() {
@@ -130,7 +132,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
 
   async _loadInitialData() {
     const todoResult = (await todoApi.listTodos(userName)).data;
-    this.setState({todos: this.state.todos.changeTodos(todoResult)});
+    this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   componentWillUnmount(): void {
@@ -139,26 +141,26 @@ class App extends React.Component<{}, { todos: TodoData }> {
 
   async addTodo(title: string) {
     const todo: Todo = {
-      id: '',
+      id: "",
       title,
       resolved: false,
     };
 
     // Send an event to Google Analytics
-    fhClient.logAnalyticsEvent('todo-add', new Map([['gaValue', '10']]));
+    fhClient.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
     const todoResult = (await todoApi.addTodo(userName, todo)).data;
-    this.setState({todos: this.state.todos.changeTodos(todoResult)});
+    this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   async removeToDo(id: string) {
-    fhClient.logAnalyticsEvent('todo-remove', new Map([['gaValue', '5']]));
+    fhClient.logAnalyticsEvent("todo-remove", new Map([["gaValue", "5"]]));
     const todoResult = (await todoApi.removeTodo(userName, id)).data;
-    this.setState({todos: this.state.todos.changeTodos(todoResult)});
+    this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   async doneToDo(id: string) {
     const todoResult = (await todoApi.resolveTodo(userName, id)).data;
-    this.setState({todos: this.state.todos.changeTodos(todoResult)});
+    this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   render() {
@@ -171,44 +173,49 @@ class App extends React.Component<{}, { todos: TodoData }> {
     }
 
     let buttonStyle = {
-      color: this.state.todos.buttonColour
+      color: this.state.todos.buttonColour,
     };
 
     return (
       <div className="App">
-        {this.state.todos.featuresUpdated &&
-          (<div className="updatedFeatures">There are updated features available.
-            <button onClick={() => window.location.reload()}>REFRESH</button></div>)}
+        {this.state.todos.featuresUpdated && (
+          <div className="updatedFeatures">
+            There are updated features available.
+            <button onClick={() => window.location.reload()}>REFRESH</button>
+          </div>
+        )}
         <h1>Todo List</h1>
         <div className="username">
           <form>
             <span>Name</span>
             <input
-              ref={node => {
+              ref={(node) => {
                 if (node != null) {
                   this.userName = node; // refresh the
                 }
               }}
             />
-            <button style={buttonStyle}
+            <button
+              style={buttonStyle}
               onClick={(e) => {
                 e.preventDefault();
                 userName = this.userName.value;
                 fhClient.userKey(this.userName.value).build();
               }}
-            >Set name
+            >
+              Set name
             </button>
           </form>
         </div>
         <form
-          onSubmit={e => {
+          onSubmit={(e) => {
             e.preventDefault();
             this.addTodo(this.titleInput.value);
-            this.titleInput.value = '';
+            this.titleInput.value = "";
           }}
         >
           <input
-            ref={node => {
+            ref={(node) => {
               if (node !== null) {
                 this.titleInput = node;
               }
@@ -223,20 +230,17 @@ class App extends React.Component<{}, { todos: TodoData }> {
                 className="qa-main"
                 key={index}
                 style={{
-                  textDecoration: todo.resolved ? 'line-through' : 'none',
+                  textDecoration: todo.resolved ? "line-through" : "none",
                 }}
               >
                 {!todo.resolved && (
-                  <button
-                    onClick={() => this.doneToDo(todo.id || '')}
-                    className="qa-done-button"
-                  >Done
+                  <button onClick={() => this.doneToDo(todo.id || "")} className="qa-done-button">
+                    Done
                   </button>
                 )}
-                <button onClick={() => this.removeToDo(todo.id || '')} className="qa-delete-button">
+                <button onClick={() => this.removeToDo(todo.id || "")} className="qa-delete-button">
                   Delete
-                </button>
-                {' '}
+                </button>{" "}
                 {todo.title}
               </li>
             );

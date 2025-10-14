@@ -32,7 +32,7 @@ function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
 
       // Need this in order for Solid to pick up the initial value properly for some reason
       setValue(() => client().feature<T | undefined>(key).value);
-    })
+    }),
   );
 
   onCleanup(() => {
