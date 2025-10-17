@@ -1,0 +1,23 @@
+packages:
+  - "packages/*"
+  - "examples/*"
+
+catalogs:
+  prettier:
+    prettier: "3.6.2"
+  rimraf:
+    rimraf: "6.0.1"
+  tsup:
+    tsup: "8.5.0"
+  typescript:
+    typescript: "5.9.3"
+  vitest:
+    vitest: "^3.2.4"
+    "@vitest/coverage-istanbul": "3.2.4"
+  node:
+    "@types/node": "22.18.10"
+  react19:
+    react: "19.2.0"
+    react-dom: "19.2.0"
+    "@types/react": "19.2.2"
+    "@types/react-dom": "19.2.2"

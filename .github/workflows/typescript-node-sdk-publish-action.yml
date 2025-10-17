@@ -6,20 +6,24 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      # Setup .npmrc file to publish to npm
-      - uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.0
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
           node-version: "22.20.0"
+          cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
-      - name: Install dependencies
-        run: npm install
-        working-directory: featurehub-javascript-node-sdk
-      - name: Ensure everything is linted correctly
-        run: npm run lint
-        working-directory: featurehub-javascript-node-sdk
+      - name: Install Dependencies
+        run: pnpm install
+        working-directory: packages/node
       - name: Compile sources and Publish to NPM
-        run: npm run release
-        working-directory: featurehub-javascript-node-sdk
+        run: pnpm run release
+        working-directory: packages/node
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["node"],
+    /*
+      This is a workaround to bypass Typescript checking of the cross-sha256 package.
+      The author of the package improperly exported the source .ts file alongside the js file
+    */
+    "paths": {
+      "cross-sha256": [
+        "../../node_modules/.pnpm/cross-sha256@1.2.0/node_modules/cross-sha256/index.d.ts"
+      ]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,72 @@
+{
+  "name": "featurehub-solid-sdk",
+  "version": "1.2.0",
+  "description": "The Solid SDK for FeatureHub",
+  "private": false,
+  "author": "info@featurehub.io",
+  "license": "MIT",
+  "homepage": "https://featurehub.io",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "exports": {
+    "import": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "clean": "rimraf node_modules dist",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "release": "pnpm run build && pnpm publish",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "featurehub-javascript-client-sdk": ">=1.3.0",
+    "solid-js": ">=1.6.8"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:node",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "babel-preset-solid": "^1.9.9",
+    "eslint": "^8.31.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "featurehub-javascript-client-sdk": "workspace:*",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "tsup": "catalog:tsup",
+    "tsup-preset-solid": "^2.2.0",
+    "typescript": "catalog:typescript"
+  },
+  "keywords": [
+    "feature-flag-api",
+    "feature-flag-sdk",
+    "feature-flag-react",
+    "feature-experimentation",
+    "feature-flag",
+    "flag",
+    "toggle",
+    "feature-toggle",
+    "feature-toggle-api",
+    "remote-configuration",
+    "gradual-rollout",
+    "ab-testing",
+    "featurehub",
+    "featurehub-solid",
+    "solid-feature-flag",
+    "solidjs-feature-flag"
+  ],
+  "packageManager": "pnpm>=10.12",
+  "browser": {},
+  "typesVersions": {}
+}

@@ -1,15 +1,17 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/solid.json",
   "compilerOptions": {
-    "strict": true,
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
+    "baseUrl": ".",
+    "outDir": "dist",
     "types": ["vite/client"],
-    "noEmit": true,
-    "isolatedModules": true
-  }
+    "paths": {
+      "cross-sha256": [
+        "../../node_modules/.pnpm/cross-sha256@1.2.0/node_modules/cross-sha256/index.d.ts"
+      ],
+      "featurehub-javascript-client-sdk": ["../../packages/js/src"],
+      "featurehub-solid-sdk": ["../../packages/solid/src"]
+    }
+  },
+  "include": ["src"]
 }

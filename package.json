@@ -11,14 +11,29 @@
     "example": "examples"
   },
   "scripts": {
+    "prepare": "husky install",
+    "build": "pnpm run build:packages",
+    "build:packages": "pnpm --filter './packages/*' run build",
+    "clean": "pnpm -r run clean && rimraf node_modules",
     "format": "prettier . --check",
     "format:fix": "prettier . --write",
-    "prepare": "husky install"
+    "lint": "pnpm -r run lint",
+    "lint:examples": "pnpm --filter './examples/*' run lint",
+    "lint:packages": "pnpm --filter './packages/*' run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "lint:fix:examples": "pnpm --filter './examples/*' run lint:fix",
+    "lint:fix:packages": "pnpm --filter './packages/*' run lint:fix",
+    "test": "pnpm run test:packages && pnmp run test:examples",
+    "test:examples": "pnpm --filter './examples/*' run test",
+    "test:packages": "pnpm --filter './packages/*' run test",
+    "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
     "husky": "^8.0.1",
-    "lint-staged": "^13.0.3",
-    "prettier": "3.6.2"
+    "lint-staged": "^16.2.4",
+    "prettier": "catalog:prettier",
+    "rimraf": "catalog:rimraf",
+    "typescript": "catalog:typescript"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"

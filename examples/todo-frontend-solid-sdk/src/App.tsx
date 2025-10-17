@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect } from "solid-js";
+import { createSignal, createEffect } from "solid-js";
 
 import logoSolid from "./logo.svg";
 import logoVite from "./vite.svg";
@@ -64,18 +64,18 @@ function Main() {
   }, [shouldUpperCaseText]);
 
   return (
-    <div class={styles.header}>
+    <div class={styles["header"]}>
       <div>
         <a href="https://vitejs.dev" target="_blank">
-          <img src={logoVite} class={styles.logo} alt="Vite logo" />
+          <img src={logoVite} class={styles["logo"]} alt="Vite logo" />
         </a>
         <a href="https://solidjs.com" target="_blank">
-          <img src={logoSolid} class={styles.logoSolid} alt="Solid logo" />
+          <img src={logoSolid} class={styles["logoSolid"]} alt="Solid logo" />
         </a>
       </div>
       <h1>Vite + Solid</h1>
-      <div class={styles.content}>
-        <div class={styles.card}>
+      <div class={styles["content"]}>
+        <div class={styles["card"]}>
           <p>
             Edit <code>src/App.tsx</code> and save to test HMR
           </p>
@@ -94,7 +94,7 @@ function Main() {
           <p>{displayText()}</p>
         </div>
         <div>
-          <p class={styles.readTheDocs}>Click on the Vite and Solid logos to learn more</p>
+          <p class={styles["readTheDocs"]}>Click on the Vite and Solid logos to learn more</p>
         </div>
       </div>
     </div>

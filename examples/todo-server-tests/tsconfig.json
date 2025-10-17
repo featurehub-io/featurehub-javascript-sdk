@@ -1,16 +1,12 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": false,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
-    "outDir": "dist",
-    "strictNullChecks": false,
-    "typeRoots": ["./node_modules/@types"],
-    "lib": ["dom", "es2015", "es2016"],
-    "types": ["node"]
-  }
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "noEmitOnError": true,
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src/**/*"]
 }

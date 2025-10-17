@@ -1,16 +1,7 @@
 import * as React from "react";
-import { Configuration, Todo, TodoServiceApi } from "./api";
+import { Configuration, type Todo, TodoServiceApi } from "./api";
 import "./App.css";
-import {
-  ClientContext,
-  EdgeFeatureHubConfig,
-  FeatureHubConfig,
-  Readyness,
-  FeatureHubPollingClient,
-  StrategyAttributeCountryName,
-  GoogleAnalyticsCollector,
-  FeatureHub,
-} from "featurehub-javascript-client-sdk";
+import { FeatureHub, Readyness } from "featurehub-javascript-client-sdk";
 
 let todoApi: TodoServiceApi;
 const user = "fred";
@@ -36,12 +27,6 @@ class TodoData {
   }
 }
 
-class ConfigData {
-  todoServerBaseUrl: string = "";
-  fhEdgeUrl: string = "";
-  fhApiKey: string = "";
-}
-
 class App extends React.Component<{}, { todos: TodoData }> {
   private titleInput!: HTMLInputElement;
 
@@ -57,7 +42,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     // connect to Google Analytics
     // FeatureHub.config.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));
 
-    FeatureHub.config.addReadinessListener((readyness, firstTimeReady) => {
+    FeatureHub.config.addReadinessListener((_readyness: Readyness, firstTimeReady: boolean) => {
       if (firstTimeReady) {
         const color = FeatureHub.context.getString("SUBMIT_COLOR_BUTTON");
         this.setState({ todos: this.state.todos.changeColor(color) });
@@ -79,7 +64,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     });
   }
 
-  async componentDidMount() {
+  override async componentDidMount() {
     this.initializeFeatureHub();
   }
 
@@ -88,7 +73,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
-  componentWillUnmount(): void {
+  override componentWillUnmount(): void {
     FeatureHub.close(); // tidy up
   }
 
@@ -116,7 +101,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
-  render() {
+  override render() {
     if (!this.state.todos.ready) {
       return (
         <div className="App">

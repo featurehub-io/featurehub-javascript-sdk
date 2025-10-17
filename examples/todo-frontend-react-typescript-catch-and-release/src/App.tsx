@@ -1,13 +1,11 @@
 import * as React from "react";
-import { Configuration, Todo, TodoServiceApi } from "./api";
+import { Configuration, type Todo, TodoServiceApi } from "./api";
 import "./App.css";
 import globalAxios from "axios";
 import {
-  ClientContext,
+  type ClientContext,
   EdgeFeatureHubConfig,
   Readyness,
-  StrategyAttributeCountryName,
-  GoogleAnalyticsCollector,
   fhLog,
 } from "featurehub-javascript-client-sdk";
 
@@ -108,7 +106,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     });
   }
 
-  async componentDidMount() {
+  override async componentDidMount() {
     this.initializeFeatureHub();
   }
 
@@ -117,7 +115,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
-  componentWillUnmount(): void {
+  override componentWillUnmount(): void {
     fhConfig.close(); // tidy up
   }
 
@@ -145,7 +143,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
-  render() {
+  override render() {
     if (!this.state.todos.ready) {
       return (
         <div className="App">

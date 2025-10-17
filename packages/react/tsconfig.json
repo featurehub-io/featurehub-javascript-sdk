@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "paths": {
+      "cross-sha256": [
+        "../../node_modules/.pnpm/cross-sha256@1.2.0/node_modules/cross-sha256/index.d.ts"
+      ],
+      "featurehub-javascript-client-sdk": ["../js/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}
