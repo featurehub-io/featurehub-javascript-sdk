@@ -6,17 +6,22 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "clean": "rimraf node_modules dist",
     "serve": "vite preview",
-    "install-sdk": "npm --prefix ../../featurehub-solid-sdk run build && rm -rf node_modules && npm i"
+    "install-sdk": "npm --prefix ../../featurehub-solid-sdk run build && rm -rf node_modules && npm i",
+    "typecheck": "tsc --noEmit"
   },
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^4.0.3",
-    "vite-plugin-solid": "^2.5.0"
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "typescript": "catalog:typescript",
+    "vite": "^7.1.10",
+    "vite-plugin-solid": "^2.11.9"
   },
   "dependencies": {
-    "featurehub-solid-sdk": "file:../../featurehub-solid-sdk",
-    "solid-js": "^1.6.8"
-  }
+    "featurehub-solid-sdk": "workspace:*",
+    "solid-js": "^1.9.9"
+  },
+  "packageManager": "pnpm>=10.12"
 }

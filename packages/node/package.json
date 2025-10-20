@@ -1,0 +1,74 @@
+{
+  "name": "featurehub-javascript-node-sdk",
+  "version": "1.4.0",
+  "description": "FeatureHub NodeJS SDK",
+  "author": "info@featurehub.io",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "feature-flag-api",
+    "feature-flag-sdk",
+    "feature-experimentation",
+    "feature-flag",
+    "flag",
+    "toggle",
+    "feature-toggle",
+    "feature-toggle-api",
+    "remote-configuration",
+    "gradual-rollout",
+    "ab-testing",
+    "feature-flag-react",
+    "featurehub"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "clean": "rimraf node_modules dist",
+    "setup": "pnpm link ../js",
+    "link": "pnpm link --global",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "compile": "pnpm run build && pnpm link --global",
+    "release": "cp ../README.md . && pnpm run build && pnpm publish",
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@fluffy-spoon/substitute": "^1.208.0",
+    "@types/node": "catalog:node",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "@typescript-eslint/typescript-estree": "^8.46.1",
+    "eslint": "^8.0.0",
+    "eslint-plugin-filenames-simple": "0.9.0",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "tsup": "catalog:tsup",
+    "typescript": "catalog:typescript",
+    "vite": "7.1.10"
+  },
+  "dependencies": {
+    "eventsource": "^2.0.2",
+    "featurehub-javascript-client-sdk": "^1.4.0",
+    "restify": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm>=10.12"
+}

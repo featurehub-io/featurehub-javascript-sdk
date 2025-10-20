@@ -13,8 +13,8 @@
  */
 
 import { Configuration } from "./configuration";
-import { RequiredError, RequestArgs } from "./base";
-import { AxiosInstance } from "axios";
+import { RequiredError, type RequestArgs } from "./base";
+import type { AxiosInstance } from "axios";
 
 /**
  *

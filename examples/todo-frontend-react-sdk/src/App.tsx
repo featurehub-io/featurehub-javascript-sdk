@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
-import { FeatureHub, useFeature } from "featurehub-react-sdk";
+import { FeatureHub, useFeature, useFeatureHub } from "featurehub-react-sdk";
 
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
@@ -43,6 +43,7 @@ function App() {
 
 function Main() {
   const [count, setCount] = useState(0);
+  const { client: fhContext } = useFeatureHub();
 
   /*
     Since <Main> is wrapped by <FeatureHub>, we can then use the supporting useFeature/useFeatureHubClient hooks!

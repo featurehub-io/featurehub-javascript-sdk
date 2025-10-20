@@ -4,3 +4,8 @@ build
 coverage
 node_modules
 .nyc_output
+
+# Lock files (auto-generated, should not be formatted)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

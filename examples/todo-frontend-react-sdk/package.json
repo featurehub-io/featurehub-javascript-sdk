@@ -7,21 +7,26 @@
     "start": "vite",
     "dev": "vite",
     "build": "tsc && vite build",
-    "link": "npm link featurehub-javascript-client-sdk",
+    "clean": "rimraf node_modules dist",
+    "link": "pnpm link ../../packages/js",
     "preview": "vite preview",
-    "install-sdk": "npm --prefix ../../featurehub-react-sdk run build && rm -rf node_modules && npm i"
+    "install-sdk": "pnpm --prefix ../../packages/react run build && rm -rf node_modules && pnpm i",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "featurehub-react-sdk": "file:../../featurehub-react-sdk",
-    "featurehub-javascript-client-sdk": "file:../../featurehub-javascript-client-sdk",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "featurehub-react-sdk": "workspace:*",
+    "featurehub-javascript-client-sdk": "workspace:*",
+    "react": "catalog:react19",
+    "react-dom": "catalog:react19"
   },
   "devDependencies": {
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
+    "@types/react": "catalog:react19",
+    "@types/react-dom": "catalog:react19",
     "@vitejs/plugin-react-swc": "^4.1.0",
-    "typescript": "^5.9.3",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "typescript": "catalog:typescript",
     "vite": "^7.1.9"
-  }
+  },
+  "packageManager": "pnpm>=10.12"
 }

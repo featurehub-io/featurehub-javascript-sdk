@@ -1,8 +1,9 @@
 import * as restify from "restify";
 import * as corsMiddleware from "restify-cors-middleware2";
-import { ITodoApiController, Todo, TodoApiRouter } from "./generated-interface";
+import type { ITodoApiController } from "./generated-interface";
+import { TodoApiRouter, Todo } from "./generated-interface";
 import {
-  ClientContext,
+  type ClientContext,
   EdgeFeatureHubConfig,
   featurehubMiddleware,
   FeatureHubPollingClient,
@@ -14,8 +15,8 @@ import {
 } from "featurehub-javascript-node-sdk";
 
 if (
-  process.env.FEATUREHUB_EDGE_URL === undefined ||
-  process.env.FEATUREHUB_CLIENT_API_KEY === undefined
+  process.env["FEATUREHUB_EDGE_URL"] === undefined ||
+  process.env["FEATUREHUB_CLIENT_API_KEY"] === undefined
 ) {
   console.error(
     "You must define the location of your FeatureHub Edge URL in the environment variable FEATUREHUB_EDGE_URL, and your API Key in FEATUREHUB_CLIENT_API_KEY",
@@ -28,16 +29,20 @@ if (
 
 FHLog.fhLog.trace = (...args: any) => console.log(args);
 const fhConfig = new EdgeFeatureHubConfig(
-  process.env.FEATUREHUB_EDGE_URL,
-  process.env.FEATUREHUB_CLIENT_API_KEY,
+  process.env["FEATUREHUB_EDGE_URL"]!,
+  process.env["FEATUREHUB_CLIENT_API_KEY"]!,
 );
 
-fhConfig.addReadinessListener((ready, firstTime) => {}, true);
+fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
 
-if (process.env.FEATUREHUB_POLLING_INTERVAL) {
+if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
   fhConfig.edgeServiceProvider(
     (repo, config) =>
-      new FeatureHubPollingClient(repo, config, parseInt(process.env.FEATUREHUB_POLLING_INTERVAL)),
+      new FeatureHubPollingClient(
+        repo,
+        config,
+        parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!),
+      ),
   );
 }
 
@@ -52,7 +57,7 @@ fhConfig.init();
 
 const api = restify.createServer();
 
-api.get("/health/liveness", (req, res, next) => {
+api.get("/health/liveness", (_req, res, next) => {
   if (fhConfig.readyness === Readyness.Ready) {
     res.status(200);
     res.send("ok");
@@ -64,7 +69,11 @@ api.get("/health/liveness", (req, res, next) => {
   next();
 });
 
-const cors = corsMiddleware({ origins: ["*"], allowHeaders: ["baggage"], exposeHeaders: [] });
+const cors = corsMiddleware.default({
+  origins: ["*"],
+  allowHeaders: ["baggage"],
+  exposeHeaders: [],
+});
 
 api.pre(cors.preflight);
 api.use(cors.actual);
@@ -72,14 +81,17 @@ api.use(restify.plugins.bodyParser());
 api.use(restify.plugins.queryParser());
 api.use(featurehubMiddleware(fhConfig.repository()));
 
-const port = process.env.TODO_PORT || 8099;
+const port = process.env["TODO_PORT"] || 8099;
 let todos: Todo[] = [];
 
 class TodoController implements ITodoApiController {
   constructor(private readonly req: any) {}
 
   async resolveTodo(parameters: { id: string; user: string }): Promise<Array<Todo>> {
-    const todo: Todo = todos.find((todo) => todo.id === parameters.id);
+    const todo: Todo | undefined = todos.find((todo) => todo.id === parameters.id);
+    if (!todo) {
+      throw new Error("Todo not found");
+    }
     todo.resolved = true;
     return this.listTodos(await this.ctx(parameters.user));
   }
@@ -95,6 +107,9 @@ class TodoController implements ITodoApiController {
   async addTodo(parameters: { body?: Todo; user: string }): Promise<Array<Todo>> {
     try {
       const ctx = await this.ctx(parameters.user);
+      if (!parameters.body) {
+        throw new Error("Todo body is required");
+      }
 
       ctx.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
 
@@ -113,9 +128,9 @@ class TodoController implements ITodoApiController {
   }
 
   private listTodos(ctx: ClientContext): Array<Todo> {
-    const newTodoList = [];
+    const newTodoList: Todo[] = [];
     todos.forEach((t) => {
-      const newT = new Todo();
+      const newT: Todo = { id: "", title: "", resolved: false };
       newT.id = t.id;
       newT.resolved = t.resolved;
       newT.title = this.processTitle(t.title, ctx);
@@ -131,7 +146,10 @@ class TodoController implements ITodoApiController {
     }
 
     if (ctx.isSet("FEATURE_NUMBER") && title == "pay") {
-      title = `${title} ${ctx.getNumber("FEATURE_NUMBER").toString()}`;
+      const num = ctx.getNumber("FEATURE_NUMBER");
+      if (num !== undefined) {
+        title = `${title} ${num.toString()}`;
+      }
       console.log("Processed number feature", title);
     }
 
@@ -168,7 +186,7 @@ class TodoController implements ITodoApiController {
 
     return fhConfig
       .newContext(
-        process.env.FEATUREHUB_ACCEPT_BAGGAGE !== undefined ? this.req.featureHub : null,
+        process.env["FEATUREHUB_ACCEPT_BAGGAGE"] !== undefined ? this.req.featureHub : null,
         fhConfig.edgeServiceProvider(),
       )
       .userKey(user)
@@ -182,7 +200,7 @@ class TodoController implements ITodoApiController {
     return this.listTodos(await this.ctx(parameters.user));
   }
 
-  async removeTodos(parameters: { user: string }): Promise<Array<Todo>> {
+  async removeTodos(_parameters: { user: string }): Promise<Array<Todo>> {
     return todos.splice(0, todos.length);
   }
 }

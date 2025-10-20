@@ -3,7 +3,7 @@
 /* tslint:disable:quotemark */
 /* tslint:disable:typedef-whitespace */
 
-import { Next, Request, Response, Server } from "restify";
+import type { Request, Server } from "restify";
 import * as restify from "restify";
 
 export class Todo {
@@ -42,7 +42,7 @@ export class TodoApiRouter {
   }
 
   registerRoutes() {
-    this.api[this.restifyHttpMethods["PUT"]](
+    (this.api as any)[this.restifyHttpMethods["PUT"]](
       "/todo/{user}/{id}/resolve".replace(/{(.*?)}/g, ":$1"),
       (req: restify.Request, res: restify.Response, next: restify.Next) => {
         this.controllerFunc(req)
@@ -60,7 +60,7 @@ export class TodoApiRouter {
           });
       },
     );
-    this.api[this.restifyHttpMethods["DELETE"]](
+    (this.api as any)[this.restifyHttpMethods["DELETE"]](
       "/todo/{user}/{id}".replace(/{(.*?)}/g, ":$1"),
       (req: restify.Request, res: restify.Response, next: restify.Next) => {
         this.controllerFunc(req)
@@ -78,7 +78,7 @@ export class TodoApiRouter {
           });
       },
     );
-    this.api[this.restifyHttpMethods["DELETE"]](
+    (this.api as any)[this.restifyHttpMethods["DELETE"]](
       "/todo/{user}".replace(/{(.*?)}/g, ":$1"),
       (req: restify.Request, res: restify.Response, next: restify.Next) => {
         this.controllerFunc(req)
@@ -95,7 +95,7 @@ export class TodoApiRouter {
           });
       },
     );
-    this.api[this.restifyHttpMethods["POST"]](
+    (this.api as any)[this.restifyHttpMethods["POST"]](
       "/todo/{user}".replace(/{(.*?)}/g, ":$1"),
       (req: restify.Request, res: restify.Response, next: restify.Next) => {
         this.controllerFunc(req)
@@ -113,7 +113,7 @@ export class TodoApiRouter {
           });
       },
     );
-    this.api[this.restifyHttpMethods["GET"]](
+    (this.api as any)[this.restifyHttpMethods["GET"]](
       "/todo/{user}".replace(/{(.*?)}/g, ":$1"),
       (req: restify.Request, res: restify.Response, next: restify.Next) => {
         this.controllerFunc(req)

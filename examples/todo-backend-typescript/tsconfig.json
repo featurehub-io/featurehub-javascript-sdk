@@ -1,18 +1,12 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "app",
-    "outDir": "dist",
-    "target": "ES6",
-    "module": "commonjs",
-    "sourceMap": true,
-    "removeComments": false,
-    "moduleResolution": "node",
-    "noImplicitAny": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "declaration": true,
-    "preserveConstEnums": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true
+    "noEmitOnError": true,
+    "verbatimModuleSyntax": false
   },
-  "exclude": ["logs", "node_modules"],
   "include": ["app/**/*"]
 }

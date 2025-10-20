@@ -28,7 +28,7 @@ export interface Todo {
 class TodoLocalApi {
   private sessionKey = "_featurehub_todos";
 
-  public addTodo(todo: Todo, options?: any): Array<Todo> {
+  public addTodo(todo: Todo, _options?: any): Array<Todo> {
     const todos = this.listTodos();
 
     if (todo?.id === undefined) {
@@ -49,7 +49,7 @@ class TodoLocalApi {
    * @throws {RequiredError}
    * @memberof DefaultApi
    */
-  public listTodos(options?: any): Array<Todo> {
+  public listTodos(_options?: any): Array<Todo> {
     const data = window.localStorage.getItem(this.sessionKey);
 
     if (!data) {
@@ -68,7 +68,7 @@ class TodoLocalApi {
    * @throws {RequiredError}
    * @memberof DefaultApi
    */
-  public removeTodo(id: string, options?: any): Array<Todo> {
+  public removeTodo(id: string, _options?: any): Array<Todo> {
     const todos = this.listTodos();
     const found = this.find(todos, id);
 
@@ -88,11 +88,11 @@ class TodoLocalApi {
    * @throws {RequiredError}
    * @memberof DefaultApi
    */
-  public resolveTodo(id: string, options?: any): Array<Todo> {
+  public resolveTodo(id: string, _options?: any): Array<Todo> {
     const todos = this.listTodos();
     const found = this.find(todos, id);
     if (found !== -1) {
-      todos[found].resolved = true;
+      todos[found]!.resolved = true;
       window.localStorage.setItem(this.sessionKey, JSON.stringify(todos));
     }
     return todos;
@@ -102,7 +102,7 @@ class TodoLocalApi {
     let found = -1;
     let index = 0;
     while (found === -1 && index < todos.length) {
-      if (todos[index].id === id) {
+      if (todos[index]!.id === id) {
         found = index;
       }
       index++;
