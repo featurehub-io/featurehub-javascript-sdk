@@ -1,3 +1,6 @@
+import { Substitute } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   EdgeFeatureHubConfig,
@@ -9,8 +12,6 @@ import {
   InterceptorValueMatch,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
-import { Substitute } from "@fluffy-spoon/substitute";
 
 class KeyValueInterceptor implements FeatureStateValueInterceptor {
   private readonly key: string;

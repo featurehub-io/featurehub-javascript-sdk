@@ -1,5 +1,5 @@
 /* tslint:disable */
-/* eslint-disable */
+
 /**
  * FeatureServiceApi
  * This describes the API clients use for accessing features

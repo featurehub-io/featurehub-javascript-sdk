@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import useFeatureHubClient from "./useFeatureHubClient";
 import type { FeatureStateHolder } from "featurehub-javascript-client-sdk";
+import { useEffect, useState } from "react";
+
+import useFeatureHubClient from "./useFeatureHubClient";
 
 /**
  * React hook to subscribe to FeatureHub feature key.

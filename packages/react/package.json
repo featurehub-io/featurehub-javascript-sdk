@@ -38,10 +38,6 @@
   "devDependencies": {
     "@types/node": "catalog:node",
     "@types/react": "catalog:react19",
-    "@typescript-eslint/eslint-plugin": "^8.46.1",
-    "@typescript-eslint/parser": "^8.46.1",
-    "eslint": "^8.32.0",
-    "eslint-plugin-react": "^7.37.5",
     "featurehub-javascript-client-sdk": "workspace:*",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",

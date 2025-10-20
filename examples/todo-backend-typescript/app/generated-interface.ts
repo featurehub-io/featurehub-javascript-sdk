@@ -1,16 +1,9 @@
-/* tslint:disable:no-string-literal */
-/* tslint:disable:member-ordering */
-/* tslint:disable:quotemark */
-/* tslint:disable:typedef-whitespace */
-
 import type { Request, Server } from "restify";
 import * as restify from "restify";
 
 export class Todo {
   "id": string;
-
   "title": string;
-
   "resolved": boolean;
 }
 

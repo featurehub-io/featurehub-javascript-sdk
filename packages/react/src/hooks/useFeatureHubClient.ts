@@ -1,6 +1,7 @@
-import { useContext } from "react";
-import { FeatureHubContext } from "../components/FeatureHub";
 import type { ClientContext } from "featurehub-javascript-client-sdk";
+import { useContext } from "react";
+
+import { FeatureHubContext } from "../components/FeatureHub";
 
 /**
  * @deprecated Use `useFeatureHub` instead.

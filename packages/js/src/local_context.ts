@@ -1,23 +1,23 @@
 import type { AnalyticsCollector } from "./analytics";
 import type { ClientContext } from "./client_context";
 import { BaseClientContext } from "./context_impl";
+import type { CatchReleaseListenerHandler } from "./feature_hub_config";
+import type { FeatureStateHolder } from "./feature_state";
+import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
   type PostLoadNewFeatureStateAvailableListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type { FeatureStateHolder } from "./feature_state";
-import { FeatureStateBaseHolder } from "./feature_state_holders";
 import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import {
   type FeatureEnvironmentCollection,
-  FeatureValueType,
   type FeatureRolloutStrategy,
+  FeatureValueType,
   SSEResultState,
 } from "./models";
 import { Applied, ApplyFeature } from "./strategy_matcher";
-import type { CatchReleaseListenerHandler } from "./feature_hub_config";
 
 class LocalFeatureRepository implements InternalFeatureRepository {
   // indexed by key as that what the user cares about
@@ -68,7 +68,6 @@ class LocalFeatureRepository implements InternalFeatureRepository {
     return undefined;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public addPostLoadNewFeatureStateAvailableListener(
     _: PostLoadNewFeatureStateAvailableListener,
   ): CatchReleaseListenerHandler {
@@ -173,7 +172,6 @@ class LocalFeatureRepository implements InternalFeatureRepository {
 
   set catchAndReleaseMode(_value: boolean) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async release(_disableCatchAndRelease?: boolean): Promise<void> {}
 
   public getFlag(key: string): boolean | undefined {
@@ -202,7 +200,6 @@ export class LocalClientContext extends BaseClientContext {
     super(new LocalFeatureRepository(environment));
   }
 
-  // eslint-disable-next-line require-await
   async build(): Promise<ClientContext> {
     return this;
   }

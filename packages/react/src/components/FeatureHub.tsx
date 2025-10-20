@@ -1,4 +1,13 @@
 import {
+  type ClientContext,
+  EdgeFeatureHubConfig,
+  FeatureHub as fh,
+  type FeatureHubConfig,
+  FeatureHubPollingClient,
+  type ReadinessListenerHandle,
+  Readyness,
+} from "featurehub-javascript-client-sdk";
+import {
   createContext,
   type FC,
   type ReactNode,
@@ -7,15 +16,6 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  type ClientContext,
-  EdgeFeatureHubConfig,
-  FeatureHubPollingClient,
-  type ReadinessListenerHandle,
-  Readyness,
-  FeatureHub as fh,
-  type FeatureHubConfig,
-} from "featurehub-javascript-client-sdk";
 
 export type UseFeatureHub = {
   readonly config: FeatureHubConfig;

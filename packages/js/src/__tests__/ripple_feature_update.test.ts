@@ -1,5 +1,6 @@
-/* tslint:disable */
-/* eslint-disable */
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { FeatureStateBaseHolder } from "../feature_state_holders";
 import {
   type AnalyticsCollector,
   BaseClientContext,
@@ -19,8 +20,6 @@ import {
   RolloutStrategyFieldType,
   SSEResultState,
 } from "../index";
-import { FeatureStateBaseHolder } from "../feature_state_holders";
-import { describe, it, expect, beforeEach } from "vitest";
 import { Applied, ApplyFeature } from "../strategy_matcher";
 
 class TestingContext extends BaseClientContext {
@@ -36,6 +35,7 @@ class TestingContext extends BaseClientContext {
     throw new Error("Method not implemented.");
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
   constructor(repository: InternalFeatureRepository) {
     super(repository);
   }

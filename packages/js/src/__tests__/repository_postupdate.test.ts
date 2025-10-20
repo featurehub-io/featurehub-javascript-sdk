@@ -1,12 +1,11 @@
-/* tslint:disable */
-/* eslint-disable */
+import { describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   type FeatureState,
   FeatureValueType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect } from "vitest";
 
 describe("When any feature changes, post new feature update should trigger", () => {
   it("should not fire until first new feature and then should fire each new feature after that but only when new", () => {

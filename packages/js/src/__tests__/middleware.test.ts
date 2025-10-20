@@ -1,13 +1,12 @@
-/* tslint:disable */
-/* eslint-disable */
 import { Substitute } from "@fluffy-spoon/substitute";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import {
   featurehubMiddleware,
   type FeatureStateHolder,
   FeatureValueType,
   type InternalFeatureRepository,
 } from "../index";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 describe("middleware decodes and provides face to repository", () => {
   beforeAll(() => {
@@ -48,9 +47,7 @@ describe("middleware decodes and provides face to repository", () => {
 
     mw(req, resp, next);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(req.featureHub).toBeDefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(nextCalled).toBe(true);
     const repo: InternalFeatureRepository = req.featureHub;
     expect(repo.feature("FEATURE_STRING").getString()).toBe("blah*&=blah");
@@ -76,7 +73,6 @@ describe("middleware decodes and provides face to repository", () => {
 
     const mw = featurehubMiddleware(fhRepo);
 
-    // tslint:disable-next-line:no-empty
     const next = () => {};
     const resp = {};
 

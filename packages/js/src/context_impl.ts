@@ -1,19 +1,18 @@
-import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type { ClientContext } from "./client_context";
+import type { EdgeService } from "./edge_service";
 import { type EdgeServiceSupplier, type FeatureHubConfig, fhLog } from "./feature_hub_config";
+import type { FeatureStateHolder } from "./feature_state";
+import type { FeatureHubRepository } from "./featurehub_repository";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
 import {
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "./models";
-import type { FeatureStateHolder } from "./feature_state";
-import type { EdgeService } from "./edge_service";
-import type { FeatureHubRepository } from "./featurehub_repository";
-import type { ClientContext } from "./client_context";
 
 export abstract class BaseClientContext implements ClientContext {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   protected readonly _repository: InternalFeatureRepository;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+
   protected _attributes = new Map<string, Array<string>>();
 
   protected constructor(repository: InternalFeatureRepository) {
@@ -55,7 +54,7 @@ export abstract class BaseClientContext implements ClientContext {
    * @param key
    * @param value
    */
-  // eslint-disable-next-line camelcase, @typescript-eslint/naming-convention
+
   attribute_value(key: string, value: string): ClientContext {
     return this.attributeValue(key, value);
   }
@@ -70,7 +69,7 @@ export abstract class BaseClientContext implements ClientContext {
    * @param key
    * @param values
    */
-  // eslint-disable-next-line camelcase, @typescript-eslint/naming-convention
+
   attribute_values(key: string, values: Array<string>): ClientContext {
     return this.attributeValues(key, values);
   }
@@ -264,7 +263,6 @@ export class ClientEvalFeatureContext extends BaseClientContext {
     this._edgeService = edgeService;
   }
 
-  // eslint-disable-next-line require-await
   async build(): Promise<ClientContext> {
     this._edgeService
       .poll()

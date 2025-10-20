@@ -1,12 +1,11 @@
-/* tslint:disable */
-/* eslint-disable */
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   type FeatureState,
   FeatureValueType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
 
 describe("if a feature is deleted it becomes undefined", () => {
   let repo: ClientFeatureRepository;
@@ -32,14 +31,10 @@ describe("if a feature is deleted it becomes undefined", () => {
     expect(repo.getFlag("banana")).toBe(true);
     expect(repo.feature("banana").exists).toBe(true);
     repo.notify(SSEResultState.DeleteFeature, features[0]);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.feature("banana").exists).toBe(false);
-    expect(repo.feature("banana").flag).to.undefined;
-    // tslint:disable-next-line:no-unused-expression
-    expect(repo.getFlag("banana")).to.undefined;
-    // tslint:disable-next-line:no-unused-expression
+    expect(repo.feature("banana").flag).toBeUndefined();
+    expect(repo.getFlag("banana")).toBeUndefined();
     expect(repo.isSet("banana")).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.feature("banana").isSet()).toBe(false);
   });
 
@@ -92,7 +87,6 @@ describe("if a feature is deleted it becomes undefined", () => {
       value: true,
     } as FeatureState);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("apple").isSet()).toBe(false);
     expect(repo.getFeatureState("banana").isSet()).toBe(true);
   });

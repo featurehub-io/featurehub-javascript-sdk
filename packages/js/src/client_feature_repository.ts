@@ -1,9 +1,20 @@
-import { FeatureStateBaseHolder } from "./feature_state_holders";
-import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
-
-import type { FeatureStateHolder } from "./feature_state";
-
 import type { AnalyticsCollector } from "./analytics";
+import type { ClientContext } from "./client_context";
+import {
+  type CatchReleaseListenerHandler,
+  fhLog,
+  type ReadinessListenerHandle,
+} from "./feature_hub_config";
+import type { FeatureStateHolder } from "./feature_state";
+import { FeatureStateBaseHolder } from "./feature_state_holders";
+import {
+  type PostLoadNewFeatureStateAvailableListener,
+  Readyness,
+  type ReadynessListener,
+} from "./featurehub_repository";
+import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
+import { ListenerUtils } from "./listener_utils";
 // leave this here, prevents circular deps
 import {
   type FeatureRolloutStrategy,
@@ -11,20 +22,7 @@ import {
   FeatureValueType,
   SSEResultState,
 } from "./models";
-import type { ClientContext } from "./client_context";
 import { Applied, ApplyFeature } from "./strategy_matcher";
-import type { InternalFeatureRepository } from "./internal_feature_repository";
-import {
-  type CatchReleaseListenerHandler,
-  fhLog,
-  type ReadinessListenerHandle,
-} from "./feature_hub_config";
-import {
-  type PostLoadNewFeatureStateAvailableListener,
-  Readyness,
-  type ReadynessListener,
-} from "./featurehub_repository";
-import { ListenerUtils } from "./listener_utils";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState = false;
@@ -295,7 +293,6 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._catchAndReleaseMode = value;
   }
 
-  // eslint-disable-next-line require-await
   public async release(disableCatchAndRelease?: boolean): Promise<void> {
     while (
       this._catchReleaseStates.size > 0 ||

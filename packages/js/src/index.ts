@@ -1,27 +1,27 @@
+import type { ClientContext } from "./client_context";
 import { EdgeFeatureHubConfig } from "./edge_featurehub_config";
-import { FeatureHubPollingClient } from "./polling_sdk";
 import { type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import { type FeatureStateHolder } from "./feature_state";
-import type { ClientContext } from "./client_context";
+import { FeatureHubPollingClient } from "./polling_sdk";
 
-export * from "./feature_state";
-export * from "./feature_hub_config";
-export * from "./edge_service";
-export * from "./client_feature_repository";
-export * from "./models/models";
 export * from "./analytics";
-export * from "./test_sdk";
-export * from "./polling_sdk";
-export * from "./middleware";
 export * from "./baggage_header";
-export * from "./interceptors";
 export * from "./client_context";
-export * from "./internal_feature_repository";
+export * from "./client_feature_repository";
 export * from "./context_impl";
-export * from "./featurehub_repository";
 export * from "./edge_featurehub_config";
+export * from "./edge_service";
+export * from "./feature_hub_config";
+export * from "./feature_state";
 export * from "./featurehub_eventsource";
+export * from "./featurehub_repository";
+export * from "./interceptors";
+export * from "./internal_feature_repository";
 export * from "./local_context";
+export * from "./middleware";
+export * from "./models/models";
+export * from "./polling_sdk";
+export * from "./test_sdk";
 
 declare global {
   interface Window {

@@ -31,8 +31,8 @@ jobs:
         run: pnpm run typecheck
       - name: Format Check
         run: pnpm run format
-      - name: Lint Check (Packages)
-        run: pnpm run lint:packages
+      - name: Lint Check
+        run: pnpm run lint
       - name: Test (Packages)
         run: pnpm run test:packages
       - name: Build (Packages)

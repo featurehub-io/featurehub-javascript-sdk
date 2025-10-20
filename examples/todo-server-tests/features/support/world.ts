@@ -1,25 +1,22 @@
+import { AfterAll, setDefaultTimeout, setWorldConstructor } from "@cucumber/cucumber";
 import globalAxios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { expect } from "chai";
 import {
+  FeatureStateHolder,
   FeatureStateUpdate,
   FeatureUpdater,
-  FeatureStateHolder,
   NodejsFeaturePostUpdater,
 } from "featurehub-javascript-node-sdk";
-import { Config } from "./config";
-import { expect } from "chai";
 import waitForExpect from "wait-for-expect";
 
-const { AfterAll } = require("@cucumber/cucumber");
-
-const { setWorldConstructor } = require("@cucumber/cucumber");
-const { setDefaultTimeout } = require("@cucumber/cucumber");
+import { Config } from "./config";
 setDefaultTimeout(30 * 1000);
 
 AfterAll(async function () {
   Config.fhConfig.close();
 });
 
-export const responseToRecord = function (response: AxiosResponse) {
+const responseToRecord = (response: AxiosResponse) => {
   const reqConfig = response.config;
   return {
     type: "response",
@@ -37,16 +34,18 @@ export const responseToRecord = function (response: AxiosResponse) {
 };
 
 let requestId: number = 1;
-const reqIdPrefix = process.env.REQUEST_ID_PREFIX || "";
+const reqIdPrefix = process.env["REQUEST_ID_PREFIX"] || "";
 
 export class CustomWorld {
+  // @ts-expect-error - TODO: revisit this later
   private variable: number;
-  private user: string;
-  private response: boolean;
+  // @ts-expect-error - TODO: revisit this later
+  private user: string = "";
+  private response: boolean = false;
 
   constructor() {
     this.variable = 0;
-    if (process.env.LOUD) {
+    if (process.env["LOUD"]) {
       globalAxios.interceptors.request.use(
         (reqConfig: InternalAxiosRequestConfig) => {
           const req = {
@@ -70,12 +69,12 @@ export class CustomWorld {
       (resp: AxiosResponse) => {
         const responseToLog = responseToRecord(resp);
         if (responseToLog !== undefined) {
-          if (process.env.LOUD) {
+          if (process.env["LOUD"]) {
             console.log(JSON.stringify(responseToLog, undefined, 2));
           } else {
-            if (responseToLog.request.method.toLowerCase() !== "get") {
+            if (responseToLog.request.method?.toLowerCase() !== "get") {
               console.log(
-                `${responseToLog.request.method.toUpperCase()} ${
+                `${responseToLog.request.method?.toUpperCase()} ${
                   responseToLog.request.url
                 } -> ${JSON.stringify(responseToLog.request.data)} ==> ${JSON.stringify(
                   responseToLog.data,
@@ -98,7 +97,7 @@ export class CustomWorld {
     );
   }
 
-  setUser(user) {
+  setUser(user: string) {
     this.user = user;
   }
 
@@ -122,12 +121,12 @@ export class CustomWorld {
 
   async lockFeature(name: string, locked: boolean = true) {
     const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
-    const timeout = process.env.FEATUREHUB_POLLING_INTERVAL
-      ? parseInt(process.env.FEATUREHUB_POLLING_INTERVAL) + 4000
+    const timeout = process.env["FEATUREHUB_POLLING_INTERVAL"]
+      ? parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!) + 4000
       : 7000;
     const interval = 1000;
     let counter = 0;
-    const self = this;
+
     this.response = await featureUpdater.updateKey(name, {
       lock: locked,
     } as FeatureStateUpdate);
@@ -153,6 +152,7 @@ export class CustomWorld {
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
     (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
+      // @ts-expect-error - TODO: revisit this later
       req.headers["Baggage"] = `cuke-req-id=${reqIdPrefix}${requestId}`;
       requestId++;
     };

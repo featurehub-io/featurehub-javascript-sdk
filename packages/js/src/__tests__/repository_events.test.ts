@@ -1,19 +1,18 @@
-/* tslint:disable */
-/* eslint-disable */
+import { Substitute } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   EdgeFeatureHubConfig,
   type EdgeService,
-  type FeatureState,
-  FeatureValueType,
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
+  type FeatureState,
+  FeatureValueType,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
-import { Substitute } from "@fluffy-spoon/substitute";
 
 describe("Feature repository reacts to incoming event lists as expected", () => {
   let repo: ClientFeatureRepository;
@@ -64,13 +63,9 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     expect(triggerPear).toBe(0);
     expect(triggerPeach).toBe(0);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("banana").getBoolean()).toBeUndefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("banana").isSet()).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("pear").getBoolean()).toBeUndefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("peach").getBoolean()).toBeUndefined();
 
     const features = [
@@ -84,11 +79,8 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     expect(triggerBanana).toBe(1);
     expect(triggerPear).toBe(1);
     expect(triggerPeach).toBe(1);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("banana").getBoolean()).toBe(true);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("pear").getBoolean()).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("peach").getBoolean()).toBe(true);
 
     const features2 = [
@@ -103,11 +95,8 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
     expect(triggerPeach).toBe(1);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("banana").getBoolean()).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("pear").getBoolean()).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("peach").getBoolean()).toBe(true);
   });
 

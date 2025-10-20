@@ -1,3 +1,8 @@
+import { v3 as murmur3 } from "murmurhash";
+import { Netmask } from "netmask";
+import compareSemver from "semver-compare";
+
+import type { ClientContext } from "./client_context";
 import {
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
@@ -5,19 +10,11 @@ import {
   RolloutStrategyFieldType,
 } from "./models";
 
-import compareSemver from "semver-compare";
-import { Netmask } from "netmask";
-
-// this library is not node specific
-import { v3 as murmur3 } from "murmurhash";
-import type { ClientContext } from "./client_context";
-
 export interface PercentageCalculator {
   determineClientPercentage(percentageText: string, featureId: string): number;
 }
 
 export class Murmur3PercentageCalculator implements PercentageCalculator {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   private readonly MAX_PERCENTAGE = 1000000;
 
   public determineClientPercentage(percentageText: string, featureId: string): number {
@@ -44,7 +41,7 @@ export interface MatcherRepository {
   findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher;
 }
 
-// @ts-ignore
+// @ts-expect-error - This is a fallback matcher
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class FallthroughMatcher implements StrategyMatcher {
   match(_suppliedValue: string, _attr: FeatureRolloutStrategyAttribute): boolean {
@@ -73,7 +70,6 @@ class StringMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = this.attrToStringValues(attr);
 
-    // tslint:disable-next-line:switch-default
     switch (attr.conditional) {
       case RolloutStrategyAttributeConditional.Equals:
         return vals.findIndex((v) => v === suppliedValue) >= 0;
@@ -158,7 +154,6 @@ class NumberMatcher implements StrategyMatcher {
 
       const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
 
-      // tslint:disable-next-line:switch-default
       switch (attr.conditional) {
         case RolloutStrategyAttributeConditional.Equals:
           return vals.findIndex((v) => conv(v) === num) >= 0;
@@ -193,7 +188,6 @@ class SemanticVersionMatcher implements StrategyMatcher {
   match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
 
-    // tslint:disable-next-line:switch-default
     switch (attr.conditional) {
       case RolloutStrategyAttributeConditional.Includes:
       case RolloutStrategyAttributeConditional.Equals:
@@ -225,7 +219,6 @@ class IPNetworkMatcher implements StrategyMatcher {
   match(ip: string, attr: FeatureRolloutStrategyAttribute): boolean {
     const vals = (attr.values || []).filter((v) => v != null);
 
-    // tslint:disable-next-line:switch-default
     switch (attr.conditional) {
       case RolloutStrategyAttributeConditional.Equals:
       case RolloutStrategyAttributeConditional.Includes:
@@ -241,7 +234,6 @@ class IPNetworkMatcher implements StrategyMatcher {
 
 export class MatcherRegistry implements MatcherRepository {
   findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher {
-    // tslint:disable-next-line:switch-default
     switch (attr?.type) {
       case RolloutStrategyFieldType.String:
         return new StringMatcher();
@@ -356,7 +348,6 @@ export class ApplyFeature {
     for (const attr of rsi.attributes || []) {
       let suppliedValues = context.getAttrs(attr.fieldName!);
       if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === "now") {
-        // tslint:disable-next-line:switch-default
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
             suppliedValues = [new Date().toISOString().substring(0, 10)];

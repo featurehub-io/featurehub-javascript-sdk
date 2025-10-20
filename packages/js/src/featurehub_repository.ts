@@ -1,9 +1,9 @@
+import type { AnalyticsCollector } from "./analytics";
 import type { ClientContext } from "./client_context";
+import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureStateValueInterceptor } from "./interceptors";
-import type { AnalyticsCollector } from "./analytics";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 
 export enum Readyness {
   NotReady = "NotReady",

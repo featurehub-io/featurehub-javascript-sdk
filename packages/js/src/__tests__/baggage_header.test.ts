@@ -1,7 +1,6 @@
-/* tslint:disable */
-/* eslint-disable */
 import { Substitute } from "@fluffy-spoon/substitute";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import { type FeatureHubRepository, w3cBaggageHeader } from "../index";
 
 describe("baggage header should encode correctly", () => {

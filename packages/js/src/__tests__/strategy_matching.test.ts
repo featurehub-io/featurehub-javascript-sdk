@@ -1,10 +1,11 @@
-import { MatcherRegistry, Murmur3PercentageCalculator } from "../strategy_matcher";
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   type FeatureRolloutStrategyAttribute,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
 } from "../models";
-import { describe, it, expect, beforeEach } from "vitest";
+import { MatcherRegistry, Murmur3PercentageCalculator } from "../strategy_matcher";
 
 describe("test the strategy matchers", () => {
   let matcher: MatcherRegistry;

@@ -1,14 +1,16 @@
-import * as React from "react";
-import { Configuration, TodoServiceApi, type Todo } from "./api";
 import "./App.css";
+
 import globalAxios from "axios";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
+  FeatureHubPollingClient,
   Readyness,
   w3cBaggageHeader,
-  FeatureHubPollingClient,
 } from "featurehub-javascript-client-sdk";
+import * as React from "react";
+
+import { Configuration, type Todo, TodoServiceApi } from "./api";
 
 let todoApi: TodoServiceApi;
 let initialized = false;
@@ -67,7 +69,7 @@ globalAxios.interceptors.request.use(
   },
 );
 
-class App extends React.Component<{}, { todos: TodoData }> {
+class App extends React.Component<object, { todos: TodoData }> {
   private titleInput!: HTMLInputElement;
   private userName!: HTMLInputElement;
 
@@ -172,7 +174,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
       );
     }
 
-    let buttonStyle = {
+    const buttonStyle = {
       color: this.state.todos.buttonColour,
     };
 

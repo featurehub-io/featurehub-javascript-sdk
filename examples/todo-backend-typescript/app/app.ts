@@ -1,7 +1,3 @@
-import * as restify from "restify";
-import * as corsMiddleware from "restify-cors-middleware2";
-import type { ITodoApiController } from "./generated-interface";
-import { TodoApiRouter, Todo } from "./generated-interface";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
@@ -13,6 +9,11 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
+import * as restify from "restify";
+import * as corsMiddleware from "restify-cors-middleware2";
+
+import type { ITodoApiController } from "./generated-interface";
+import { Todo, TodoApiRouter } from "./generated-interface";
 
 if (
   process.env["FEATUREHUB_EDGE_URL"] === undefined ||
