@@ -23,6 +23,10 @@ backend servers, Web front-ends (e.g. Vanilla, React, Angular) or Mobile apps (R
 
 To control the feature flags from the FeatureHub Admin console, either use FeatureHub SaaS cloud version [demo](https://app.featurehub.io) or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
 
+## Contributing
+
+Interested in contributing to the FeatureHub JavaScript SDK? Please see our [Contributing Guide](CONTRIBUTING.md) for development setup, testing, and contribution guidelines.
+
 ## SDK installation
 
 Run to install the dependency:
