@@ -43,7 +43,7 @@
     "link": "pnpm link --global",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "compile": "pnpm run build && pnpm link --global",
+    "compile": "pnpm run build && pnpm run link",
     "release": "cp ../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit"
@@ -55,7 +55,7 @@
     "rimraf": "catalog:rimraf",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.1.10"
+    "vite": "7.2.0"
   },
   "dependencies": {
     "eventsource": "^4.0.0",
@@ -64,5 +64,5 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }

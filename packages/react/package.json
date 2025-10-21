@@ -61,5 +61,5 @@
     "featurehub",
     "featurehub-react"
   ],
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }

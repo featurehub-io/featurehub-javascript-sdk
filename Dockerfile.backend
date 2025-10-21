@@ -1,0 +1,84 @@
+# ================================
+# STAGE 0: Setup Base Image
+# ================================
+FROM node:22.20-bullseye-slim AS base
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Set working directory
+WORKDIR /app
+
+# Enable pnpm
+RUN corepack enable pnpm
+
+# ================================
+# STAGE 1: Install Dependencies
+# ================================
+FROM base AS deps
+
+# Copy workspace configuration files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for dependency resolution
+COPY packages/js/package.json ./packages/js/
+COPY packages/node/package.json ./packages/node/
+COPY packages/react/package.json ./packages/react/
+COPY packages/solid/package.json ./packages/solid/
+COPY packages/tsconfig/package.json ./packages/tsconfig/
+
+# Copy example package.json files (only what we need)
+COPY examples/todo-backend-typescript/package.json ./examples/todo-backend-typescript/
+COPY examples/todo-frontend-react-typescript/package.json ./examples/todo-frontend-react-typescript/
+
+# Install all dependencies
+RUN pnpm install --frozen-lockfile
+
+# ================================
+# STAGE 2: Build Application
+# ================================
+FROM base AS builder
+
+# Copy the ENTIRE dependency layer including all node_modules
+COPY --from=deps /app ./
+
+# Copy source code (only what we need)
+COPY packages/ ./packages/
+COPY examples/todo-backend-typescript/ ./examples/todo-backend-typescript/
+COPY examples/todo-frontend-react-typescript/ ./examples/todo-frontend-react-typescript/
+
+# Build packages first (libraries that examples depend on)
+RUN pnpm run build:packages
+
+# Build backend example
+RUN pnpm --filter './examples/todo-backend-typescript' run build
+
+# Build frontend example  
+RUN pnpm --filter './examples/todo-frontend-react-typescript' run build
+
+# ================================
+# STAGE 3: Runtime
+# ================================
+FROM base AS runtime
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy built backend application
+COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
+
+COPY --from=builder /app/examples/todo-backend-typescript/node_modules ./node_modules
+COPY --from=builder /app/examples/todo-backend-typescript/dist ./dist
+COPY --from=builder /app/examples/todo-backend-typescript/package.json ./
+
+# Copy built frontend to backend's expected location
+COPY --from=builder /app/examples/todo-frontend-react-typescript/dist ./dist/todo-frontend
+
+WORKDIR /app/examples/todo-backend-typescript
+
+EXPOSE 8099
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8099/health/liveness || exit 1
+
+CMD ["node", "dist/app.js"]

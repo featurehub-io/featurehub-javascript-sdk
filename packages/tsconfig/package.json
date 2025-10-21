@@ -14,5 +14,5 @@
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.6"
   },
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }
