@@ -1,14 +1,14 @@
-import type { InternalFeatureRepository } from "./internal_feature_repository";
-import type { EdgeService } from "./edge_service";
-import { ClientFeatureRepository } from "./client_feature_repository";
 import type { AnalyticsCollector } from "./analytics";
-import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { ClientContext } from "./client_context";
-import { type EdgeServiceProvider, type FeatureHubConfig, fhLog } from "./feature_hub_config";
-import { Readyness, type ReadynessListener } from "./featurehub_repository";
+import { ClientFeatureRepository } from "./client_feature_repository";
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
-import { FeatureHubPollingClient } from "./polling_sdk";
+import type { EdgeService } from "./edge_service";
+import { type EdgeServiceProvider, type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
+import { Readyness, type ReadynessListener } from "./featurehub_repository";
+import type { FeatureStateValueInterceptor } from "./interceptors";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
+import { FeatureHubPollingClient } from "./polling_sdk";
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _host: string;
@@ -93,7 +93,6 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this.repository().readyness;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public feature<T = any>(name: string): FeatureStateHolder<T> {
     if (this.clientEvaluated()) {
       throw new Error(

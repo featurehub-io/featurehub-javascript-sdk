@@ -1,24 +1,25 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import {
+  EdgeFeatureHubConfig,
+  type FeatureEnvironmentCollection,
+  FeatureHubEventSourceClient,
   FeatureHubPollingClient,
+  type FeaturesFunction,
   type FeatureStateUpdate,
   type FeatureUpdatePostManager,
   FeatureUpdater,
+  FHLog,
+  fhLog,
   type GoogleAnalyticsApiClient,
   GoogleAnalyticsCollector,
   type NodejsOptions,
   PollingBase,
-  FeatureHubEventSourceClient,
   type PollingService,
-  type FeaturesFunction,
-  type FeatureEnvironmentCollection,
-  EdgeFeatureHubConfig,
-  FHLog,
-  fhLog,
   type PromiseLikeFunction,
   type RejectLikeFunction,
 } from "featurehub-javascript-client-sdk";
-import { URL } from "url";
 import type { RequestOptions } from "https";
+import { URL } from "url";
 
 const ES = require("eventsource");
 
@@ -164,7 +165,7 @@ export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
         FHLog.fhLog.trace("FeatureUpdater", cra, update);
         req.write(JSON.stringify(update));
         req.end();
-      } catch (e) {
+      } catch (_e) {
         resolve(false);
       }
     });

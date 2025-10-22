@@ -1,4 +1,5 @@
-import { type Accessor, createEffect, createSignal, onCleanup, on } from "solid-js";
+import { type Accessor, createEffect, createSignal, on, onCleanup } from "solid-js";
+
 import { ready } from "../components/FeatureHub";
 import { useFeatureHub } from "./useFeatureHub";
 

@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   EdgeFeatureHubConfig,
@@ -8,7 +8,6 @@ import {
   Readyness,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
 
 describe("Readiness listeners should fire on appropriate events", () => {
   let repo: ClientFeatureRepository;

@@ -6,7 +6,11 @@
     "moduleResolution": "Node",
     "declaration": true,
     "noEmitOnError": true,
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "types": ["node"],
+    "paths": {
+      "featurehub-javascript-node-sdk": ["../../packages/node/src"]
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "features/**/*"]
 }

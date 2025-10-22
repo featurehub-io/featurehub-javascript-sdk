@@ -1,7 +1,6 @@
-/* tslint:disable */
-/* eslint-disable */
-import { describe, it, expect, beforeEach } from "vitest";
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
+
 import { EdgeFeatureHubConfig, type EdgeService, type InternalFeatureRepository } from "../index";
 
 describe("We can initialize the config", () => {
@@ -22,7 +21,6 @@ describe("We can initialize the config", () => {
     EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () => edge;
 
     const fc = new EdgeFeatureHubConfig("http://localhost:8080", "123*345");
-    // tslint:disable-next-line:no-unused-expression
     expect(fc.clientEvaluated()).toBe(true);
     fc.init();
 
@@ -38,7 +36,6 @@ describe("We can initialize the config", () => {
     expect(fc.edgeServiceProvider()).toBe(edgeProvider);
     expect(fc.edgeServiceProvider()).toBe(edgeProvider);
     const repo = fc.repository();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo).not.toBeNull();
     expect(fc.repository()).toBe(repo);
   });
@@ -88,7 +85,6 @@ describe("We can initialize the config", () => {
     });
 
     it("should allow for the creation of a new context which on building should poll the edge repo", async () => {
-      // tslint:disable-next-line:no-unused-expression
       expect(fc.clientEvaluated()).toBe(false);
       await fc.newContext().build();
       edge.received(1).contextChange("");

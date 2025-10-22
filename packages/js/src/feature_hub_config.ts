@@ -1,18 +1,18 @@
-import type { EdgeService } from "./edge_service";
-import type { ClientContext } from "./client_context";
-import type { InternalFeatureRepository } from "./internal_feature_repository";
 import type { AnalyticsCollector } from "./analytics";
-import type { FeatureStateValueInterceptor } from "./interceptors";
+import type { ClientContext } from "./client_context";
+import type { EdgeService } from "./edge_service";
+import type { FeatureStateHolder } from "./feature_state";
 import {
   type FeatureHubRepository,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type { FeatureStateHolder } from "./feature_state";
+import type { FeatureStateValueInterceptor } from "./interceptors";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
 
 export type EdgeServiceProvider = (
   repository: InternalFeatureRepository,
-  // eslint-disable-next-line no-use-before-define
+
   config: FeatureHubConfig,
 ) => EdgeService;
 export type EdgeServiceSupplier = () => EdgeService;
@@ -33,7 +33,6 @@ export class FHLog {
     console.error("FeatureHub/Error: ", ...args);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public trace: FHLogMethod = (..._args: unknown[]) => {
     // console.log('FeatureHub/Trace: ', ...args);
   };
@@ -61,7 +60,7 @@ export interface FeatureHubConfig {
    * config
    * @param name
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   feature<T = any>(name: string): FeatureStateHolder<T>;
 
   url(): string;

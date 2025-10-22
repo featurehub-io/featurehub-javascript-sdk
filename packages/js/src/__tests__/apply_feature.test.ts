@@ -1,5 +1,13 @@
-/* tslint:disable */
-/* eslint-disable */
+import { Arg, Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import type { ClientContext } from "../client_context";
+import {
+  type FeatureRolloutStrategy,
+  type FeatureRolloutStrategyAttribute,
+  RolloutStrategyAttributeConditional,
+  RolloutStrategyFieldType,
+} from "../models";
 import {
   ApplyFeature,
   MatcherRegistry,
@@ -7,15 +15,6 @@ import {
   type PercentageCalculator,
   type StrategyMatcher,
 } from "../strategy_matcher";
-import { Arg, Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import type { ClientContext } from "../client_context";
-import { describe, it, beforeEach, expect } from "vitest";
-import {
-  type FeatureRolloutStrategy,
-  type FeatureRolloutStrategyAttribute,
-  RolloutStrategyAttributeConditional,
-  RolloutStrategyFieldType,
-} from "../models";
 
 describe("apply feature works as expected", () => {
   let pCalc: SubstituteOf<PercentageCalculator>;
@@ -34,29 +33,21 @@ describe("apply feature works as expected", () => {
   it("should always return false when there is an undefined context", () => {
     const found = app.apply([{} as FeatureRolloutStrategy], "key", "fid", ctx);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBeNull();
-    // let ctx = Substitute.for<ClientContext>();
-    // ctx.attribute_values()
   });
 
   it("should be false when the rollout strategies are empty", () => {
     const found = app.apply([], "key", "fid", ctx);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBeNull();
   });
 
   it("should be false when the rollout strategies are null", () => {
     const found = app.apply(undefined, "key", "fid", ctx);
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBeNull();
   });
 
@@ -80,9 +71,7 @@ describe("apply feature works as expected", () => {
       "fid",
       ctx,
     );
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBeNull();
   });
 
@@ -108,9 +97,7 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(true);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBe("sausage");
   });
 
@@ -143,9 +130,7 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBeNull();
   });
 
@@ -178,9 +163,7 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(true);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBe("sausage");
   });
 
@@ -202,7 +185,6 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
   });
 
@@ -234,9 +216,7 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(true);
-    // tslint:disable-next-line:no-unused-expression
     expect(found.value).toBe("sausage");
   });
 
@@ -268,7 +248,6 @@ describe("apply feature works as expected", () => {
       ctx,
     );
 
-    // tslint:disable-next-line:no-unused-expression
     expect(found.matched).toBe(false);
   });
 });

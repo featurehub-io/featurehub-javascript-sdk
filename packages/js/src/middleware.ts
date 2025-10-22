@@ -3,19 +3,19 @@
 ///
 /// For this we are using the W3C Baggage standard for future supportability
 
+import type { AnalyticsCollector } from "./analytics";
+import type { ClientContext } from "./client_context";
+import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
+import type { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
 import {
   type PostLoadNewFeatureStateAvailableListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
-import { FeatureValueType, type FeatureRolloutStrategy, SSEResultState } from "./models";
 import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
-import type { ClientContext } from "./client_context";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
+import { type FeatureRolloutStrategy, FeatureValueType, SSEResultState } from "./models";
 import { Applied } from "./strategy_matcher";
-import type { AnalyticsCollector } from "./analytics";
-import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 
 class BaggageHolder<T = any> implements FeatureStateHolder<T> {
   protected readonly existing: FeatureStateHolder;
@@ -39,7 +39,6 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
     return new BaggageHolder(this.existing.withContext(param), this.baggageValue);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   addListener(_: FeatureListener<T>): FeatureListenerHandle {
     return 0;
   }
@@ -73,7 +72,6 @@ class BaggageHolder<T = any> implements FeatureStateHolder<T> {
       if (this.baggageValue.includes(".")) {
         return parseFloat(this.baggageValue);
       } else {
-        // tslint:disable-next-line:radix
         return parseInt(this.baggageValue);
       }
     }

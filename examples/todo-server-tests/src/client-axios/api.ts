@@ -17,7 +17,7 @@ import { Configuration } from "./configuration";
 import globalAxios, { AxiosPromise, AxiosInstance } from "axios";
 // Some imports not used depending on template conditions
 // @ts-ignore
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 import {
   DUMMY_BASE_URL,
   assertParamExists,

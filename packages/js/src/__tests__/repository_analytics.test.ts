@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   EdgeFeatureHubConfig,
@@ -8,7 +8,6 @@ import {
   FeatureValueType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
 
 describe("We should be able to log an analytics event", () => {
   let repo: ClientFeatureRepository;
@@ -53,7 +52,6 @@ describe("We should be able to log an analytics event", () => {
     repo.logAnalyticsEvent("name");
     expect(firedFeatures?.length).toBe(0);
     expect(firedAction).toBe("name");
-    // tslint:disable-next-line:no-unused-expression
     expect(firedOther?.size).toBe(0);
   });
 
@@ -61,7 +59,6 @@ describe("We should be able to log an analytics event", () => {
     repo.logAnalyticsEvent("name");
     expect(firedFeatures?.length).toBe(0);
     expect(firedAction).toBe("name");
-    // tslint:disable-next-line:no-unused-expression
     expect(firedOther?.size).toBe(0);
   });
 
@@ -71,7 +68,6 @@ describe("We should be able to log an analytics event", () => {
     repo.logAnalyticsEvent("name", other);
     expect(firedFeatures?.length).toBe(0);
     expect(firedAction).toBe("name");
-    // tslint:disable-next-line:no-unused-expression
     expect(firedOther).toBe(other);
   });
 
@@ -86,9 +82,7 @@ describe("We should be able to log an analytics event", () => {
 
     expect(firedFeatures?.length).toBe(1);
     const fs = firedFeatures![0];
-    // tslint:disable-next-line:no-unused-expression
     expect(fs?.isSet()).toBe(true);
-    // tslint:disable-next-line:no-unused-expression
     expect(fs?.getBoolean()).toBe(true);
     expect(fs?.getKey()).toBe("banana");
   });

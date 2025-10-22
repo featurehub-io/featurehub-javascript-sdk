@@ -36,11 +36,6 @@
   },
   "devDependencies": {
     "@types/node": "catalog:node",
-    "@typescript-eslint/eslint-plugin": "^8.46.1",
-    "@typescript-eslint/parser": "^8.46.1",
-    "babel-preset-solid": "^1.9.9",
-    "eslint": "^8.31.0",
-    "eslint-plugin-solid": "^0.14.5",
     "featurehub-javascript-client-sdk": "workspace:*",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",

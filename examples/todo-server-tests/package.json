@@ -2,23 +2,25 @@
   "name": "todo-server-tests",
   "version": "2.0.0",
   "description": "Integration tests for FeatureHub SDKs (server-side)",
+  "type": "module",
   "scripts": {
     "build": "node ./node_modules/typescript/bin/tsc",
     "clean": "rimraf node_modules dist",
     "setup": "pnpm link ../../packages/js ../../packages/node",
     "compile": "pnpm run setup && pnpm run build",
     "test": "cucumber-js --require-module ts-node/register --require 'features/support/*.ts' --publish",
-    "generate:specs": "openapi-generator-cli generate -g typescript-axios -i ../todo-api/todo-api.yaml -o ./src/client-axios",
+    "generate:specs": "openapi-generator-cli generate -g typescript-axios -i ../todo-api/todo-api.yaml -o ./src",
     "typecheck": "tsc --noEmit"
   },
   "author": "FeatureHub.io",
   "dependencies": {
     "@cucumber/cucumber": "^7.0.0",
     "@openapitools/openapi-generator-cli": "^2.5.2",
+    "@types/chai": "^5.2.3",
     "@types/node": "catalog:node",
     "axios": "^1.12.2",
-    "chai": "^4.3.0",
-    "featurehub-javascript-node-sdk": "^1.3.2",
+    "chai": "^6.2.0",
+    "featurehub-javascript-node-sdk": "workspace:*",
     "ts-node": "^10.9.1",
     "wait-for-expect": "^3.0.2"
   },

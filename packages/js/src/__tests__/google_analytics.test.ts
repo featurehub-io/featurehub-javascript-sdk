@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+import { describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   FeatureValueType,
@@ -7,7 +7,6 @@ import {
   GoogleAnalyticsCollector,
   SSEResultState,
 } from "../index";
-import { describe, it, expect } from "vitest";
 
 describe("Google analytics collector should output correct info", () => {
   it("we should provide all different types of features and the analytics should log all except JSON", async () => {

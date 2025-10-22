@@ -51,11 +51,6 @@
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
     "@types/node": "catalog:node",
-    "@typescript-eslint/eslint-plugin": "^8.46.1",
-    "@typescript-eslint/parser": "^8.46.1",
-    "@typescript-eslint/typescript-estree": "^8.46.1",
-    "eslint": "^8.0.0",
-    "eslint-plugin-filenames-simple": "0.9.0",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "tsup": "catalog:tsup",

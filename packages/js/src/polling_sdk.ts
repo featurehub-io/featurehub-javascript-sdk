@@ -1,10 +1,10 @@
-// prevents circular deps
-import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "./models";
+import * as base64 from "@juanelas/base64";
+import { sha256 } from "cross-sha256";
+
 import type { EdgeService } from "./edge_service";
 import { type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import { sha256 } from "cross-sha256";
-import * as base64 from "@juanelas/base64";
+import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "./models";
 
 export interface PollingService {
   get frequency(): number;
@@ -85,7 +85,7 @@ export abstract class PollingBase implements PollingService {
 
   // this is a dead  function but if we don't include it
   // then node will fail
-  // eslint-disable-next-line require-await
+
   protected async delayTimer(): Promise<void> {
     return new Promise((resolve) => {
       resolve();

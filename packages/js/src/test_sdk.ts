@@ -1,5 +1,5 @@
-import type { FeatureStateUpdate } from "./models";
 import type { FeatureHubConfig } from "./feature_hub_config";
+import type { FeatureStateUpdate } from "./models";
 
 export interface FeatureUpdatePostManager {
   post(url: string, update: FeatureStateUpdate): Promise<boolean>;

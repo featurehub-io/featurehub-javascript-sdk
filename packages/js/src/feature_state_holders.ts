@@ -1,9 +1,9 @@
-import type { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
-import { type FeatureState, FeatureValueType } from "./models";
 import type { ClientContext } from "./client_context";
+import { fhLog } from "./feature_hub_config";
+import type { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { ListenerUtils } from "./listener_utils";
-import { fhLog } from "./feature_hub_config";
+import { type FeatureState, FeatureValueType } from "./models";
 
 interface ListenerTracker {
   listener: FeatureListener;
@@ -20,7 +20,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   protected listeners: Map<number, ListenerTracker> = new Map<number, ListenerTracker>();
   protected _repo: InternalFeatureRepository;
   protected _ctx: ClientContext | undefined;
-  // eslint-disable-next-line no-use-before-define
+
   protected parentHolder: FeatureStateBaseHolder | undefined;
 
   constructor(
@@ -284,7 +284,6 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
         return parseFloat(value);
       }
 
-      // tslint:disable-next-line:radix
       return parseInt(value);
     } else if (type === FeatureValueType.Json) {
       if (parseJson) {

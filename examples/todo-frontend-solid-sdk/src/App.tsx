@@ -1,9 +1,9 @@
-import { createSignal, createEffect } from "solid-js";
+import { FeatureHub, useFeature } from "featurehub-solid-sdk";
+import { createEffect, createSignal } from "solid-js";
 
+import styles from "./App.module.css";
 import logoSolid from "./logo.svg";
 import logoVite from "./vite.svg";
-import styles from "./App.module.css";
-import { FeatureHub, useFeature } from "featurehub-solid-sdk";
 
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
@@ -61,7 +61,7 @@ function Main() {
 
   createEffect(() => {
     setDisplayText(shouldUpperCaseText() ? SAMPLE_TEXT.toUpperCase() : SAMPLE_TEXT);
-  }, [shouldUpperCaseText]);
+  });
 
   return (
     <div class={styles["header"]}>

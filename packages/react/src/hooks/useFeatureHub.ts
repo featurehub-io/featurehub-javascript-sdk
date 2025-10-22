@@ -1,4 +1,5 @@
 import { useContext } from "react";
+
 import { FeatureHubContext, type UseFeatureHub } from "../components/FeatureHub";
 
 /**

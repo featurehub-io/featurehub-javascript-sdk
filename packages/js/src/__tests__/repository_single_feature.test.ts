@@ -1,13 +1,12 @@
-/* tslint:disable */
-/* eslint-disable */
+import { Substitute } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
+
 import {
   type ClientContext,
   ClientFeatureRepository,
   FeatureValueType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect, beforeEach } from "vitest";
-import { Substitute } from "@fluffy-spoon/substitute";
 
 describe("repository reacts to single feature changes as expected", () => {
   let repo: ClientFeatureRepository;
@@ -45,22 +44,17 @@ describe("repository reacts to single feature changes as expected", () => {
   });
 
   it("should specify undefined for unknown feature values", () => {
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("bool").getBoolean()).toBeUndefined();
     expect(repo.getFeatureState("bool").flag).toBeUndefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("num").getNumber()).toBeUndefined();
     expect(repo.getFeatureState("num").num).toBeUndefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("str").getString()).toBeUndefined();
     expect(repo.getFeatureState("str").str).toBeUndefined();
-    // tslint:disable-next-line:no-unused-expression
     expect(repo.getFeatureState("str").getRawJson()).toBeUndefined();
     expect(repo.getFeatureState("str").rawJson).toBeUndefined();
 
     const ctx = Substitute.for<ClientContext>();
     const feat = repo.getFeatureState("bool").withContext(ctx);
-    // tslint:disable-next-line:no-unused-expression
     expect(feat.flag).toBeUndefined();
   });
 

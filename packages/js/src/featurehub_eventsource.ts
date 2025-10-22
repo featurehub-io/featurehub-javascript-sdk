@@ -29,7 +29,6 @@ export declare class EventSource {
   close(): void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export declare namespace EventSource {
   enum ReadyState {
     CONNECTING = 0,

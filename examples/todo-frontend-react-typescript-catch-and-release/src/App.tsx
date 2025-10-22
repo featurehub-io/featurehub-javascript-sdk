@@ -1,13 +1,15 @@
-import * as React from "react";
-import { Configuration, type Todo, TodoServiceApi } from "./api";
 import "./App.css";
+
 import globalAxios from "axios";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
-  Readyness,
   fhLog,
+  Readyness,
 } from "featurehub-javascript-client-sdk";
+import * as React from "react";
+
+import { Configuration, type Todo, TodoServiceApi } from "./api";
 
 let todoApi: TodoServiceApi;
 let initialized = false;
@@ -49,7 +51,7 @@ class ConfigData {
   fhApiKey: string = "";
 }
 
-class App extends React.Component<{}, { todos: TodoData }> {
+class App extends React.Component<object, { todos: TodoData }> {
   private titleInput!: HTMLInputElement;
 
   constructor() {
@@ -151,7 +153,7 @@ class App extends React.Component<{}, { todos: TodoData }> {
         </div>
       );
     }
-    let buttonStyle = {
+    const buttonStyle = {
       color: this.state.todos.buttonColour,
     };
     return (

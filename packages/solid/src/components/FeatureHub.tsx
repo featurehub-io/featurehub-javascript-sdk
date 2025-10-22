@@ -1,11 +1,11 @@
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
+  FeatureHub as fh,
   type FeatureHubConfig,
   FeatureHubPollingClient,
   type InternalFeatureRepository,
   Readyness,
-  FeatureHub as fh,
 } from "featurehub-javascript-client-sdk";
 import {
   type Accessor,

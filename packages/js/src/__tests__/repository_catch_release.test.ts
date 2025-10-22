@@ -1,5 +1,5 @@
-/* tslint:disable */
-/* eslint-disable */
+import { describe, expect, it } from "vitest";
+
 import {
   ClientFeatureRepository,
   type FeatureHubRepository,
@@ -7,7 +7,6 @@ import {
   FeatureValueType,
   SSEResultState,
 } from "../index";
-import { describe, it, expect } from "vitest";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 
 describe("Catch and release should hold and then release feature changes", () => {

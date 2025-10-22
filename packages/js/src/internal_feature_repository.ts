@@ -1,7 +1,7 @@
-import type { FeatureHubRepository } from "./featurehub_repository";
-import { type FeatureRolloutStrategy, SSEResultState } from "./models";
-import { InterceptorValueMatch } from "./interceptors";
 import type { ClientContext } from "./client_context";
+import type { FeatureHubRepository } from "./featurehub_repository";
+import { InterceptorValueMatch } from "./interceptors";
+import { type FeatureRolloutStrategy, SSEResultState } from "./models";
 import { Applied } from "./strategy_matcher";
 
 export interface InternalFeatureRepository extends FeatureHubRepository {

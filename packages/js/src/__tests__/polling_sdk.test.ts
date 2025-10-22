@@ -1,19 +1,18 @@
-/* tslint:disable */
-/* eslint-disable */
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import type { SinonFakeTimers } from "sinon";
+import * as sinon from "sinon";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+
 import {
   type FeatureHubConfig,
   FeatureHubPollingClient,
   type FeaturesFunction,
-  fhLog,
   FHLog,
+  fhLog,
   type InternalFeatureRepository,
   PollingBase,
   type PollingService,
 } from "../index";
-import * as sinon from "sinon";
-import type { SinonFakeTimers } from "sinon";
 
 describe("basic polling sdk works as expected", () => {
   let poller: SubstituteOf<PollingService>;
@@ -22,8 +21,8 @@ describe("basic polling sdk works as expected", () => {
 
   beforeEach(() => {
     poller = Substitute.for<PollingBase>();
-    // @ts-ignore
-    poller.busy.returns(false);
+
+    poller.busy.returns?.(false);
 
     FeatureHubPollingClient.pollingClientProvider = () => poller;
 
@@ -45,10 +44,9 @@ describe("basic polling sdk works as expected", () => {
     let callback: FeaturesFunction | undefined;
 
     poller.poll().resolves();
-    // @ts-ignore
-    // poller.busy.returns(false);
+    poller.busy.returns?.(false);
 
-    FeatureHubPollingClient.pollingClientProvider = (opt, url1, freq1, callback1) => {
+    FeatureHubPollingClient.pollingClientProvider = (_opt, url1, freq1, callback1) => {
       url = url1;
       freq = freq1;
       callback = callback1;
@@ -61,6 +59,8 @@ describe("basic polling sdk works as expected", () => {
     expect(freq).toBe(0);
 
     callback!([]);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     repo.received(1).notify;
   });
 
@@ -102,8 +102,8 @@ describe("basic polling sdk works as expected", () => {
       const p = new FeatureHubPollingClient(repo, config, 2000);
 
       poller.poll().resolves();
-      // @ts-ignore
-      poller.frequency.returns(2000);
+
+      poller.frequency.returns?.(2000);
 
       FeatureHubPollingClient.pollingClientProvider = () => {
         return poller;

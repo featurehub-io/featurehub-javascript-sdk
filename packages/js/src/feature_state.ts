@@ -1,15 +1,12 @@
-import { FeatureValueType } from "./models";
 import type { ClientContext } from "./client_context";
+import { FeatureValueType } from "./models";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface FeatureListener<T = any> {
-  // eslint-disable-next-line no-use-before-define
   (featureChanged: FeatureStateHolder<T>): void;
 }
 
 export type FeatureListenerHandle = number;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface FeatureStateHolder<T = any> {
   /**
    * getKey: returns feature key if feature exists
