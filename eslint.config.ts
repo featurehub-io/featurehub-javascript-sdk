@@ -20,7 +20,6 @@ export default defineConfig([
       "**/node_modules/**",
       // TODO: Revisit these sections later so that we can have linting across everything
       "examples/todo-server-tests/features/**",
-      "examples/todo-angular-featurehub-app/**",
       "plugins/**",
     ],
   },
