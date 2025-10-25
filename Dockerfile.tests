@@ -1,0 +1,31 @@
+FROM node:22.20-bullseye-slim AS base
+
+RUN npm install -g pnpm@latest
+WORKDIR /app
+RUN corepack enable pnpm
+
+FROM base AS deps
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/*/package.json ./packages/*/
+COPY examples/todo-server-tests/package.json ./examples/todo-server-tests/
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+
+COPY --from=deps /app ./
+COPY packages/ ./packages/
+COPY examples/todo-server-tests/ ./examples/todo-server-tests/
+RUN pnpm run build:packages
+RUN pnpm --filter './examples/todo-server-tests' run build
+
+FROM node:22.20-bullseye-slim AS runtime
+
+WORKDIR /app
+COPY --from=builder /app/examples/todo-server-tests ./
+COPY --from=builder /app/examples/todo-server-tests/node_modules ./node_modules
+
+EXPOSE 8099
+
+# Default to running tests, but can be overridden
+CMD ["pnpm", "run", "test"]

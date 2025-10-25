@@ -2,11 +2,12 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "outDir": "dist",
     "declaration": true,
     "noEmitOnError": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "verbatimModuleSyntax": false
   },
-  "include": ["app/**/*"]
+  "include": ["src/**/*"]
 }
