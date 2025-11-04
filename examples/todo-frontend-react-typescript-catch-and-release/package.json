@@ -24,7 +24,6 @@
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "@vitejs/plugin-react": "^5.0.4",
-    "eslint": "^8.8.0",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",

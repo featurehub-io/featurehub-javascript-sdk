@@ -11,5 +11,6 @@
       "featurehub-javascript-client-sdk": ["../../packages/js/src"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -8,5 +8,6 @@
     "noEmitOnError": true,
     "verbatimModuleSyntax": false
   },
-  "include": ["app/**/*"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }

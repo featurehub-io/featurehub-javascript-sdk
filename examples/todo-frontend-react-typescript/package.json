@@ -1,6 +1,7 @@
 {
   "name": "featurehub-react-example",
   "version": "2.1.1",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -24,12 +25,10 @@
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "@vitejs/plugin-react": "^5.0.4",
-    "eslint": "^8.8.0",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",
     "vite": "^7.1.9"
   },
-  "type": "module",
   "packageManager": "pnpm>=10.12"
 }
