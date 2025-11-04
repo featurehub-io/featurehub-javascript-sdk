@@ -18,7 +18,6 @@ import {
   type PromiseLikeFunction,
   type RejectLikeFunction,
 } from "featurehub-javascript-client-sdk";
-import type { RequestOptions } from "https";
 import { URL } from "url";
 
 const ES = require("eventsource");
@@ -34,7 +33,19 @@ interface PromiseLikeData {
   reject: RejectLikeFunction;
 }
 
-export type ModifyRequestFunction = (options: RequestOptions) => void;
+type FetchRequestOptions = RequestInit & {
+  protocol: string;
+  host: string;
+  hostname: string;
+  port: string;
+  path: string;
+  method: string;
+  search: string;
+  headers: Record<string, string>;
+  timeout: number;
+};
+
+export type ModifyRequestFunction = (options: FetchRequestOptions) => void;
 
 export class NodejsPollingService extends PollingBase implements PollingService {
   private readonly uri: URL;
@@ -48,7 +59,7 @@ export class NodejsPollingService extends PollingBase implements PollingService 
     this.uri = new URL(this.url);
   }
 
-  public poll(): Promise<void> {
+  public async poll(): Promise<void> {
     if (this._busy) {
       return new Promise((resolve, reject) => {
         this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
@@ -61,61 +72,57 @@ export class NodejsPollingService extends PollingBase implements PollingService 
 
     this._busy = true;
 
-    return new Promise((resolve, reject) => {
-      const http = this.uri.protocol === "http:" ? require("http") : require("https");
-      let data = "";
-      const headers: Record<string, string> =
-        this._header === undefined
-          ? {}
-          : {
-              "x-featurehub": this._header,
-            };
+    const headers: Record<string, string> = this._header ? { "x-featurehub": this._header } : {};
 
-      if (this._etag) {
-        headers["if-none-match"] = this._etag;
-      }
+    if (this._etag) headers["if-none-match"] = this._etag;
 
-      // we are not specifying the type as it forces us to bring in one of http or https
-      const reqOptions: RequestOptions = {
-        protocol: this.uri.protocol,
-        host: this.uri.host,
-        hostname: this.uri.hostname,
-        port: this.uri.port,
-        method: "GET",
-        path: this.uri.pathname + this.uri.search + `&contextSha=${this._shaHeader}`,
-        headers: headers,
-        timeout: this._options.timeout || 8000,
-      };
+    // we are not specifying the type as it forces us to bring in one of http or https
+    const req: FetchRequestOptions = {
+      method: "GET",
+      headers,
+      protocol: this.uri.protocol,
+      host: this.uri.host,
+      hostname: this.uri.hostname,
+      port: this.uri.port,
+      path: this.uri.pathname,
+      search: `${this.uri.search}&contextSha=${this._shaHeader}`,
+      timeout: this._options.timeout || 8000,
+    };
 
-      if (this.modifyRequestFunction) {
-        this.modifyRequestFunction(reqOptions);
-      }
+    this.modifyRequestFunction?.(req);
 
-      const req = http.request(reqOptions, (res: any) => {
-        res.on("data", (chunk: any) => (data += chunk));
-        res.on("end", () => {
-          this.parseCacheControl(res.headers["cache-control"]);
-          if (res.statusCode === 200 || res.statusCode === 236) {
-            this._etag = res.headers.etag;
-            this._callback(JSON.parse(data) as Array<FeatureEnvironmentCollection>);
-            this._stopped = res.statusCode === 236;
-            this._busy = false;
-            this.resolveOutstanding();
-            resolve();
-          } else if (res.statusCode == 304) {
-            this._busy = false;
-            this.resolveOutstanding();
-            resolve();
-          } else {
-            this._busy = false;
-            this.rejectOutstanding(req.status);
-            reject(res.statusCode);
-          }
-        });
-      });
+    const url = `${req.protocol}//${req.host}${req.path}${req.search}`;
 
-      req.end();
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this._options.timeout || 8000);
+
+    const response = await fetch(url, {
+      headers,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+    this.parseCacheControl(response.headers.get("cache-control"));
+
+    if (response.status === 304) {
+      this._busy = false;
+      this.resolveOutstanding();
+      return;
+    } else if (!response.ok) {
+      this._busy = false;
+      this.rejectOutstanding(response.status);
+      throw new Error(`Failed to fetch features: ${response.statusText}`);
+    }
+
+    this._etag = response.headers.get("etag");
+
+    const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
+
+    this._callback(environments);
+    this._stopped = response.status === 236;
+    this._busy = false;
+    this.resolveOutstanding();
   }
 }
 
@@ -125,50 +132,57 @@ FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
 export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
   public modifyRequestFunction: ModifyRequestFunction | undefined;
 
-  post(url: string, update: FeatureStateUpdate): Promise<boolean> {
+  async post(url: string, update: FeatureStateUpdate): Promise<boolean> {
     const loc = new URL(url);
-
-    const cra: RequestOptions = {
-      protocol: loc.protocol,
-      path: loc.pathname,
-      host: loc.hostname,
-      method: "PUT",
-      port: loc.port,
-      timeout: 3000,
-      headers: {
-        "content-type": "application/json",
-      },
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
     };
 
-    // allows you to override it with any security or such
-    if (this.modifyRequestFunction) {
-      this.modifyRequestFunction(cra);
-    }
+    const req: FetchRequestOptions = {
+      method: "PUT",
+      headers,
+      protocol: loc.protocol,
+      host: loc.host,
+      hostname: loc.hostname,
+      port: loc.port,
+      path: loc.pathname,
+      search: loc.search,
+      timeout: 3000,
+    };
 
-    const http = cra.protocol === "http:" ? require("http") : require("https");
-    return new Promise<boolean>((resolve) => {
-      try {
-        const req = http.request(cra, (res: any) => {
-          fhLog.trace("update result -> ", res.statusCode);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        });
+    this.modifyRequestFunction?.(req);
 
-        req.on("error", () => {
-          fhLog.trace("update result -> error");
-          resolve(false);
-        });
+    // Extract any modified headers back
+    Object.assign(headers, req.headers);
 
-        FHLog.fhLog.trace("FeatureUpdater", cra, update);
-        req.write(JSON.stringify(update));
-        req.end();
-      } catch (_e) {
-        resolve(false);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    FHLog.fhLog.trace("FeatureUpdater", req, update);
+
+    try {
+      const _url = `${req.protocol}//${req.host}${req.path}${req.search}`;
+
+      const response = await fetch(_url, {
+        method: req.method,
+        headers: req.headers,
+        body: JSON.stringify(update),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        fhLog.trace("update result -> error");
+        return false;
       }
-    });
+
+      fhLog.trace("update result -> ", response.status);
+      return response.ok;
+    } catch (_e) {
+      fhLog.trace("update result -> error");
+      return false;
+    }
   }
 }
 
@@ -179,13 +193,11 @@ class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
     return other.get("cid") || process.env["GA_CID"] || "";
   }
 
-  postBatchUpdate(batchData: string): void {
-    const req = require("https").request({
-      host: "www.google-analytics.com",
-      path: "batch",
+  postBatchUpdate(batchData: string): Promise<Response> {
+    return fetch("https://www.google-analytics.com/batch", {
+      method: "POST",
+      body: batchData,
     });
-    req.write(batchData);
-    req.end();
   }
 }
 
