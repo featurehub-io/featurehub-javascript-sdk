@@ -71,7 +71,6 @@
     "cross-sha256": "^1.2.0",
     "murmurhash": "^2.0.1",
     "netmask": "^2.0.2",
-    "restify": "^11.1.0",
     "semver-compare": "^1.0.0"
   },
   "engines": {

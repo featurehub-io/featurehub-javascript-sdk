@@ -59,8 +59,7 @@
   },
   "dependencies": {
     "eventsource": "^2.0.2",
-    "featurehub-javascript-client-sdk": "^1.4.0",
-    "restify": "^11.1.0"
+    "featurehub-javascript-client-sdk": "^1.4.0"
   },
   "engines": {
     "node": ">=20.0.0"
