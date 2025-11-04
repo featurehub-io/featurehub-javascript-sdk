@@ -1,6 +1,4 @@
-import * as base64 from "@juanelas/base64";
-import { sha256 } from "cross-sha256";
-
+import { createBase64UrlSafeHash } from "./crypto";
 import type { EdgeService } from "./edge_service";
 import { type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
@@ -48,15 +46,12 @@ export abstract class PollingBase implements PollingService {
     this._busy = false;
   }
 
-  attributeHeader(header: string): Promise<void> {
+  async attributeHeader(header: string): Promise<void> {
     this._header = header;
     this._shaHeader =
       header === undefined || header.length === 0
         ? "0"
-        : base64.encode(new sha256().update(header).digest(), true, false);
-    return new Promise((resolve) => {
-      resolve();
-    });
+        : await createBase64UrlSafeHash("sha256", header);
   }
 
   public stop(): void {

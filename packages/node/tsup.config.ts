@@ -8,8 +8,6 @@ export default defineConfig({
   format: ["esm", "cjs"],
   bundle: true,
   clean: true,
-  sourcemap: true,
-  splitting: true,
   dts: {
     footer: `declare module '${pkg.name}'`,
   },
