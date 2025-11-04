@@ -152,7 +152,6 @@ export class CustomWorld {
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
     (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
-      // @ts-expect-error - TODO: revisit this later
       req.headers["Baggage"] = `cuke-req-id=${reqIdPrefix}${requestId}`;
       requestId++;
     };

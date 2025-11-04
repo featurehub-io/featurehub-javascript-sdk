@@ -12,7 +12,7 @@ export interface AnalyticsCollector {
 export interface GoogleAnalyticsApiClient {
   cid(other: Map<string, string>): string;
 
-  postBatchUpdate(batchData: string): void;
+  postBatchUpdate(batchData: string): Promise<Response> | Promise<void>;
 }
 
 class BrowserGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
@@ -20,11 +20,12 @@ class BrowserGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
     return other.get("cid") || "";
   }
 
-  postBatchUpdate(batchData: string): void {
-    const req = new XMLHttpRequest();
-    req.open("POST", "https://www.google-analytics.com/batch");
-    req.send(batchData);
-  }
+  postBatchUpdate = async (batchData: string) => {
+    return fetch("https://www.google-analytics.com/batch", {
+      method: "POST",
+      body: batchData,
+    });
+  };
 }
 
 type GoogleAnalyticsApiClientProvider = () => GoogleAnalyticsApiClient;

@@ -123,11 +123,6 @@ export interface BrowserOptions {
 export class BrowserPollingService extends PollingBase implements PollingService {
   private localStorageLastUrl?: string;
 
-  // override this with a replacement if you need to, for example to add any headers.
-  static httpRequestor = () => {
-    return new XMLHttpRequest();
-  };
-
   // override this in React Native - for example use AsyncStorage
   static localStorageRequestor = () => {
     if (window.localStorage) {
@@ -169,7 +164,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
     }
   }
 
-  public poll(): Promise<void> {
+  public async poll(): Promise<void> {
     if (this._busy) {
       return new Promise((resolve, reject) => {
         this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
@@ -182,62 +177,45 @@ export class BrowserPollingService extends PollingBase implements PollingService
       });
     }
 
-    return new Promise((resolve, reject) => {
-      const calculatedUrl = `${this.url}&contextSha=${this._shaHeader}`;
+    // check in case we have a cached copy of it
+    this.loadLocalState(this.url);
 
-      // check in case we have a cached copy of it
-      this.loadLocalState(this.url);
+    const headers: Record<string, string> = {
+      "Content-type": "application/json",
+      ...(this._etag ? { "if-none-match": this._etag } : {}),
+      ...(this._header ? { "x-featurehub": this._header } : {}),
+    };
 
-      const req = BrowserPollingService.httpRequestor();
-      req.open("GET", calculatedUrl);
-      req.setRequestHeader("Content-type", "application/json");
+    const response = await fetch(`${this.url}&contextSha=${this._shaHeader}`, { headers });
 
-      if (this._etag) {
-        req.setRequestHeader("if-none-match", this._etag);
-      }
+    if (response.status === 304) {
+      this._busy = false;
+      this.resolveOutstanding();
+      return;
+    } else if (!response.ok) {
+      this._busy = false;
+      this.rejectOutstanding(response.status);
+      throw new Error(`Failed to fetch features: ${response.statusText}`);
+    }
 
-      if (this._header) {
-        req.setRequestHeader("x-featurehub", this._header);
-      }
+    this._etag = response.headers.get("etag");
+    this.parseCacheControl(response.headers.get("cache-control"));
 
-      req.send();
+    const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
 
-      req.onreadystatechange = () => {
-        if (req.readyState === 4) {
-          if (req.status === 200 || req.status == 236) {
-            this._etag = req.getResponseHeader("etag");
-            this.parseCacheControl(req.getResponseHeader("cache-control"));
+    try {
+      BrowserPollingService.localStorageRequestor().setItem(
+        this.url,
+        JSON.stringify({ e: environments }),
+      );
+    } catch (_) {
+      fhLog.error("featurehub: unable to cache features");
+    }
 
-            const environments = JSON.parse(
-              req.responseText,
-            ) as Array<FeatureEnvironmentCollection>;
-            try {
-              BrowserPollingService.localStorageRequestor().setItem(
-                this.url,
-                JSON.stringify({ e: environments }),
-              );
-            } catch (_) {
-              fhLog.error("featurehub: unable to cache features");
-            }
-            this._callback(environments);
-
-            this._stopped = req.status === 236;
-            this._busy = false;
-            this.resolveOutstanding();
-            resolve();
-          } else if (req.status == 304) {
-            // no change
-            this._busy = false;
-            this.resolveOutstanding();
-            resolve();
-          } else {
-            this._busy = false;
-            this.rejectOutstanding(req.status);
-            reject(req.status);
-          }
-        }
-      };
-    });
+    this._callback(environments);
+    this._stopped = response.status === 236;
+    this._busy = false;
+    this.resolveOutstanding();
   }
 }
 

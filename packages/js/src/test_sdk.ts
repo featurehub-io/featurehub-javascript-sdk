@@ -7,17 +7,15 @@ export interface FeatureUpdatePostManager {
 
 class BrowserFeaturePostUpdater implements FeatureUpdatePostManager {
   post(url: string, update: FeatureStateUpdate): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      const req = new XMLHttpRequest();
-      req.open("PUT", url);
-      req.setRequestHeader("Content-type", "application/json");
-      req.send(JSON.stringify(update));
-      req.onreadystatechange = function () {
-        if (req.readyState === 4) {
-          resolve(req.status >= 200 && req.status < 300);
-        }
-      };
-    });
+    return fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify(update),
+    })
+      .then((res) => res.status >= 200 && res.status < 300)
+      .catch(() => false);
   }
 }
 
