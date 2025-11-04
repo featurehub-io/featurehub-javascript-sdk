@@ -58,7 +58,7 @@
     "vite": "7.1.10"
   },
   "dependencies": {
-    "eventsource": "^2.0.2",
+    "eventsource": "^4.0.0",
     "featurehub-javascript-client-sdk": "workspace:*"
   },
   "engines": {

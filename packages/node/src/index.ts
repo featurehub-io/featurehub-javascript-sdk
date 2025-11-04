@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+import { EventSource } from "eventsource";
 import {
   EdgeFeatureHubConfig,
   type FeatureEnvironmentCollection,
@@ -20,12 +20,10 @@ import {
 } from "featurehub-javascript-client-sdk";
 import { URL } from "url";
 
-const ES = require("eventsource");
-
 export * from "featurehub-javascript-client-sdk";
 
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
-  return new ES(url, dict);
+  return new EventSource(url, dict);
 };
 
 interface PromiseLikeData {

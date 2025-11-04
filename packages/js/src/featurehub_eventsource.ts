@@ -17,9 +17,9 @@ export declare class EventSource {
   readonly readyState: number;
   readonly withCredentials: boolean;
 
-  onopen: (evt: MessageEvent) => any;
-  onmessage: (evt: MessageEvent) => any;
-  onerror: (evt: MessageEvent) => any;
+  onopen?: ((evt: Event) => void) | null;
+  onmessage?: ((evt: MessageEvent) => void) | null;
+  onerror?: ((evt: Event) => void) | null;
 
   constructor(url: string, eventSourceInitDict?: EventSource.EventSourceInitDict);
 
