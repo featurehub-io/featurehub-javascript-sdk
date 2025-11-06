@@ -13,5 +13,6 @@
       "featurehub-solid-sdk": ["../../packages/solid/src"]
     }
   },
-  "include": ["src"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }

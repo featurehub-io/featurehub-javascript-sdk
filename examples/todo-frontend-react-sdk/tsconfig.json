@@ -11,5 +11,6 @@
       "featurehub-react-sdk": ["../../packages/react/src"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }
