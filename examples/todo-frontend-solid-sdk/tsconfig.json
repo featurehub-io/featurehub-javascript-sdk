@@ -6,9 +6,6 @@
     "outDir": "dist",
     "types": ["vite/client"],
     "paths": {
-      "cross-sha256": [
-        "../../node_modules/.pnpm/cross-sha256@1.2.0/node_modules/cross-sha256/index.d.ts"
-      ],
       "featurehub-javascript-client-sdk": ["../../packages/js/src"],
       "featurehub-solid-sdk": ["../../packages/solid/src"]
     }

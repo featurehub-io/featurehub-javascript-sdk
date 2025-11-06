@@ -4,7 +4,6 @@
   "description": "FeatureHub client/browser SDK",
   "author": "info@featurehub.io",
   "type": "module",
-  "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "lib/index.js",
@@ -53,12 +52,14 @@
   },
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
+    "@types/jsdom": "^27.0.0",
     "@types/netmask": "^2.0.5",
     "@types/node": "catalog:node",
     "@types/semver-compare": "^1.0.3",
     "@types/sinon": "^10.0.13",
     "@vitest/coverage-istanbul": "catalog:vitest",
     "featurehub-tsconfig": "workspace:*",
+    "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
     "sinon": "^15.0.1",
     "tsup": "catalog:tsup",
@@ -67,8 +68,6 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "@juanelas/base64": "^1.1.5",
-    "cross-sha256": "^1.2.0",
     "murmurhash": "^2.0.1",
     "netmask": "^2.0.2",
     "semver-compare": "^1.0.0"
