@@ -18,7 +18,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.18.0
+          version: 10.21.0
           run_install: false
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -27,6 +27,8 @@ jobs:
           cache: "pnpm"
       - name: Install Dependencies
         run: pnpm install
+      - name: Build (Packages)
+        run: pnpm run build:packages
       - name: Types Check
         run: pnpm run typecheck
       - name: Format Check
@@ -35,5 +37,3 @@ jobs:
         run: pnpm run lint
       - name: Test (Packages)
         run: pnpm run test:packages
-      - name: Build (Packages)
-        run: pnpm run build:packages

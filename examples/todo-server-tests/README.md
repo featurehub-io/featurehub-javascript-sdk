@@ -1,10 +1,11 @@
-== Prerequisites:
+# Prerequisites
+
 Requires to setup the following features in the FeatureHub Admin Console:
 
-* FEATURE_TITLE_TO_UPPERCASE (boolean)
-* FEATURE_NUMBER (number)
-* FEATURE_STRING (string)
-* FEATURE_JSON (json)
+- FEATURE_TITLE_TO_UPPERCASE (boolean)
+- FEATURE_NUMBER (number)
+- FEATURE_STRING (string)
+- FEATURE_JSON (json)
 
 The values can be left as "not set", as they are controlled from the tests. Application name can be anything.
 
@@ -21,12 +22,10 @@ Example:
 
 `FEATUREHUB_CLIENT_API_KEY=default/4148dcad-b9e2-40d9-9f4f-d1322f899583/Gv5pom5e0JKVlphnsj0NMIwLxAAkB7GAPC91Y92fbb7Pj5SAeAK8JlnGy4PaREA4OsnxxfbdVGIAEW5O`
 
-== To run the tests:
+## To run the tests:
 
-`npm install`
+`pnpm install`
 
-`npm run generate:specs`
+`pnpm run generate:specs`
 
-``APP_SERVER_URL='your-server-url' FEATUREHUB_EDGE_URL='fh-edge-url' FEATUREHUB_CLIENT_API_KEY='fh-api-key' npm run test
-``
-
+`APP_SERVER_URL='your-server-url' FEATUREHUB_EDGE_URL='fh-edge-url' FEATUREHUB_CLIENT_API_KEY='fh-api-key' pnpm run test`

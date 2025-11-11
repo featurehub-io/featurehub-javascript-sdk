@@ -1,4 +1,4 @@
-import { v3 as murmur3 } from "murmurhash";
+import * as murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
@@ -18,7 +18,7 @@ export class Murmur3PercentageCalculator implements PercentageCalculator {
   private readonly MAX_PERCENTAGE = 1000000;
 
   public determineClientPercentage(percentageText: string, featureId: string): number {
-    const result = murmur3(percentageText + featureId, 0);
+    const result = murmurhash.v3(percentageText + featureId, 0);
     return Math.floor((result / Math.pow(2, 32)) * this.MAX_PERCENTAGE);
   }
 }

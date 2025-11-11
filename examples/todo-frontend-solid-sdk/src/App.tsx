@@ -11,7 +11,7 @@ const SAMPLE_TEXT =
 /*
   DEVELOPER NOTE:
   If making changes to the FeatureHub Solid SDK implementation, there is a convenience npm script that
-  is part of this example project "npm run install-sdk" that will allow you to make changes to the
+  is part of this example project "pnpm run install-sdk" that will allow you to make changes to the
   SDK and regenerate the lib source files for this example to install and then use.
 
   This should hopefully save you time from going back and forth having to package everything for the SDK

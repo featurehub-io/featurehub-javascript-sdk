@@ -2,13 +2,14 @@
   "name": "featurehub-react-example-catch-and-release",
   "version": "2.1.1",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "clean": "rimraf node_modules dist",
     "preview": "vite preview",
     "start": "vite",
-    "link": "npm link featurehub-javascript-client-sdk",
+    "link": "pnpm link featurehub-javascript-client-sdk",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,12 +24,11 @@
     "@types/node": "catalog:node",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^5.1.0",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",
-    "vite": "^7.1.9"
+    "vite": "^7.2.0"
   },
-  "type": "module",
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }

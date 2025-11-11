@@ -1,7 +1,8 @@
-== Description
+# Description
+
 Backend Todo server app to demonstrate the usage of FeatureHub JavaScript/Typescript SDK with Typescript and restify.
 
-Typescript and restify are used here as an example and can be replaced with any other npm module to perform REST requests and used with Javascript instead.
+Typescript and Express are used here as an example and can be replaced with any other npm module to perform REST requests and used with Javascript instead.
 
 Demonstrates the Feature Flag ("BOOLEAN" type)
 
@@ -17,33 +18,31 @@ The app is based on the Open API description stored in todo-api folder, however 
 
 In addition, it demonstrates integration with Google Analytics.
 
-== Prerequisites
+## Prerequisites
 
-* Node @12 or higher
+- Node v20 or higher
 
-* You need to setup a feature of type "Feature flag - boolean" in the FeatureHub Admin Console.
-Set feature key to "FEATURE_TITLE_TO_UPPERCASE".
+- You need to setup a feature of type "Feature flag - boolean" in the FeatureHub Admin Console.
+  Set feature key to "FEATURE_TITLE_TO_UPPERCASE".
 
-image::https://docs.featurehub.io/images/create-feature-title.png[Feature demo,800]
+![Feature demo](https://docs.featurehub.io/images/create-feature-title.png)
 
-* You need to provide FeatureHub Edge server Url. It will depend on your installation, e.g.:
+- You need to provide FeatureHub Edge server Url. It will depend on your installation, e.g.:
 
 `export FEATUREHUB_EDGE_URL=http://localhost:8903/`
 
-* You are required to have a Service Account created in the FeatureHub Admin Console with the "read" permissions for your desired environment.
-Once this is set, copy the API Key (Client eval key) from the API Keys page for your desired environment and set it as an environment variable:
-
+- You are required to have a Service Account created in the FeatureHub Admin Console with the "read" permissions for your desired environment.
+  Once this is set, copy the API Key (Client eval key) from the API Keys page for your desired environment and set it as an environment variable:
 
 `export FEATUREHUB_API_KEY=default/4e439d38-1e87-4e77-84c3-2a32c112cfc5/Fpy5YpEfTeR5yQ15DUWEyvpQyfpjKHefMq9QhlodNzN8XH4by048X9Vjlj94fPieNc5nkagdfVoeAJxM`
 
+Alternatively, you can set `FEATUREHUB_EDGE_URL` and `FEATUREHUB_API_KEY` it in the `run.sh` file and run this script to kick off the back-end server.
 
-Alternatively, you can set `FEATUREHUB_EDGE_URL` and `FEATUREHUB_API_KEY` it in the ```run.sh``` file and run this script to kick off the back-end server.
-
-* If you like to see events fire in your Google Analytics, you will require to have valid GA Tracking ID, e.g. 'UA-XXXXXXXXX-X'.
+- If you like to see events fire in your Google Analytics, you will require to have valid GA Tracking ID, e.g. 'UA-XXXXXXXXX-X'.
 
 You also need to specify a CID - a customer id this is associate with GA. In this example it is set to a random number.
 
-Read more about CID https://stackoverflow.com/questions/14227331/what-is-the-client-id-when-sending-tracking-data-to-google-analytics-via-the-mea[here]
+Read more about CID [here](https://stackoverflow.com/questions/14227331/what-is-the-client-id-when-sending-tracking-data-to-google-analytics-via-the-mea)
 
 GA events:
 
@@ -55,34 +54,30 @@ Once you launch the server, any call to "add" or "delete" to-do will generate a 
 
 More on GA integration can be found here https://docs.featurehub.io/analytics.html
 
-== Installation Instructions
+## Installation Instructions
 
-----
-npm install && npm run-script start
-----
+```bash
+pnpm install && pnpm run-script start
+```
 
 You should see `"Features are available, starting server..."` message in the console. If no message shows up, it is likely the API Url is incorrect.
 
 once the app is running, you should be able to do:
 
-[source]
-----
+```bash
 curl -X POST \
   http://0.0.0.0:8099/todo/add \
   -H 'Content-Type: application/json' \
   -d '{"title": "Hello World", "id": "456"}'
-----
+```
 
 and to get the list of to-dos:
 
-[source]
-----
+```bash
 curl -X GET \
 http://0.0.0.0:8099/todo/list \
 -H 'Postman-Token: 6bfe318a-5481-4e8e-a3e4-ab881202ba31' \
 -H 'cache-control: no-cache'
-----
+```
 
 Watch how "title" value in the response changes from lower case to upper case when you turn feature on/off from the FeatureHub Admin Console
-
-

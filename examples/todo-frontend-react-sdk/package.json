@@ -6,7 +6,7 @@
   "scripts": {
     "start": "vite",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "clean": "rimraf node_modules dist",
     "link": "pnpm link ../../packages/js",
     "preview": "vite preview",
@@ -22,11 +22,11 @@
   "devDependencies": {
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react-swc": "^4.1.0",
+    "@vitejs/plugin-react-swc": "^4.2.0",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",
-    "vite": "^7.1.9"
+    "vite": "^7.2.0"
   },
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }
