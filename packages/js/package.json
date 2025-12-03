@@ -64,7 +64,7 @@
     "sinon": "^15.0.1",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.1.10",
+    "vite": "7.2.0",
     "vitest": "catalog:vitest"
   },
   "dependencies": {
@@ -75,5 +75,5 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "packageManager": "pnpm>=10.12"
+  "packageManager": "pnpm@10.18.3"
 }

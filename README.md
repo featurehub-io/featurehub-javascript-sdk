@@ -23,17 +23,21 @@ backend servers, Web front-ends (e.g. Vanilla, React, Angular) or Mobile apps (R
 
 To control the feature flags from the FeatureHub Admin console, either use FeatureHub SaaS cloud version [demo](https://app.featurehub.io) or install the app using our guide [here](https://docs.featurehub.io/featurehub/latest/installation.html)
 
+## Contributing
+
+Interested in contributing to the FeatureHub JavaScript SDK? Please see our [Contributing Guide](CONTRIBUTING.md) for development setup, testing, and contribution guidelines.
+
 ## SDK installation
 
 Run to install the dependency:
 
 if you are intending to use this SDK with React, Angular and other browser frameworks:
 
-`npm install featurehub-javascript-client-sdk`
+`pnpm install featurehub-javascript-client-sdk`
 
 if you are using NodeJS use
 
-`npm install featurehub-javascript-node-sdk`
+`pnpm install featurehub-javascript-node-sdk`
 
 (and further imports you see below should refer to this node library instead of the client library)
 

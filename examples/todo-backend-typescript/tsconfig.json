@@ -2,11 +2,15 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "outDir": "dist",
     "declaration": true,
     "noEmitOnError": true,
-    "verbatimModuleSyntax": false
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "featurehub-javascript-node-sdk": ["../../packages/node/src"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist"]

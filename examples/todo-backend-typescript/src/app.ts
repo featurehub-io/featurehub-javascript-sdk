@@ -1,3 +1,5 @@
+import cors from "cors";
+import express from "express";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
@@ -9,8 +11,8 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
-import * as restify from "restify";
-import * as corsMiddleware from "restify-cors-middleware2";
+import fs from "fs";
+import path from "path";
 
 import type { ITodoApiController } from "./generated-interface";
 import { Todo, TodoApiRouter } from "./generated-interface";
@@ -56,31 +58,30 @@ fhConfig.init();
 // Connect to GA
 // fhConfig.addAnalyticCollector(new GoogleAnalyticsCollector('UA-XXXYYYYY', '1234-5678-abcd-1234'));
 
-const api = restify.createServer();
+const app = express();
 
-api.get("/health/liveness", (_req, res, next) => {
+app.get("/health/liveness", (_req, res) => {
   if (fhConfig.readyness === Readyness.Ready) {
-    res.status(200);
-    res.send("ok");
+    res.status(200).send("ok");
   } else {
-    res.send("not ready");
-    res.status(500);
+    res.status(500).send("not ready");
   }
-
-  next();
 });
 
-const cors = corsMiddleware.default({
-  origins: ["*"],
-  allowHeaders: ["baggage"],
-  exposeHeaders: [],
-});
+app.use(
+  cors({
+    origin: "*",
+    allowedHeaders: ["baggage"],
+    exposedHeaders: [],
+  }),
+);
 
-api.pre(cors.preflight);
-api.use(cors.actual);
-api.use(restify.plugins.bodyParser());
-api.use(restify.plugins.queryParser());
-api.use(featurehubMiddleware(fhConfig.repository()));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(featurehubMiddleware(fhConfig.repository()));
+
+// Serve static frontend files
+app.use(express.static(path.join(__dirname, "todo-frontend")));
 
 const port = process.env["TODO_PORT"] || 8099;
 let todos: Todo[] = [];
@@ -206,17 +207,29 @@ class TodoController implements ITodoApiController {
   }
 }
 
-const todoRouter = new TodoApiRouter(api, (req: any) => new TodoController(req));
+const todoRouter = new TodoApiRouter(app, (req: any) => new TodoController(req));
 
 todoRouter.registerRoutes();
+
+// Catch-all handler: send back React's index.html file for client-side routing
+// Fixed for Express 5.x: wildcard "*" must be named "/*splat"
+app.get("/*splat", (_req, res) => {
+  const indexPath = path.join(__dirname, "todo-frontend", "index.html");
+
+  // Check if frontend exists, otherwise send API-only message
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.send("[FeatureHub API Server]: Frontend not built");
+  }
+});
 
 process.on("SIGINT", () => {
   console.log("closing FH client");
   fhConfig.close();
-  api.close(() => console.log("Shut down server..."));
   process.exit(0);
 });
 
-api.listen(port, function () {
+app.listen(port, function () {
   console.log("server is listening on port", port);
 });

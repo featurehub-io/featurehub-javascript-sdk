@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "outDir": "dist",
+    "module": "ESNext",
     "declaration": true,
     "noEmitOnError": true,
     "verbatimModuleSyntax": false,
@@ -15,6 +15,10 @@
       "featurehub-javascript-node-sdk": ["../../packages/node/src"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
+  "ts-node": {
+    "esm": true,
+    "ignore": ["node_modules/.*", "dist/.*", ".*/dist/.*"]
+  },
+  "include": ["src/**/*", "features/**/*"],
+  "exclude": ["node_modules", "dist", "../../packages/*/dist"]
 }
