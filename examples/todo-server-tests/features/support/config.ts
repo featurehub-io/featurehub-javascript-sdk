@@ -16,7 +16,7 @@ function getApplicationServerUrl(): string {
     );
     process.exit(-1);
   } else {
-    appUrl = process.env["APP_SERVER_URL"]!;
+    appUrl = process.env["APP_SERVER_URL"] || "http://localhost:8099";
   }
 
   return appUrl;

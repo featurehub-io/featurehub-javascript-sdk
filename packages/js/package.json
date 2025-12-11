@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-client-sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "FeatureHub client/browser SDK",
   "author": "info@featurehub.io",
   "type": "module",
@@ -40,7 +40,6 @@
     "build:watch": "tsup --watch",
     "clean": "rimraf node_modules dist",
     "tsc": "node ./node_modules/typescript/bin/tsc -p",
-    "link": "pnpm link --global",
     "release": "cp ../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
     "lint": "eslint .",

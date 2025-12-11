@@ -13,6 +13,7 @@ export * from "./edge_featurehub_config";
 export * from "./edge_service";
 export * from "./feature_hub_config";
 export * from "./feature_state";
+export * from "./feature_state_holders";
 export * from "./featurehub_eventsource";
 export * from "./featurehub_repository";
 export * from "./interceptors";
