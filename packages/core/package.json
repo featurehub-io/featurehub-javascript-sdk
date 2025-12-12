@@ -1,18 +1,17 @@
 {
-  "name": "featurehub-javascript-node-sdk",
+  "name": "featurehub-javascript-core-sdk",
   "version": "1.5.0",
-  "description": "FeatureHub NodeJS SDK",
+  "description": "FeatureHub core SDK - not intended to be used directly",
   "author": "info@featurehub.io",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "lib/index.js",
-  "homepage": "https://featurehub.io",
   "repository": "github:featurehub-io/featurehub-javascript-sdk",
-  "license": "MIT",
   "files": [
     "dist"
   ],
+  "homepage": "https://featurehub.io",
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",
@@ -28,6 +27,7 @@
     "feature-flag-react",
     "featurehub"
   ],
+  "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -39,27 +39,37 @@
     "build": "tsup",
     "build:watch": "tsup --watch",
     "clean": "rimraf node_modules dist",
-    "setup": "pnpm link ../js",
-    "link": "pnpm link --global",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
-    "compile": "pnpm run build && pnpm run link",
+    "tsc": "node ./node_modules/typescript/bin/tsc -p",
     "release": "cp ../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
+    "@types/jsdom": "^27.0.0",
+    "@types/netmask": "^2.0.5",
     "@types/node": "catalog:node",
+    "@types/semver-compare": "^1.0.3",
+    "@types/sinon": "^10.0.13",
+    "@vitest/coverage-istanbul": "catalog:vitest",
     "featurehub-tsconfig": "workspace:*",
+    "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
+    "sinon": "^15.0.1",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.2.0"
+    "vite": "7.2.0",
+    "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "eventsource": "^4.0.0",
-    "featurehub-javascript-core-sdk": "workspace:*"
+    "murmurhash": "^2.0.1",
+    "netmask": "^2.0.2",
+    "semver-compare": "^1.0.0"
   },
   "engines": {
     "node": ">=20.0.0"

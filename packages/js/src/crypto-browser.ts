@@ -2,8 +2,9 @@
  * Browser crypto utilities using Web Crypto API
  * This module should only be imported in browser environments
  */
+import type {HashAlgorithm} from "featurehub-javascript-core-sdk";
 
-import type { HashAlgorithm } from "./types";
+// import type { HashAlgorithm } from "./types";
 
 const algorithmMap: Record<HashAlgorithm, string> = {
   sha1: "SHA-1",

@@ -7,11 +7,10 @@
     "emitDeclarationOnly": true,
     "noEmitOnError": true,
     "verbatimModuleSyntax": false,
-    // TODO: Remove DOM here!! The Node SDK should not need DOM types. We need to define a core JS package
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext"],
     "types": ["node"],
     "paths": {
-      "featurehub-javascript-client-sdk": ["../js/src"]
+      "featurehub-javascript-core-sdk": ["../core/src"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

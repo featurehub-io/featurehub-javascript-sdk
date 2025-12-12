@@ -1,204 +1,60 @@
 import { EventSource } from "eventsource";
 import {
   EdgeFeatureHubConfig,
-  type FeatureEnvironmentCollection,
   FeatureHubEventSourceClient,
   FeatureHubPollingClient,
-  type FeaturesFunction,
-  type FeatureStateUpdate,
-  type FeatureUpdatePostManager,
   FeatureUpdater,
-  FHLog,
-  fhLog,
-  type GoogleAnalyticsApiClient,
-  GoogleAnalyticsCollector,
-  type NodejsOptions,
-  PollingBase,
-  type PollingService,
-  type PromiseLikeFunction,
-  type RejectLikeFunction,
-} from "featurehub-javascript-client-sdk";
-import { URL } from "url";
+  FeatureStateHolder, FeatureHubConfig, ClientContext,
+} from "featurehub-javascript-core-sdk";
+import {NodejsFeaturePostUpdater, NodejsPollingService} from "./polling_sdk";
 
-export * from "featurehub-javascript-client-sdk";
+export * from "featurehub-javascript-core-sdk";
 
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
   return new EventSource(url, dict);
 };
 
-interface PromiseLikeData {
-  resolve: PromiseLikeFunction;
-  reject: RejectLikeFunction;
-}
-
-type FetchRequestOptions = RequestInit & {
-  protocol: string;
-  host: string;
-  hostname: string;
-  port: string;
-  path: string;
-  method: string;
-  search: string;
-  headers: Record<string, string>;
-  timeout: number;
-};
-
-export type ModifyRequestFunction = (options: FetchRequestOptions) => void;
-
-export class NodejsPollingService extends PollingBase implements PollingService {
-  private readonly uri: URL;
-  private readonly _options: NodejsOptions;
-  public modifyRequestFunction: ModifyRequestFunction | undefined;
-
-  constructor(options: NodejsOptions, url: string, frequency: number, _callback: FeaturesFunction) {
-    super(url, frequency, _callback);
-
-    this._options = options;
-    this.uri = new URL(this.url);
-  }
-
-  public async poll(): Promise<void> {
-    if (this._busy) {
-      return new Promise((resolve, reject) => {
-        this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
-      });
-    }
-
-    if (this._stopped) {
-      return new Promise((resolve) => resolve());
-    }
-
-    this._busy = true;
-
-    const headers: Record<string, string> = this._header ? { "x-featurehub": this._header } : {};
-
-    if (this._etag) headers["if-none-match"] = this._etag;
-
-    // we are not specifying the type as it forces us to bring in one of http or https
-    const req: FetchRequestOptions = {
-      method: "GET",
-      headers,
-      protocol: this.uri.protocol,
-      host: this.uri.host,
-      hostname: this.uri.hostname,
-      port: this.uri.port,
-      path: this.uri.pathname,
-      search: `${this.uri.search}&contextSha=${this._shaHeader}`,
-      timeout: this._options.timeout || 8000,
-    };
-
-    this.modifyRequestFunction?.(req);
-
-    const url = `${req.protocol}//${req.host}${req.path}${req.search}`;
-
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this._options.timeout || 8000);
-
-    const response = await fetch(url, {
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-    this.parseCacheControl(response.headers.get("cache-control"));
-
-    if (response.status === 304) {
-      this._busy = false;
-      this.resolveOutstanding();
-      return;
-    } else if (!response.ok) {
-      this._busy = false;
-      this.rejectOutstanding(response.status);
-      throw new Error(`Failed to fetch features: ${response.statusText}`);
-    }
-
-    this._etag = response.headers.get("etag");
-
-    const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
-
-    this._callback(environments);
-    this._stopped = response.status === 236;
-    this._busy = false;
-    this.resolveOutstanding();
+declare global {
+  interface Window {
+    fhConfig?: FeatureHubConfig;
+    fhContext?: ClientContext;
   }
 }
 
-FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
-  new NodejsPollingService(opt, url, freq, callback);
+export class FeatureHub {
 
-export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
-  public modifyRequestFunction: ModifyRequestFunction | undefined;
+  public static feature<T = any>(key: string): FeatureStateHolder<T> | undefined {
+    return this.context?.feature(key);
+  }
 
-  async post(url: string, update: FeatureStateUpdate): Promise<boolean> {
-    const loc = new URL(url);
-    const headers: Record<string, string> = {
-      "content-type": "application/json",
-    };
+  private static cfg: { fhConfig?: FeatureHubConfig, fhContext? : ClientContext } = {};
 
-    const req: FetchRequestOptions = {
-      method: "PUT",
-      headers,
-      protocol: loc.protocol,
-      host: loc.host,
-      hostname: loc.hostname,
-      port: loc.port,
-      path: loc.pathname,
-      search: loc.search,
-      timeout: 3000,
-    };
+  public static set(config?: FeatureHubConfig, context?: ClientContext) {
+    FeatureHub.cfg.fhConfig = config;
+    FeatureHub.cfg.fhContext = context;
+  }
 
-    this.modifyRequestFunction?.(req);
+  public static get context(): ClientContext | undefined {
+    return FeatureHub.cfg.fhContext;
+  }
 
-    // Extract any modified headers back
-    Object.assign(headers, req.headers);
+  public static get config(): FeatureHubConfig | undefined {
+    return FeatureHub.cfg.fhConfig;
+  }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+  static close() {
+    if (FeatureHub.config) {
+      FeatureHub.config.close();
 
-    FHLog.fhLog.trace("FeatureUpdater", req, update);
-
-    try {
-      const _url = `${req.protocol}//${req.host}${req.path}${req.search}`;
-
-      const response = await fetch(_url, {
-        method: req.method,
-        headers: req.headers,
-        body: JSON.stringify(update),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        fhLog.trace("update result -> error");
-        return false;
-      }
-
-      fhLog.trace("update result -> ", response.status);
-      return response.ok;
-    } catch (_e) {
-      fhLog.trace("update result -> error");
-      return false;
+      FeatureHub.set(undefined, undefined);
     }
   }
 }
 
 FeatureUpdater.featureUpdaterProvider = () => new NodejsFeaturePostUpdater();
 
-class NodejsGoogleAnalyticsApiClient implements GoogleAnalyticsApiClient {
-  cid(other: Map<string, string>): string {
-    return other.get("cid") || process.env["GA_CID"] || "";
-  }
+FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
+  new NodejsPollingService(opt, url, freq, callback);
 
-  postBatchUpdate(batchData: string): Promise<Response> {
-    return fetch("https://www.google-analytics.com/batch", {
-      method: "POST",
-      body: batchData,
-    });
-  }
-}
-
-GoogleAnalyticsCollector.googleAnalyticsClientProvider = () => new NodejsGoogleAnalyticsApiClient();
 EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) =>
   new FeatureHubEventSourceClient(config, repository);
