@@ -1,20 +1,16 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import type { SinonFakeTimers } from "sinon";
-import * as sinon from "sinon";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   type FeatureHubConfig,
   FeatureHubPollingClient,
   FHLog,
-  type InternalFeatureRepository,
   PollingBase,
   type PollingService,
 } from "../index";
 
 describe("basic polling sdk works as expected", () => {
   let poller: SubstituteOf<PollingService>;
-  let repo: SubstituteOf<InternalFeatureRepository>;
   let config: SubstituteOf<FeatureHubConfig>;
 
   beforeEach(() => {
@@ -28,7 +24,6 @@ describe("basic polling sdk works as expected", () => {
       console.log("FeatureHub/Trace: ", ...args);
     };
 
-    repo = Substitute.for<InternalFeatureRepository>();
     config = Substitute.for<FeatureHubConfig>();
     config.getHost().returns("http://localhost/");
     config.getApiKeys().returns(["12344"]);

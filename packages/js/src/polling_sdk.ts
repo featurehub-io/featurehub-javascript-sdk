@@ -1,11 +1,13 @@
 import type {
+  FeatureEnvironmentCollection,
   FeaturesFunction,
   PollingOptions,
   PollingService,
-  FeatureEnvironmentCollection, PromiseLikeData
+  PromiseLikeData,
 } from "featurehub-javascript-core-sdk";
-import {createBase64UrlSafeHash} from "./crypto-browser";
-import {fhLog, PollingBase} from "featurehub-javascript-core-sdk";
+import { fhLog, PollingBase } from "featurehub-javascript-core-sdk";
+
+import { createBase64UrlSafeHash } from "./crypto-browser";
 
 /**
  * This should never be used directly but we are exporting it because we need it
@@ -54,7 +56,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
     }
   }
 
-  public async poll(): Promise<unknown> {
+  public async poll(): Promise<void> {
     if (this._busy) {
       return new Promise((resolve, reject) => {
         this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
@@ -72,8 +74,8 @@ export class BrowserPollingService extends PollingBase implements PollingService
 
     const headers: Record<string, string> = {
       "Content-type": "application/json",
-      ...(this._etag ? { "if-none-match": this._etag } as Record<string, string> : {}),
-      ...(this._header ? { "x-featurehub": this._header } as Record<string, string> : {}),
+      ...(this._etag ? ({ "if-none-match": this._etag } as Record<string, string>) : {}),
+      ...(this._header ? ({ "x-featurehub": this._header } as Record<string, string>) : {}),
     };
 
     const response = await fetch(`${this.url}&contextSha=${this._shaHeader}`, { headers });

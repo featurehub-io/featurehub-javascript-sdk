@@ -155,7 +155,14 @@ describe("basic polling sdk works as expected", () => {
 
       class StubPoller extends PollingBase {
         constructor() {
-          super("", 200, () => {});
+          super(
+            "",
+            200,
+            async () => {
+              return "";
+            },
+            () => {},
+          );
           this._busy = false;
         }
 

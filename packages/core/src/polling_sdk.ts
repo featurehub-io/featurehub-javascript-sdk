@@ -1,13 +1,13 @@
+import type { HashAlgorithm } from "./crypto/types";
 import type { EdgeService } from "./edge_service";
 import { type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "./models";
-import type {HashAlgorithm} from "./crypto/types";
 
 export interface PollingService {
   get frequency(): number;
 
-  poll(): Promise<unknown>;
+  poll(): Promise<void>;
 
   stop(): void;
 
@@ -41,7 +41,12 @@ export abstract class PollingBase implements PollingService {
   protected _outstandingPromises: Array<PromiseLikeData> = [];
   protected readonly _createBase64UrlSafeHash: CryptoProvider;
 
-  protected constructor(url: string, frequency: number, createBase64UrlSafeHash: CryptoProvider, callback: FeaturesFunction) {
+  protected constructor(
+    url: string,
+    frequency: number,
+    createBase64UrlSafeHash: CryptoProvider,
+    callback: FeaturesFunction,
+  ) {
     this.url = url;
     this._frequency = frequency;
     this._shaHeader = "0";
@@ -66,7 +71,7 @@ export abstract class PollingBase implements PollingService {
     return this._frequency;
   }
 
-  public abstract poll(): Promise<unknown>;
+  public abstract poll(): Promise<void>;
 
   /**
    * Allow the cache control settings on the server override this polling _frequency

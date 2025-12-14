@@ -59,6 +59,7 @@
     "featurehub-tsconfig": "workspace:*",
     "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
+    "@types/sinon": "catalog:sinon",
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",

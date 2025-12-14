@@ -1,21 +1,11 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import type { SinonFakeTimers } from "sinon";
-import * as sinon from "sinon";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import {
-  type FeatureHubConfig,
-  FeatureHubPollingClient,
-  FHLog,
-  type InternalFeatureRepository,
-  PollingBase,
-  type PollingService,
-} from "../index";
-import {createBase64UrlSafeHash} from "../crypto-node";
+import { createBase64UrlSafeHash } from "../crypto-node";
+import { type FeatureHubConfig, FHLog, PollingBase, type PollingService } from "../index";
 
 describe("basic polling sdk works as expected", () => {
   let poller: SubstituteOf<PollingService>;
-  let repo: SubstituteOf<InternalFeatureRepository>;
   let config: SubstituteOf<FeatureHubConfig>;
 
   beforeEach(() => {
@@ -23,13 +13,10 @@ describe("basic polling sdk works as expected", () => {
 
     poller.busy.returns?.(false);
 
-    FeatureHubPollingClient.pollingClientProvider = () => poller;
-
     FHLog.fhLog.trace = (...args: any[]) => {
       console.log("FeatureHub/Trace: ", ...args);
     };
 
-    repo = Substitute.for<InternalFeatureRepository>();
     config = Substitute.for<FeatureHubConfig>();
     config.getHost().returns("http://localhost/");
     config.getApiKeys().returns(["12344"]);
@@ -41,7 +28,6 @@ describe("basic polling sdk works as expected", () => {
     const SESSION_HASH = "ZJ2mGsLI7CqpUgmQqueaBudcjnxW6SZ9uVuwMWASoe4";
 
     it("should produce consistent hash results for context headers", async () => {
-
       class TestPoller extends PollingBase {
         constructor() {
           super("", 0, createBase64UrlSafeHash, () => {});

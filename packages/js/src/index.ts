@@ -1,7 +1,15 @@
-import { BrowserPollingService } from "./polling_sdk";
-import {FeatureHubPollingClient,type ClientContext,EdgeFeatureHubConfig,type FeatureStateHolder,type FeatureHubConfig,fhLog} from "featurehub-javascript-core-sdk";
+import {
+  type ClientContext,
+  EdgeFeatureHubConfig,
+  type FeatureHubConfig,
+  FeatureHubPollingClient,
+  type FeatureStateHolder,
+  fhLog,
+} from "featurehub-javascript-core-sdk";
 
-export * from 'featurehub-javascript-core-sdk';
+import { BrowserPollingService } from "./polling_sdk";
+
+export * from "featurehub-javascript-core-sdk";
 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
   new BrowserPollingService(opt, url, freq, callback);

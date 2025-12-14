@@ -31,6 +31,9 @@ catalogs:
       specifier: 6.0.1
       version: 6.0.1
   sinon:
+    '@types/sinon':
+      specifier: ^10.0.13
+      version: 10.0.20
     sinon:
       specifier: ^15.0.1
       version: 15.2.0
@@ -407,6 +410,9 @@ importers:
       '@types/semver-compare':
         specifier: ^1.0.3
         version: 1.0.3
+      '@types/sinon':
+        specifier: catalog:sinon
+        version: 10.0.20
       '@vitest/coverage-istanbul':
         specifier: catalog:vitest
         version: 3.2.4(vitest@3.2.4(@types/node@22.18.10)(jiti@2.6.1)(jsdom@27.1.0)(less@4.4.0)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.2))
@@ -1612,6 +1618,12 @@ packages:
 
   '@types/serve-static@1.15.10':
     resolution: {integrity: sha512-tRs1dB+g8Itk72rlSI2ZrW6vZg0YrLI81iQSTkMmOqnqCaNr/8Ek4VwWcN5vZgCYWbg/JJSGBlUaYGAOP73qBw==}
+
+  '@types/sinon@10.0.20':
+    resolution: {integrity: sha512-2APKKruFNCAZgx3daAyACGzWuJ028VVCUDk6o2rw/Z4PXT0ogwdV4KUegW0MwVs0Zu59auPXbbuBJHF12Sx1Eg==}
+
+  '@types/sinonjs__fake-timers@15.0.1':
+    resolution: {integrity: sha512-Ko2tjWJq8oozHzHV+reuvS5KYIRAokHnGbDwGh/J64LntgpbuylF74ipEL24HCyRjf9FOlBiBHWBR1RlVKsI1w==}
 
   '@types/tough-cookie@4.0.5':
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
@@ -5473,6 +5485,12 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/node': 22.18.11
       '@types/send': 0.17.6
+
+  '@types/sinon@10.0.20':
+    dependencies:
+      '@types/sinonjs__fake-timers': 15.0.1
+
+  '@types/sinonjs__fake-timers@15.0.1': {}
 
   '@types/tough-cookie@4.0.5': {}
 

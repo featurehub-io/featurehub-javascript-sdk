@@ -1,14 +1,17 @@
 import type {
   FeatureEnvironmentCollection,
-  FeaturesFunction, FeatureStateUpdate, FeatureUpdatePostManager,
+  FeaturesFunction,
+  FeatureStateUpdate,
+  FeatureUpdatePostManager,
   PollingOptions,
   PollingService,
   PromiseLikeFunction,
-  RejectLikeFunction
+  RejectLikeFunction,
 } from "featurehub-javascript-core-sdk";
-import {FeatureHubPollingClient, fhLog, FHLog, PollingBase} from "featurehub-javascript-core-sdk";
-import {URL} from "url";
-import {createBase64UrlSafeHash} from "./crypto-node";
+import { FHLog, fhLog, PollingBase } from "featurehub-javascript-core-sdk";
+import { URL } from "url";
+
+import { createBase64UrlSafeHash } from "./crypto-node";
 
 interface PromiseLikeData {
   resolve: PromiseLikeFunction;
@@ -34,27 +37,34 @@ export class NodejsPollingService extends PollingBase implements PollingService 
   private readonly _options: PollingOptions;
   public modifyRequestFunction: ModifyRequestFunction | undefined;
 
-  constructor(options: PollingOptions, url: string, frequency: number, _callback: FeaturesFunction) {
+  constructor(
+    options: PollingOptions,
+    url: string,
+    frequency: number,
+    _callback: FeaturesFunction,
+  ) {
     super(url, frequency, createBase64UrlSafeHash, _callback);
 
     this._options = options;
     this.uri = new URL(this.url);
   }
 
-  public async poll(): Promise<unknown> {
+  public async poll(): Promise<void> {
     if (this._busy) {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
       });
     }
 
     if (this._stopped) {
-      return new Promise((resolve) => resolve());
+      return new Promise<void>((resolve) => resolve());
     }
 
     this._busy = true;
 
-    const headers: Record<string, string> = this._header ? { "x-featurehub": this._header } as Record<string, string> : {};
+    const headers: Record<string, string> = this._header
+      ? ({ "x-featurehub": this._header } as Record<string, string>)
+      : {};
 
     if (this._etag) headers["if-none-match"] = this._etag;
 
@@ -107,7 +117,6 @@ export class NodejsPollingService extends PollingBase implements PollingService 
     this.resolveOutstanding();
   }
 }
-
 
 export class NodejsFeaturePostUpdater implements FeatureUpdatePostManager {
   public modifyRequestFunction: ModifyRequestFunction | undefined;

@@ -1,13 +1,17 @@
 import { EventSource } from "eventsource";
 import {
+  ClientContext,
   EdgeFeatureHubConfig,
+  FeatureHubConfig,
   FeatureHubEventSourceClient,
   FeatureHubPollingClient,
+  FeatureStateHolder,
   FeatureUpdater,
-  FeatureStateHolder, FeatureHubConfig, ClientContext,
 } from "featurehub-javascript-core-sdk";
-import {NodejsFeaturePostUpdater, NodejsPollingService} from "./polling_sdk";
 
+import { NodejsFeaturePostUpdater, NodejsPollingService } from "./polling_sdk";
+
+export * from "./polling_sdk";
 export * from "featurehub-javascript-core-sdk";
 
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
@@ -15,12 +19,11 @@ FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
 };
 
 export class FeatureHub {
-
   public static feature<T = any>(key: string): FeatureStateHolder<T> | undefined {
     return this.context?.feature(key);
   }
 
-  private static cfg: { fhConfig?: FeatureHubConfig, fhContext? : ClientContext } = {};
+  private static cfg: { fhConfig?: FeatureHubConfig; fhContext?: ClientContext } = {};
 
   public static set(config?: FeatureHubConfig, context?: ClientContext) {
     FeatureHub.cfg.fhConfig = config;
