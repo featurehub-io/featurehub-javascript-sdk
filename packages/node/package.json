@@ -46,7 +46,10 @@
     "compile": "pnpm run build && pnpm run link",
     "release": "cp ../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
@@ -55,7 +58,9 @@
     "rimraf": "catalog:rimraf",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.2.0"
+    "vite": "7.2.0",
+    "vitest": "catalog:vitest",
+    "sinon": "catalog:sinon"
   },
   "dependencies": {
     "eventsource": "^4.0.0",

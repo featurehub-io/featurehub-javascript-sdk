@@ -14,13 +14,6 @@ FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
   return new EventSource(url, dict);
 };
 
-declare global {
-  interface Window {
-    fhConfig?: FeatureHubConfig;
-    fhContext?: ClientContext;
-  }
-}
-
 export class FeatureHub {
 
   public static feature<T = any>(key: string): FeatureStateHolder<T> | undefined {

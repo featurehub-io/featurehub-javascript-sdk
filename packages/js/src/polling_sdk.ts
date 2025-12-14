@@ -2,10 +2,10 @@ import type {
   FeaturesFunction,
   PollingOptions,
   PollingService,
-  PollingBase, FeatureEnvironmentCollection, PromiseLikeData
+  FeatureEnvironmentCollection, PromiseLikeData
 } from "featurehub-javascript-core-sdk";
 import {createBase64UrlSafeHash} from "./crypto-browser";
-import {fhLog} from "featurehub-javascript-core-sdk";
+import {fhLog, PollingBase} from "featurehub-javascript-core-sdk";
 
 /**
  * This should never be used directly but we are exporting it because we need it

@@ -11,6 +11,7 @@ import {
   PollingBase,
   type PollingService,
 } from "../index";
+import {createBase64UrlSafeHash} from "../crypto-node";
 
 describe("basic polling sdk works as expected", () => {
   let poller: SubstituteOf<PollingService>;
@@ -39,52 +40,7 @@ describe("basic polling sdk works as expected", () => {
     const USER_ID_HASH = "F7827sASf1GewZfMvDzBlYpLnaFcKM0xchzNEElvh94";
     const SESSION_HASH = "ZJ2mGsLI7CqpUgmQqueaBudcjnxW6SZ9uVuwMWASoe4";
 
-    let dom: any;
-    let originalWindow: any;
-    let originalDocument: any;
-
-    beforeAll(async () => {
-      // Create JSDOM environment to simulate browser
-      const { JSDOM } = await import("jsdom");
-      dom = new JSDOM("", {
-        url: "https://localhost",
-        pretendToBeVisual: true,
-        resources: "usable",
-      });
-
-      // Store original window
-      originalWindow = (globalThis as any).window;
-      originalDocument = (globalThis as any).document;
-
-      // Set up browser-like environment
-      (globalThis as any).window = dom.window;
-
-      Object.defineProperty(globalThis, "window", {
-        value: dom.window,
-        writable: true,
-        configurable: true,
-      });
-
-      const { webcrypto } = await import("crypto");
-      Object.defineProperty(globalThis.window, "crypto", {
-        value: {
-          ...webcrypto,
-          subtle: webcrypto.subtle,
-        },
-        writable: true,
-        configurable: true,
-      });
-    });
-
-    afterAll(() => {
-      // Restore original window
-      (globalThis as any).window = originalWindow;
-      (globalThis as any).document = originalDocument;
-      dom.window.close();
-    });
-
     it("should produce consistent hash results for context headers", async () => {
-      const { createBase64UrlSafeHash } = await import("../crypto-browser");
 
       class TestPoller extends PollingBase {
         constructor() {
@@ -118,8 +74,6 @@ describe("basic polling sdk works as expected", () => {
     });
 
     it("produces same hash results in browser environment as node environment", async () => {
-      const { createBase64UrlSafeHash } = await import("../crypto-browser");
-
       const testHash = await createBase64UrlSafeHash("sha256", "test");
       expect(testHash).toBe(TEST_HASH);
 

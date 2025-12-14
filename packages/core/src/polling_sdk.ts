@@ -73,11 +73,13 @@ export abstract class PollingBase implements PollingService {
    * @param cacheHeader
    */
   public parseCacheControl(cacheHeader: string | undefined | null) {
-    const maxAge = cacheHeader?.match(/max-age=(\d+)/);
-    if (maxAge) {
-      const newFreq = parseInt(maxAge[1]!, 10);
-      if (newFreq > 0) {
-        this._frequency = newFreq * 1000;
+    if (cacheHeader) {
+      const maxAge = cacheHeader.match(/max-age=(\d+)/);
+      if (maxAge) {
+        const newFreq = parseInt(maxAge[1]!, 10);
+        if (newFreq > 0) {
+          this._frequency = newFreq * 1000;
+        }
       }
     }
   }
@@ -86,7 +88,7 @@ export abstract class PollingBase implements PollingService {
   // then node will fail
 
   protected async delayTimer(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       resolve();
     });
   }

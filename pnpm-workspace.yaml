@@ -16,6 +16,9 @@ catalogs:
     "@vitest/coverage-istanbul": "3.2.4"
   node:
     "@types/node": "22.18.10"
+  sinon:
+    "@types/sinon": "^10.0.13"
+    "sinon": "^15.0.1"
   react19:
     react: "19.2.0"
     react-dom: "19.2.0"
