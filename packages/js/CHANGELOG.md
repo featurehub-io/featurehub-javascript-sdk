@@ -9,7 +9,7 @@
 - updates to react and solid sdk's to recognize lazy initialisation
 - fixed issue with complex strategies with percentage evaluation
 - address issue with local storage caching of non-generic attributes
- 
+
 #### 1.4.0
 
 - polling functionality changed to ensure double polling doesn't happen when the context is changed, but as node
