@@ -3,11 +3,8 @@
   "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM"],
-    "types": ["node"],
-    "paths": {
-      "featurehub-javascript-core-sdk": ["../core/src"]
-    }
+    "types": ["node"]
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }

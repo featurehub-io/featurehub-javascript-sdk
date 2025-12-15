@@ -8,7 +8,6 @@
     "dev": "vite",
     "build": "vite build",
     "clean": "rimraf node_modules dist",
-    "link": "pnpm link ../../packages/js",
     "preview": "vite preview",
     "install-sdk": "pnpm --prefix ../../packages/react run build && rm -rf node_modules && pnpm i",
     "typecheck": "tsc --noEmit"

@@ -37,7 +37,12 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey} pollInterval={5000}>
+    <FeatureHub
+      url="http://localhost:8085"
+      apiKey="34dd1279-2080-4dd8-8e7a-a0de35a03727/nl2poOELhloGwEj9WjIM6DlzamxjTtizKbfnzqgI"
+      userKey={userKey}
+      pollInterval={5000}
+    >
       <Main />
     </FeatureHub>
   );
@@ -57,7 +62,7 @@ function Main() {
     Make sure they exist when you run your local FeatureHub container instance for this example.
   */
 
-  const shouldUpperCaseText = useFeature("uppercase_text");
+  const shouldUpperCaseText = useFeature<boolean>("uppercase_text");
   const textColour = useFeature<string>("text_colour");
   const [displayText, setDisplayText] = useState(SAMPLE_TEXT);
 

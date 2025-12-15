@@ -313,7 +313,7 @@ export class ApplyFeature {
           }
 
           // this was only a percentage and had no other attributes
-          if (rsi.attributes?.length) {
+          if ((rsi.attributes?.length || 0) === 0) {
             basePercentage.set(percentageKey, basePercentage.get(percentageKey)! + rsi.percentage!);
           }
         }

@@ -31,8 +31,11 @@ export function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
           setValue(client().feature(key).value);
         });
 
-      // Need this in order for Solid to pick up the initial value properly for some reason
-      setValue(() => client().feature<T | undefined>(key).value);
+      // check if the feature exists already, which means the repository already has a value and
+      // solid is asking for the effect AFTER the data has already arrived
+      if (client().feature<T | undefined>(key).isSet()) {
+        setValue(() => client().feature<T | undefined>(key).value);
+      }
     }),
   );
 

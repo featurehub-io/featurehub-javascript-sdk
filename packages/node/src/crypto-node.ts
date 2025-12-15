@@ -2,8 +2,7 @@
  * Node.js/Bun/Deno crypto utilities
  * This module should only be imported in server environments
  */
-
-import type { HashAlgorithm } from "./types";
+import { HashAlgorithm } from "featurehub-javascript-core-sdk";
 
 export const createBase64UrlSafeHash = async (
   algorithm: HashAlgorithm,

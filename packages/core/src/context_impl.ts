@@ -214,6 +214,9 @@ export class ServerEvalFeatureContext extends BaseClientContext {
         this._repository.notReady();
 
         if (this._currentEdge != null && this._currentEdge.requiresReplacementOnHeaderChange()) {
+          fhLog.trace(
+            "We are changing the contextSha and have to close the existing polling connection.",
+          );
           this._currentEdge.close();
           this._currentEdge = undefined;
         }

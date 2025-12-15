@@ -15,7 +15,7 @@
 import { Configuration } from "./configuration";
 // Some imports not used depending on template conditions
 // @ts-ignore
-import globalAxios, { AxiosPromise, AxiosInstance } from "axios";
+import globalAxios, { type AxiosInstance } from "axios";
 
 export const BASE_PATH = "http://localhost:3000".replace(/\/+$/, "");
 
@@ -72,6 +72,6 @@ export class RequiredError extends Error {
     public field: string,
     msg?: string,
   ) {
-    super(msg);
+    super(msg || "requiredError");
   }
 }

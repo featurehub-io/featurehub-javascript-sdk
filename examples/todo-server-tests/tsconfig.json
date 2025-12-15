@@ -3,7 +3,10 @@
   "extends": "featurehub-tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "ESNext",
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+
     "declaration": true,
     "noEmitOnError": true,
     "verbatimModuleSyntax": false,
@@ -11,7 +14,6 @@
     "lib": ["ESNext", "DOM"],
     "types": ["node"],
     "paths": {
-      "featurehub-javascript-client-sdk": ["../../packages/js/src"],
       "featurehub-javascript-node-sdk": ["../../packages/node/src"]
     }
   },
@@ -19,6 +21,6 @@
     "esm": true,
     "ignore": ["node_modules/.*", "dist/.*", ".*/dist/.*"]
   },
-  "include": ["src/**/*", "features/**/*"],
+  "include": ["src/**/*.ts", "features/**/*.ts"],
   "exclude": ["node_modules", "dist", "../../packages/*/dist"]
 }

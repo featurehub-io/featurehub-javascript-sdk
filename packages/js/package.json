@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-client-sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "FeatureHub client/browser SDK",
   "author": "info@featurehub.io",
   "type": "module",
@@ -40,7 +40,6 @@
     "build:watch": "tsup --watch",
     "clean": "rimraf node_modules dist",
     "tsc": "node ./node_modules/typescript/bin/tsc -p",
-    "link": "pnpm link --global",
     "release": "cp ../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
     "lint": "eslint .",
@@ -56,12 +55,11 @@
     "@types/netmask": "^2.0.5",
     "@types/node": "catalog:node",
     "@types/semver-compare": "^1.0.3",
-    "@types/sinon": "^10.0.13",
     "@vitest/coverage-istanbul": "catalog:vitest",
     "featurehub-tsconfig": "workspace:*",
     "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
-    "sinon": "^15.0.1",
+    "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
     "vite": "7.2.0",
@@ -70,7 +68,8 @@
   "dependencies": {
     "murmurhash": "^2.0.1",
     "netmask": "^2.0.2",
-    "semver-compare": "^1.0.0"
+    "semver-compare": "^1.0.0",
+    "featurehub-javascript-core-sdk": "workspace:*"
   },
   "engines": {
     "node": ">=20.0.0"
