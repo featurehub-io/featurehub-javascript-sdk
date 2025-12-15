@@ -41,8 +41,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
     if (url !== this.localStorageLastUrl) {
       this.localStorageLastUrl = url;
 
-      // local storage url should include sha otherwise it gets the wrong state
-      const storedData = BrowserPollingService.localStorageRequestor().getItem(`${this.url}&contextSha=${this._shaHeader}`);
+      const storedData = BrowserPollingService.localStorageRequestor().getItem(url);
       if (storedData) {
         try {
           const data = JSON.parse(storedData);
@@ -70,8 +69,13 @@ export class BrowserPollingService extends PollingBase implements PollingService
       });
     }
 
+    // local storage url should include sha otherwise it gets the wrong state
+    const fullUrl = `${this.url}&contextSha=${this._shaHeader}`;
+
     // check in case we have a cached copy of it
-    this.loadLocalState(this.url);
+    this.loadLocalState(fullUrl);
+
+    this._busy = true;
 
     const headers: Record<string, string> = {
       "Content-type": "application/json",
@@ -79,7 +83,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
       ...(this._header ? ({ "x-featurehub": this._header } as Record<string, string>) : {}),
     };
 
-    const response = await fetch(`${this.url}&contextSha=${this._shaHeader}`, { headers });
+    const response = await fetch(fullUrl, { headers });
 
     if (response.status === 304) {
       this._busy = false;
@@ -98,7 +102,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
 
     try {
       BrowserPollingService.localStorageRequestor().setItem(
-        this.url,
+        fullUrl,
         JSON.stringify({ e: environments }),
       );
     } catch (_) {
