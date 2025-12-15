@@ -32,8 +32,8 @@ class TodoData {
 class App extends React.Component<object, { todos: TodoData }> {
   private titleInput!: HTMLInputElement;
 
-  constructor() {
-    super([]);
+  constructor(props: object) {
+    super(props);
 
     this.state = {
       todos: new TodoData(),
@@ -41,9 +41,6 @@ class App extends React.Component<object, { todos: TodoData }> {
   }
 
   async initializeFeatureHub() {
-    // connect to Google Analytics
-    // FeatureHub.config.addAnalyticCollector(new GoogleAnalyticsCollector('UA-1234', '1234-5678-abcd-1234'));
-
     FeatureHub.config.addReadinessListener((_readyness: Readyness, firstTimeReady: boolean) => {
       if (firstTimeReady) {
         const color = FeatureHub.context.getString("SUBMIT_COLOR_BUTTON");
@@ -75,9 +72,10 @@ class App extends React.Component<object, { todos: TodoData }> {
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
-  override componentWillUnmount(): void {
-    FeatureHub.close(); // tidy up
-  }
+  // this kills polling immediately
+  // override componentWillUnmount(): void {
+  //   FeatureHub.close(); // tidy up
+  // }
 
   async addTodo(title: string) {
     const todo: Todo = {

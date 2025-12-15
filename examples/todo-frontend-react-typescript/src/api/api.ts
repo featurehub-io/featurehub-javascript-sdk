@@ -25,7 +25,7 @@ import {
   createRequestFunction,
 } from "./common";
 // @ts-ignore
-import { BASE_PATH, COLLECTION_FORMATS, RequestArgs, BaseAPI, RequiredError } from "./base";
+import { BASE_PATH, COLLECTION_FORMATS, type RequestArgs, BaseAPI, RequiredError } from "./base";
 
 /**
  *

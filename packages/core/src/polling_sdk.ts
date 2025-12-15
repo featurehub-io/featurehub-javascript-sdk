@@ -49,6 +49,7 @@ export abstract class PollingBase implements PollingService {
   ) {
     this.url = url;
     this._frequency = frequency;
+    fhLog.trace(`Created polling client with url ${this.url} and frequency ${this._frequency}`);
     this._shaHeader = "0";
     this._callback = callback;
     this._busy = false;
@@ -78,10 +79,13 @@ export abstract class PollingBase implements PollingService {
    * @param cacheHeader
    */
   public parseCacheControl(cacheHeader: string | undefined | null) {
+    fhLog.trace(`cache header is ${cacheHeader}`);
     if (cacheHeader) {
       const maxAge = cacheHeader.match(/max-age=(\d+)/);
+      fhLog.trace(`max age is ${maxAge}`);
       if (maxAge) {
         const newFreq = parseInt(maxAge[1]!, 10);
+        fhLog.trace(`new freq is ${newFreq} ${newFreq > 0}`);
         if (newFreq > 0) {
           this._frequency = newFreq * 1000;
         }
@@ -278,7 +282,7 @@ export class FeatureHubPollingClient implements EdgeService {
 
         // set the next one going before we resolve as otherwise the test will fail
         this._readyNextPoll();
-
+        fhLog.trace("next polled finished");
         if (this._pollPromiseResolve !== undefined) {
           try {
             this._pollPromiseResolve();
@@ -330,15 +334,14 @@ export class FeatureHubPollingClient implements EdgeService {
       this._currentTimer = setTimeout(() => this._restartTimer(), this._pollingService.frequency);
     } else {
       fhLog.trace(
-        "no polling service or 0 frequency, stopping polling.",
-        this._pollingService === undefined,
-        this._pollingService?.frequency,
+        `no polling service or 0 frequency, stopping polling. defined? ${this._pollingService} frequency: ${this._pollingService?.frequency}`,
       );
     }
   }
 
   private response(environments: Array<FeatureEnvironmentCollection>): void {
     if (environments.length === 0) {
+      fhLog.trace(`There are no environments for this apikey, stopping polling.`);
       this._startable = false;
       this.stop();
       this._repository.notify(SSEResultState.Failure, null);

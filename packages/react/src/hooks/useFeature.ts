@@ -1,7 +1,7 @@
 import type { FeatureStateHolder } from "featurehub-javascript-client-sdk";
 import { useEffect, useState } from "react";
 
-import useFeatureHubClient from "./useFeatureHubClient";
+import useFeatureHub from "./useFeatureHub";
 
 /**
  * React hook to subscribe to FeatureHub feature key.
@@ -11,18 +11,24 @@ import useFeatureHubClient from "./useFeatureHubClient";
  * @returns {T | undefined} value - generic type of feature value (default boolean)
  */
 function useFeature<T = boolean>(key: string): T | undefined {
-  const client = useFeatureHubClient();
-  const [value, setValue] = useState(client.feature<T | undefined>(key).value);
+  const featurehub = useFeatureHub();
+  const [value, setValue] = useState(featurehub.client.feature<T | undefined>(key).value);
 
   useEffect(() => {
     const listener = (fsh: FeatureStateHolder<T | undefined>) => setValue(fsh.value);
+    const feature = featurehub.client.feature(key);
+    const listenerHandler = feature.addListener(listener);
 
-    client.feature(key).addListener(listener);
+    // if we already have a value when this request is made, trigger the listener otherwise we can use the
+    // effect AFTER we have features and the client never uses them.
+    if (feature.isSet()) {
+      listener(feature);
+    }
 
     return () => {
-      client.feature(key).removeListener(listener);
+      featurehub.client.feature(key).removeListener(listenerHandler);
     };
-  }, [client, key]);
+  }, [featurehub, key]);
 
   return value;
 }

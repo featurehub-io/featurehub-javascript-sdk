@@ -1,7 +1,6 @@
 {
   "name": "featurehub-react-example",
   "version": "2.1.1",
-  "type": "module",
   "private": true,
   "type": "module",
   "scripts": {

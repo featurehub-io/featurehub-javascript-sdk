@@ -71,7 +71,7 @@ app.get("/health/liveness", (_req, res) => {
 app.use(
   cors({
     origin: "*",
-    allowedHeaders: ["baggage"],
+    allowedHeaders: ["baggage", "content-type"],
     exposedHeaders: [],
   }),
 );

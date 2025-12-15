@@ -1,3 +1,15 @@
+#### 1.5.0
+
+- extract all shared code into `core` module, leaving only browser specific logic
+  in `client`. `client` now depends on `core` and `node` now depends on `core` rather
+  than `client` so there are no window objects.
+- swap to `fetch` as the standard for all HTTP/s communication across the board
+- using browser or node native `crypto` library to generate sha256s
+- swapped to pnpm to generate more secure packages
+- updates to react and solid sdk's to recognize lazy initialisation
+- fixed issue with complex strategies with percentage evaluation
+- address issue with local storage caching of non-generic attributes
+
 #### 1.4.0
 
 - polling functionality changed to ensure double polling doesn't happen when the context is changed, but as node

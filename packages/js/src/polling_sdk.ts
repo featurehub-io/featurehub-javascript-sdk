@@ -41,7 +41,8 @@ export class BrowserPollingService extends PollingBase implements PollingService
     if (url !== this.localStorageLastUrl) {
       this.localStorageLastUrl = url;
 
-      const storedData = BrowserPollingService.localStorageRequestor().getItem(url);
+      // local storage url should include sha otherwise it gets the wrong state
+      const storedData = BrowserPollingService.localStorageRequestor().getItem(`${this.url}&contextSha=${this._shaHeader}`);
       if (storedData) {
         try {
           const data = JSON.parse(storedData);
@@ -58,13 +59,13 @@ export class BrowserPollingService extends PollingBase implements PollingService
 
   public async poll(): Promise<void> {
     if (this._busy) {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
       });
     }
 
     if (this._stopped) {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         resolve();
       });
     }

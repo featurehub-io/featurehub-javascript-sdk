@@ -184,6 +184,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   forceClose(): void {
+    fhLog.trace(`force close requested`);
     this._edgeServices.forEach((es) => {
       es.close();
     });

@@ -9,6 +9,7 @@ import {
 
 import { BrowserPollingService } from "./polling_sdk";
 
+export * from "./polling_sdk";
 export * from "featurehub-javascript-core-sdk";
 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
@@ -21,18 +22,23 @@ declare global {
   }
 }
 
+const fhConfigKey = "fhConfig";
+const fhContextKey = "fhContext";
+const fhUnloadListenerLoaded = "fhUnloadListenerExists";
+const expectedValueForUnload = "featurehub-initialized";
+
 export class FeatureHub {
   public static feature<T = any>(key: string): FeatureStateHolder<T> {
     return this.context.feature(key);
   }
 
   public static set(config: FeatureHubConfig, context: ClientContext) {
-    window["fhConfig"] = config;
-    window["fhContext"] = context;
+    window[fhConfigKey] = config;
+    window[fhContextKey] = context;
   }
 
   public static get context(): ClientContext {
-    const fhContext = window["fhContext"];
+    const fhContext = window[fhContextKey];
     if (fhContext) {
       return fhContext;
     }
@@ -41,7 +47,7 @@ export class FeatureHub {
   }
 
   public static get config(): FeatureHubConfig {
-    const fhConfig = window["fhConfig"];
+    const fhConfig = window[fhConfigKey];
     if (fhConfig) {
       return fhConfig;
     }
@@ -50,6 +56,25 @@ export class FeatureHub {
   }
 
   public static _initialize() {
+    // @ts-expect-error of course it is an any
+    if (!window[fhUnloadListenerLoaded]) {
+      // @ts-expect-error of course it is an any
+      window[fhUnloadListenerLoaded] = expectedValueForUnload;
+
+      window.addEventListener("beforeunload", () => {
+        const cfg = window[fhConfigKey];
+        if (cfg) {
+          try {
+            fhLog.trace("unloading featurehub config!");
+            (cfg as FeatureHubConfig).close();
+          } catch (_e) {
+            // ignore
+          }
+        } else {
+          fhLog.trace("featurehub not configured");
+        }
+      });
+    }
     // check for a meta tag with the featurehub API key and url
     const metaTags = document.getElementsByTagName("meta");
     const apiKeys: Array<string> = [];
@@ -67,6 +92,32 @@ export class FeatureHub {
         apiKeys.push(content);
       } else if (name === "featurehub-interval") {
         pollInterval = content;
+      } else if (name === "featurehub-loglevel") {
+        switch (content) {
+          // @ts-expect-error we want fallthrough
+
+          case "trace":
+            fhLog.trace = (..._args: unknown[]) => {
+              console.log("FeatureHub/Trace: ", ..._args);
+            };
+          // @ts-expect-error  we want fallthrough
+          // eslint-disable-next-line
+          case "log":
+            fhLog.log = (..._args: unknown[]) => {
+              console.log("FeatureHub/Debug: ", ..._args);
+            };
+          // eslint-disable-next-line
+          case "error":
+            fhLog.error = (..._args: unknown[]) => {
+              console.error("FeatureHub/Debug: ", ..._args);
+            };
+            break;
+          default:
+            fhLog.trace = () => {};
+            fhLog.log = () => {};
+            fhLog.error = () => {};
+            break;
+        }
       } else if (content && name?.startsWith("featurehub-")) {
         params.push([name.substring(11), content]);
       }
