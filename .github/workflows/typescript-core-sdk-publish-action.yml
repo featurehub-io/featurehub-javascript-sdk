@@ -33,5 +33,3 @@ jobs:
       - name: Compile sources and Publish to NPM
         run: pnpm run release
         working-directory: packages/core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
