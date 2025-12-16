@@ -69,7 +69,7 @@
     "murmurhash": "^2.0.1",
     "netmask": "^2.0.2",
     "semver-compare": "^1.0.0",
-    "featurehub-javascript-core-sdk": "workspace:*"
+    "featurehub-javascript-core-sdk": "^1.5.0"
   },
   "engines": {
     "node": ">=20.0.0"
