@@ -44,7 +44,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "compile": "pnpm run build && pnpm run link",
-    "release": "cp ../../README.md . && pnpm run build && pnpm publish --no-git-checks --provenance --access public",
+    "release": "cp ../../README.md . && pnpm run build && pnpm publish --no-git-checks --access public",
     "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
