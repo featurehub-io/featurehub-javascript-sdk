@@ -25,11 +25,11 @@ jobs:
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: packages/js
       - name: Run Tests
         run: pnpm run test
         working-directory: packages/js
       - name: Compile sources and Publish to NPM
-        run: pnpm run release
+        run: NODE_AUTH_TOKEN="" pnpm run release
         working-directory: packages/js

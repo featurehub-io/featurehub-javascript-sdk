@@ -25,13 +25,11 @@ jobs:
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: packages/solid
       - name: Install Peer Dependencies
         run: pnpm install featurehub-javascript-client-sdk solid-js
         working-directory: packages/solid
       - name: Compile sources and Publish to NPM
-        run: pnpm run release
+        run: NODE_AUTH_TOKEN="" pnpm run release
         working-directory: packages/solid
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
