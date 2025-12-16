@@ -40,7 +40,7 @@
     "build:watch": "tsup --watch",
     "clean": "rimraf node_modules dist",
     "tsc": "node ./node_modules/typescript/bin/tsc -p",
-    "release": "cp ../README.md . && pnpm run build && pnpm publish",
+    "release": "cp ../../README.md . && pnpm run build && pnpm publish",
     "prepublishOnly": "pnpm run build",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

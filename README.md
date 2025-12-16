@@ -532,23 +532,6 @@ You can replace these methods with whatever logger you use to ensure you get the
 
 There is a `.quiet()` method available on FHLog which will silence logs.
 
-### Connecting to Google Analytics
-
-To see feature analytics (events) fire in your Google Analytics, you will require to have valid GA Tracking ID, e.g. 'UA-XXXXXXXXX-X'.
-You also need to specify a CID - a customer id this is associate with GA.
-Read more about CID [here](https://stackoverflow.com/questions/14227331/what-is-the-client-id-when-sending-tracking-data-to-google-analytics-via-the-mea)
-
-```typescript
-// add an analytics adapter with a random or known CID
-fhConfig.addAnalyticCollector(new GoogleAnalyticsCollector("UA-1234", "1234-5678-abcd-1234"));
-```
-
-To log an event in Google Analytics:
-
-```typescript
-fhClient.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]])); //indicate value of the event through gaValue
-```
-
 ### NodeJS server usage
 
 For the full example see [here](https://github.com/featurehub-io/featurehub-javascript-sdk/tree/main/examples/todo-backend-typescript)
