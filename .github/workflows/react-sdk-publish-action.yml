@@ -30,6 +30,21 @@ jobs:
       - name: Install Peer Dependencies
         run: pnpm install featurehub-javascript-client-sdk react
         working-directory: packages/react
+      - name: Clear npm auth config for OIDC
+        # Remove the _authToken line from .npmrc that setup-node creates
+        # This allows npm to use OIDC instead of token-based auth
+        # See: https://github.com/actions/setup-node/issues/1440
+        run: |
+         echo "Contents of .npmrc before cleanup:"
+         cat $NPM_CONFIG_USERCONFIG || true
+         # Remove any authToken lines to allow OIDC
+         sed -i '/_authToken/d' $NPM_CONFIG_USERCONFIG || true
+         echo "Contents of .npmrc after cleanup:"
+         cat $NPM_CONFIG_USERCONFIG || true
+         # Also unset the env var
+         unset NODE_AUTH_TOKEN
       - name: Compile sources and Publish to NPM
-        run: NODE_AUTH_TOKEN="" pnpm run release
+        run: pnpm run release
+        env:
+          NODE_AUTH_TOKEN: ''
         working-directory: packages/react
