@@ -1,4 +1,4 @@
-name: Publish featurehub-javascript-client-sdk package to NPM registry
+name: Publish client-sdk package to NPM registry
 on:
   workflow_dispatch:
 
