@@ -12,7 +12,7 @@ WORKDIR /sdk
 # Enable pnpm
 RUN corepack enable pnpm
 
-COPY * /sdk
+COPY / /sdk/
 
 # Install all dependencies
 RUN pnpm install --frozen-lockfile
