@@ -1,5 +1,9 @@
 .PHONY: image-backend image-tests start-backend start-backend-qa test-server test-server-tags test-server-qa test-server-qa-tags
 
+image-e2e:
+	@echo "Building full image for e2e tests"
+	docker build -f Dockerfile.e2e -t featurehub/js-sdk-e2e:latest .
+
 image-backend:
 	@echo "Building Docker image for backend with integrated frontend..."
 	docker build -f Dockerfile.backend -t featurehub/js-sdk-backend:latest .
@@ -44,7 +48,7 @@ test-server-tags:
 	@echo "Running todo-server-tests (full integration) with tags: $(TAGS)"
 	@$(MAKE) _run-test TEST_ENV="$(TEST_FULL_ENV)" TAGS="$(TAGS)"
 
-# Usage: make test-server-qa-tags TAGS=@smoke  
+# Usage: make test-server-qa-tags TAGS=@smoke
 test-server-qa-tags:
 	@echo "Running todo-server-tests (QA mode) with tags: $(TAGS)"
 	@$(MAKE) _run-test TEST_ENV="$(TEST_BASE_ENV)" TAGS="$(TAGS)"

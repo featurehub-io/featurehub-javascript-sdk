@@ -5,6 +5,7 @@
     "lib": ["ESNext", "DOM"],
     "types": ["node"],
     "paths": {
+      "featurehub-javascript-core-sdk": ["../core/src"]
     }
   },
   "include": ["**/*.ts"],
