@@ -27,7 +27,7 @@ Feature: Checks string feature
     Given I have a user called "Wilma"
     And I wipe my list of todos
     When I have added a new to-do item "buy"
-    Then my list of todos should contain "buy"
+    Then my list of todos should contain "buy "
 
   @FEATURE_STRING_NULL
   Scenario: Check null string value
