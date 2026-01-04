@@ -63,7 +63,7 @@ Before({ tags: "@FEATURE_STRING_MULTI" }, async function (this: CustomWorld) {
 Before({ tags: "@FEATURE_STRING_EMPTY" }, async function (this: CustomWorld) {
   await this.updateFeature("FEATURE_STRING", "");
   await awaitCompletionOfChange((ctx: ClientContext) => {
-    expect(ctx.feature("FEATURE_STRING").isSet()).to.not.be.true;
+    expect(ctx.feature("FEATURE_STRING").str).to.eq("");
   });
 });
 
