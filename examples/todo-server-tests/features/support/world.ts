@@ -120,25 +120,20 @@ export class CustomWorld {
   }
 
   async lockFeature(name: string, locked: boolean = true) {
-    const featureUpdater = this.addRequestIdHeaderToFeatureUpdater();
-    const timeout = process.env["FEATUREHUB_POLLING_INTERVAL"]
-      ? parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!) + 4000
-      : 7000;
-    const interval = 1000;
+    const pollingInterval = parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"] || '0');
+    const timeout = (pollingInterval > 0) ? (pollingInterval + 4000) : 7000;
+    const interval = (pollingInterval > 0 && pollingInterval < 1000) ? 500 : 1000;
     let counter = 0;
 
-    this.response = await featureUpdater.updateKey(name, {
-      lock: locked,
-    } as FeatureStateUpdate);
-    console.log(`Feature ${name}: lock true, response is ${this.response}`);
-    console.log(`Feature ${name}: waiting for lock to be true`);
+    await this.justLockFeature(name, locked);
+    console.log(`Feature ${name}: waiting for lock to be ${locked}, timeout is ${timeout} interval is ${interval}`);
     const ctx = await Config.fhConfig.newContext().build();
     await waitForExpect(
       async () => {
         const feature: FeatureStateHolder = ctx.feature(name);
         console.log(`Lock is ${feature.isLocked()} vs ${locked}`);
         counter++;
-        if (counter % 2 == 0 && feature.isLocked() !== locked) {
+        if (counter % 3 == 0 && feature.isLocked() !== locked) {
           // might have failed due to a conflicting update
           await this.justLockFeature(name, locked);
         }

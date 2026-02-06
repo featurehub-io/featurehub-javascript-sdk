@@ -10,6 +10,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # enable GitHub OIDC token issuance for this job
     steps:
       - name: Checkout
         uses: actions/checkout@v5
