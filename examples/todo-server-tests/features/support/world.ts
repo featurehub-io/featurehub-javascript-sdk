@@ -1,4 +1,4 @@
-import { AfterAll, setDefaultTimeout, setWorldConstructor } from "@cucumber/cucumber";
+import {AfterAll, setDefaultTimeout, setWorldConstructor, World} from "@cucumber/cucumber";
 import globalAxios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { expect } from "chai";
 import {
@@ -10,6 +10,7 @@ import {
 import waitForExpect from "wait-for-expect";
 
 import { Config } from "./config";
+import {IWorldOptions} from "@cucumber/cucumber/lib/support_code_library_builder/world";
 setDefaultTimeout(30 * 1000);
 
 AfterAll(async function () {
@@ -34,17 +35,20 @@ const responseToRecord = (response: AxiosResponse) => {
 };
 
 let requestId: number = 1;
-const reqIdPrefix = process.env["REQUEST_ID_PREFIX"] || "";
 
-export class CustomWorld {
+
+export class CustomWorld extends World<any>{
   // @ts-expect-error - TODO: revisit this later
   private variable: number;
   // @ts-expect-error - TODO: revisit this later
   private user: string = "";
   private response: boolean = false;
 
-  constructor() {
+  constructor({ attach, log, link, parameters, }: IWorldOptions) {
+    super({ attach, log, link, parameters, });
+
     this.variable = 0;
+
     if (process.env["LOUD"]) {
       globalAxios.interceptors.request.use(
         (reqConfig: InternalAxiosRequestConfig) => {
@@ -97,6 +101,10 @@ export class CustomWorld {
     );
   }
 
+  increaseCukeId() {
+    Config.cukeId ++;
+  }
+
   setUser(user: string) {
     this.user = user;
   }
@@ -147,7 +155,7 @@ export class CustomWorld {
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
     (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
-      req.headers["Baggage"] = `cuke-req-id=${reqIdPrefix}${requestId}`;
+      req.headers["Baggage"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}-${requestId}`;
       requestId++;
     };
     return updater;
