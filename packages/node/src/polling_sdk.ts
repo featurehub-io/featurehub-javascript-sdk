@@ -87,10 +87,10 @@ export class NodejsPollingService extends PollingBase implements PollingService 
 
     // Create AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this._options.timeout || 8000);
+    const timeoutId = setTimeout(() => controller.abort(), req.timeout || 8000);
 
     const response = await fetch(url, {
-      headers,
+      headers: headers,
       signal: controller.signal,
     });
 
