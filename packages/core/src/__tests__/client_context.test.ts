@@ -1,19 +1,15 @@
-import { Arg, Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import { beforeEach, describe, expect, it } from "vitest";
+import {Arg, Substitute, type SubstituteOf} from "@fluffy-spoon/substitute";
+import {beforeEach, describe, expect, it} from "vitest";
 
-import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "../context_impl";
+import {ClientEvalFeatureContext, ServerEvalFeatureContext} from "../context_impl";
 import {
   type EdgeService,
-  type FeatureEnvironmentCollection,
-  type FeatureState,
   type FeatureStateHolder,
-  FeatureValueType,
-  LocalClientContext,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "../index";
-import type { InternalFeatureRepository } from "../internal_feature_repository";
+import type {InternalFeatureRepository} from "../internal_feature_repository";
 
 describe("Client context should be able to encode as expected", () => {
   let repo: SubstituteOf<InternalFeatureRepository>;
@@ -21,6 +17,7 @@ describe("Client context should be able to encode as expected", () => {
 
   beforeEach(() => {
     repo = Substitute.for<InternalFeatureRepository>();
+
     edge = Substitute.for<EdgeService>();
     edge.poll().returns(new Promise<void>(() => {}));
   });
@@ -33,8 +30,8 @@ describe("Client context should be able to encode as expected", () => {
       .country(StrategyAttributeCountryName.Turkey)
       .platform(StrategyAttributePlatformName.Macos)
       .device(StrategyAttributeDeviceName.Desktop)
-      .attribute_value("city", "istanbul")
-      .attribute_values("musical styles", ["deep", "psychedelic"])
+      .attributeValue("city", "istanbul")
+      .attributeValue("musical styles", ["deep", "psychedelic"])
       .version("4.3.2")
       .build();
 
@@ -45,8 +42,8 @@ describe("Client context should be able to encode as expected", () => {
       .userKey("DJElif")
       .sessionKey("VirtualBurningMan")
       .device(StrategyAttributeDeviceName.Desktop)
-      .attribute_value("city", "istanbul")
-      .attribute_values("musical styles", ["deep", "psychedelic"])
+      .attributeValue("city", "istanbul")
+      .attributeValue("musical styles", ["deep", "psychedelic"])
       .version("4.3.2")
       .country(StrategyAttributeCountryName.Turkey)
       .platform(StrategyAttributePlatformName.Macos)
@@ -79,25 +76,5 @@ describe("Client context should be able to encode as expected", () => {
     await clientContext.userKey("DJElif").sessionKey("VirtualBurningMan").build();
     repo.received(0).notReady();
     edge.received(0).contextChange(Arg.all());
-  });
-
-  it("the static client context should just work", async () => {
-    const environment = {
-      features: [
-        {
-          id: "1",
-          key: "banana",
-          version: 1,
-          type: FeatureValueType.Boolean,
-          value: true,
-        } as FeatureState,
-      ],
-    } as FeatureEnvironmentCollection;
-    const context = await new LocalClientContext(environment)
-      .userKey("DJElif")
-      .sessionKey("VirtualBurningMan")
-      .build();
-
-    expect(context.getBoolean("banana")).toBe(true);
   });
 });

@@ -2,7 +2,7 @@ import * as murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
-import type { ClientContext } from "./client_context";
+import {caToString, type ClientContext} from "./client_context";
 import {
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
@@ -34,36 +34,51 @@ export class Applied {
 }
 
 export interface StrategyMatcher {
-  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean;
+  match(suppliedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean;
 }
 
 export interface MatcherRepository {
   findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher;
 }
 
+type BaseContextAttribute = string|number|boolean;
+
 // @ts-expect-error - This is a fallback matcher
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class FallthroughMatcher implements StrategyMatcher {
-  match(_suppliedValue: string, _attr: FeatureRolloutStrategyAttribute): boolean {
+  match(_suppliedValue: BaseContextAttribute, _attr: FeatureRolloutStrategyAttribute): boolean {
     return false;
   }
 }
 
 class BooleanMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const val = "true" === suppliedValue;
+  match(comparedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
+    const values = (attr.values || [])
+      .filter(v => v != null)
+      .map(v => (typeof v === 'boolean' ? v : v.toString() === 'true'));
 
-    const values = attr.values || [];
+    if ( values.length == 0 ) return false;
+
+    const val = typeof comparedValue === 'boolean' ? comparedValue : (comparedValue.toString() === 'true');
+
+    // we only care about the 1st one
     if (attr.conditional === RolloutStrategyAttributeConditional.Equals) {
-      return val === (values[0].toString() === "true");
+      return val === values[0];
     }
 
     if (attr.conditional === RolloutStrategyAttributeConditional.NotEquals) {
-      return val !== (values[0].toString() === "true");
+      return val !== values[0];
     }
 
     return false;
   }
+}
+
+function stringValues(attrValues: Array<any>|undefined) : Array<string> {
+  if (attrValues === undefined) return [];
+
+  return (attrValues || []).filter((v) => v != null)
+    .map((v) => v.toString());
 }
 
 class StringMatcher implements StrategyMatcher {
@@ -96,15 +111,16 @@ class StringMatcher implements StrategyMatcher {
     }
   }
 
+  // this is overridden in some descendants
   protected attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
-    return (attr.values || []).filter((v) => v != null).map((v) => v.toString());
+    return stringValues(attr.values);
   }
 }
 
 class DateMatcher extends StringMatcher {
-  override match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
+  override match(suppliedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
-      const parsedDate = new Date(suppliedValue);
+      const parsedDate = new Date(suppliedValue.toString());
 
       if (parsedDate == null) {
         return false;
@@ -124,9 +140,9 @@ class DateMatcher extends StringMatcher {
 }
 
 class DateTimeMatcher extends StringMatcher {
-  override match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
+  override match(suppliedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
     try {
-      const parsedDate = new Date(suppliedValue);
+      const parsedDate = new Date(suppliedValue.toString());
 
       if (parsedDate == null) {
         return false;
@@ -145,38 +161,45 @@ class DateTimeMatcher extends StringMatcher {
   }
 }
 
-class NumberMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    try {
-      const isFloat = suppliedValue.indexOf(".") >= 0;
-      const num = isFloat ? parseFloat(suppliedValue) : parseInt(suppliedValue, 10);
-      const conv = (v: string) => (isFloat ? parseFloat(v) : parseInt(v, 10));
 
-      const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
+class NumberMatcher implements StrategyMatcher {
+  private numericValues(attrValues: Array<any>|undefined) : Array<number> {
+    if (attrValues === undefined) return [];
+
+    return (attrValues || []).filter((v) => v != null)
+      .map((v) => typeof v === 'number' ? v : parseFloat(v.toString()));
+  }
+
+  match(comparedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
+    try {
+      const suppliedValue = (typeof comparedValue === 'number') ? comparedValue :
+        (comparedValue.toString().indexOf('.') >= 0 ?
+          parseFloat(comparedValue.toString()) : parseInt(comparedValue.toString(), 10));
 
       switch (attr.conditional) {
         case RolloutStrategyAttributeConditional.Equals:
-          return vals.findIndex((v) => conv(v) === num) >= 0;
-        case RolloutStrategyAttributeConditional.EndsWith:
-          return vals.findIndex((v) => suppliedValue.endsWith(v)) >= 0;
-        case RolloutStrategyAttributeConditional.StartsWith:
-          return vals.findIndex((v) => suppliedValue.startsWith(v)) >= 0;
+          return this.numericValues(attr.values).findIndex((v) => v === suppliedValue) >= 0;
         case RolloutStrategyAttributeConditional.Greater:
-          return vals.findIndex((v) => num > conv(v)) >= 0;
+          return this.numericValues(attr.values).findIndex((v) => suppliedValue > v) >= 0;
         case RolloutStrategyAttributeConditional.GreaterEquals:
-          return vals.findIndex((v) => num >= conv(v)) >= 0;
+          return this.numericValues(attr.values).findIndex((v) => suppliedValue >= v) >= 0;
         case RolloutStrategyAttributeConditional.Less:
-          return vals.findIndex((v) => num < conv(v)) >= 0;
+          return this.numericValues(attr.values).findIndex((v) => suppliedValue < v) >= 0;
         case RolloutStrategyAttributeConditional.LessEquals:
-          return vals.findIndex((v) => num <= conv(v)) >= 0;
+          return this.numericValues(attr.values).findIndex((v) => suppliedValue <= v) >= 0;
         case RolloutStrategyAttributeConditional.NotEquals:
-          return vals.findIndex((v) => conv(v) === num) === -1;
+          return this.numericValues(attr.values).findIndex((v) => suppliedValue === v) === -1;
+          // the below have to be string comparisons still
         case RolloutStrategyAttributeConditional.Includes:
-          return vals.findIndex((v) => suppliedValue.includes(v)) >= 0;
+          return ((val: string) => stringValues(attr.values).findIndex((v) => val.includes(v)) >= 0)(suppliedValue.toString());
         case RolloutStrategyAttributeConditional.Excludes:
-          return vals.findIndex((v) => suppliedValue.includes(v)) === -1;
+          return ((val: string) => stringValues(attr.values).findIndex((v) => val.includes(v)) === -1)(suppliedValue.toString());
         case RolloutStrategyAttributeConditional.Regex:
-          return vals.findIndex((v) => suppliedValue.match(v)) >= 0;
+          return ((val: string) => stringValues(attr.values).findIndex((v) => val.match(v)) >= 0)(suppliedValue.toString());
+        case RolloutStrategyAttributeConditional.EndsWith:
+          return ((val: string) => stringValues(attr.values).findIndex((v) => val.endsWith(v)) >= 0)(suppliedValue.toString());
+        case RolloutStrategyAttributeConditional.StartsWith:
+          return ((val: string) => stringValues(attr.values).findIndex((v) => val.startsWith(v)) >= 0)(suppliedValue.toString());
       }
     } catch (_) {
       return false;
@@ -185,8 +208,9 @@ class NumberMatcher implements StrategyMatcher {
 }
 
 class SemanticVersionMatcher implements StrategyMatcher {
-  match(suppliedValue: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const vals = (attr.values || []).filter((v) => v != null).map((v) => v.toString());
+  match(comparedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
+    const vals = stringValues(attr.values);
+    const suppliedValue = comparedValue.toString();
 
     switch (attr.conditional) {
       case RolloutStrategyAttributeConditional.Includes:
@@ -216,8 +240,9 @@ class SemanticVersionMatcher implements StrategyMatcher {
 }
 
 class IPNetworkMatcher implements StrategyMatcher {
-  match(ip: string, attr: FeatureRolloutStrategyAttribute): boolean {
-    const vals = (attr.values || []).filter((v) => v != null);
+  match(comparedVal: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
+    const vals = stringValues(attr.values);
+    const ip = comparedVal.toString();
 
     switch (attr.conditional) {
       case RolloutStrategyAttributeConditional.Equals:
@@ -341,13 +366,17 @@ export class ApplyFeature {
       return context.defaultPercentageKey()!;
     }
 
-    return percentageAttributes.map((pa) => context.getAttr(pa, "<none>")).join("$");
+    return percentageAttributes.map((pa) =>
+      caToString(context.getAttr(pa) || '<none>')).join('$');
   }
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
     for (const attr of rsi.attributes || []) {
-      let suppliedValues = context.getAttrs(attr.fieldName!);
-      if (suppliedValues.length == 0 && attr.fieldName!.toLowerCase() === "now") {
+      let suppliedValues = context.getAttr(attr.fieldName!);
+
+      if (suppliedValues === undefined ||
+          (Array.isArray(suppliedValues) && suppliedValues.length == 0) &&
+          attr.fieldName!.toLowerCase() === "now") {
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
             suppliedValues = [new Date().toISOString().substring(0, 10)];
@@ -358,7 +387,13 @@ export class ApplyFeature {
         }
       }
 
-      if (attr.values == null && suppliedValues.length == 0) {
+      if (suppliedValues === undefined) {
+        return false;
+      }
+
+      const comparedValues = Array.isArray(suppliedValues) ? suppliedValues! : [suppliedValues!];
+
+      if (attr.values == null && comparedValues.length == 0) {
         if (attr.conditional !== RolloutStrategyAttributeConditional.Equals) {
           return false;
         }
@@ -366,11 +401,11 @@ export class ApplyFeature {
         continue; // skip
       }
 
-      if (attr.values == null || suppliedValues.length == 0) {
+      if (attr.values == null || comparedValues.length == 0) {
         return false;
       }
 
-      const match = suppliedValues.find((sv) =>
+      const match = comparedValues.find((sv) =>
         this._matcherRepository.findMatcher(attr).match(sv, attr),
       );
 

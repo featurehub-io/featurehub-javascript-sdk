@@ -1,8 +1,9 @@
-import type { ClientContext } from "./client_context";
+import type {ClientContext} from "./client_context";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import { InterceptorValueMatch } from "./interceptors";
-import { type FeatureRolloutStrategy, SSEResultState } from "./models";
+import {type FeatureRolloutStrategy, SSEResultState} from "./models";
 import { Applied } from "./strategy_matcher";
+import {type UsageEvent, UsageProvider} from "./usage/usage";
 
 export interface InternalFeatureRepository extends FeatureHubRepository {
   // called when it is ready, but has changed important state (e.g. server eval and the client
@@ -12,6 +13,10 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
   notify(state: SSEResultState, data: any): void;
 
   valueInterceptorMatched(key: string): InterceptorValueMatch | undefined;
+
+  recordUsageEvent(event: UsageEvent): void;
+
+  get usageProvider(): UsageProvider;
 
   apply(
     strategies: Array<FeatureRolloutStrategy>,

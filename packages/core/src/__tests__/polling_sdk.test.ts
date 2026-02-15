@@ -60,7 +60,7 @@ describe("basic polling sdk works as expected", () => {
 
     callback!([]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+     
     repo.received(1).notify;
   });
 

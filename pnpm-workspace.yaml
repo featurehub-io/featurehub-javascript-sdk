@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "examples/*"
+  - "plugins/usage/*"
 
 catalogs:
   prettier:

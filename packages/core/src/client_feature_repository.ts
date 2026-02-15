@@ -1,5 +1,4 @@
-import type { AnalyticsCollector } from "./analytics";
-import type { ClientContext } from "./client_context";
+import type {ClientContext} from "./client_context";
 import {
   type CatchReleaseListenerHandler,
   fhLog,
@@ -23,17 +22,24 @@ import {
   SSEResultState,
 } from "./models";
 import { Applied, ApplyFeature } from "./strategy_matcher";
+import {
+  defaultUsageProvider,
+  type UsageEvent,
+  type UsageEventListener,
+  type UsageProvider
+} from "./usage/usage";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState = false;
   // indexed by key as that what the user cares about
   private features = new Map<string, FeatureStateBaseHolder>();
-  private analyticsCollectors = new Array<AnalyticsCollector>();
   private readynessState: Readyness = Readyness.NotReady;
   private _readinessListeners: Map<number, ReadynessListener> = new Map<
     number,
     ReadynessListener
   >();
+  private _listenerCounter = 1;
+  private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>;
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
@@ -44,9 +50,40 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
+  private _usageProvider : UsageProvider = defaultUsageProvider;
 
   constructor(applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
+  }
+
+  registerUsageStream(listener: UsageEventListener): number {
+    const counter = this._listenerCounter++;
+
+    this._usageStreams.set(counter, listener);
+
+    return counter;
+  }
+
+  get featureKeys(): Array<string> {
+    return this.features.values().map(f => f.key).toArray();
+  }
+
+  removeUsageStream(handler: number): void {
+    this._usageStreams.delete(handler);
+  }
+
+  get serverProvidedFeatureKeys(): Array<string> {
+    return this.features.values()
+      .filter(f => f.exists)
+      .map(f => f.key).toArray();
+  }
+
+  public set usageProvider(provider: UsageProvider) {
+    this._usageProvider = provider;
+  }
+
+  get usageProvider(): UsageProvider {
+    return this._usageProvider;
   }
 
   public apply(
@@ -210,10 +247,6 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._readinessListeners.forEach((l) => l(this.readynessState, firstState));
   }
 
-  public addAnalyticCollector(collector: AnalyticsCollector): void {
-    this.analyticsCollectors.push(collector);
-  }
-
   public simpleFeatures(): Map<string, string | undefined> {
     const vals = new Map<string, string | undefined>();
 
@@ -244,22 +277,6 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     });
 
     return vals;
-  }
-
-  public logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext): void {
-    const featureStateAtCurrentTime: Array<FeatureStateBaseHolder> = [];
-
-    for (const fs of this.features.values()) {
-      if (fs.isSet()) {
-        const fsVal: FeatureStateBaseHolder =
-          ctx == null ? fs : (fs.withContext(ctx) as FeatureStateBaseHolder);
-        featureStateAtCurrentTime.push(fsVal.analyticsCopy());
-      }
-    }
-
-    this.analyticsCollectors.forEach((ac) =>
-      ac.logEvent(action, other || new Map<string, string>(), featureStateAtCurrentTime),
-    );
   }
 
   public hasFeature(key: string): undefined | FeatureStateHolder {
@@ -422,5 +439,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     ) {
       holder.setFeatureState(undefined);
     }
+  }
+
+  public recordUsageEvent(event: UsageEvent): void {
+    this._usageStreams.values().forEach((v) => v(event));
   }
 }

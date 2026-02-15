@@ -44,6 +44,13 @@ export default defineConfig([
       "simple-import-sort/exports": "error",
     },
   },
+  {
+    files: ["**/*.test.ts", "**/*.spec.ts"],
+    rules: {
+      "no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-expressions": "off"
+    }
+  },
   //
   // ────────────────────────────────
   // 3️⃣ TypeScript (General - Base rules)

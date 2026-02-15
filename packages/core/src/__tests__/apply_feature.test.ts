@@ -53,7 +53,7 @@ describe("apply feature works as expected", () => {
 
   it("should be false if none of the rollout strategies match the context", () => {
     ctx.defaultPercentageKey().returns("userkey");
-    ctx.getAttrs("warehouseId").returns([]);
+    ctx.getAttr("warehouseId").returns([]);
     const found = app.apply(
       [
         {
@@ -77,7 +77,7 @@ describe("apply feature works as expected", () => {
 
   it("should not match the percentage but should match the field comparison", () => {
     ctx.defaultPercentageKey().returns("userkey");
-    ctx.getAttrs("warehouseId").returns(["ponsonby"]);
+    ctx.getAttr("warehouseId").returns("ponsonby");
     const found = app.apply(
       [
         {
@@ -103,7 +103,7 @@ describe("apply feature works as expected", () => {
 
   it("should not match the field comparison if the value is different", () => {
     ctx.defaultPercentageKey().returns("userkey");
-    ctx.getAttrs("warehouseId").returns(["ponsonby"]);
+    ctx.getAttr("warehouseId").returns("ponsonby");
 
     const sMatcher = Substitute.for<StrategyMatcher>();
     sMatcher.match("ponsonby", Arg.any()).returns(false);
@@ -190,7 +190,7 @@ describe("apply feature works as expected", () => {
 
   it("should process pattern match percentages properly", () => {
     ctx.defaultPercentageKey().returns("userkey");
-    ctx.getAttrs("warehouseId").returns(["ponsonby"]);
+    ctx.getAttr("warehouseId").returns("ponsonby");
     pCalc.determineClientPercentage("userkey", "fid").returns(15);
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());
@@ -222,7 +222,7 @@ describe("apply feature works as expected", () => {
 
   it("should fail pattern match percentages properly", () => {
     ctx.defaultPercentageKey().returns("userkey");
-    ctx.getAttrs("warehouseId").returns([]);
+    ctx.getAttr("warehouseId").returns(undefined);
     pCalc.determineClientPercentage("userkey", "fid").returns(15);
 
     const sApp = new ApplyFeature(pCalc, new MatcherRegistry());

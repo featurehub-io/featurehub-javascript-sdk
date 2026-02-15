@@ -1,149 +1,17 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import {beforeEach, describe, expect, it} from "vitest";
 
-import { FeatureStateBaseHolder } from "../feature_state_holders";
+import {FeatureStateBaseHolder} from "../feature_state_holders";
 import {
-  type AnalyticsCollector,
-  BaseClientContext,
-  type ClientContext,
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
   type FeatureState,
   type FeatureStateHolder,
-  type FeatureStateValueInterceptor,
   FeatureValueType,
-  InterceptorValueMatch,
-  type InternalFeatureRepository,
-  type PostLoadNewFeatureStateAvailableListener,
-  Readyness,
-  type ReadynessListener,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
-  SSEResultState,
 } from "../index";
-import { Applied, ApplyFeature } from "../strategy_matcher";
+import {FakeInternalRepository, TestingContext} from "./testing_context";
 
-class TestingContext extends BaseClientContext {
-  build(): Promise<ClientContext> {
-    throw new Error("Method not implemented.");
-  }
-
-  feature(_name: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  close(): void {
-    throw new Error("Method not implemented.");
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
-  constructor(repository: InternalFeatureRepository) {
-    super(repository);
-  }
-}
-
-class FakeInternalRepository implements InternalFeatureRepository {
-  private applier = new ApplyFeature();
-
-  notReady(): void {
-    throw new Error("Method not implemented.");
-  }
-
-  notify(_state: SSEResultState, _data: any) {
-    throw new Error("Method not implemented.");
-  }
-
-  valueInterceptorMatched(_key: string): InterceptorValueMatch {
-    return new InterceptorValueMatch(undefined);
-  }
-
-  apply(
-    strategies: FeatureRolloutStrategy[],
-    key: string,
-    featureValueId: string,
-    context: ClientContext,
-  ): Applied {
-    return this.applier.apply(strategies, key, featureValueId, context);
-  }
-
-  readyness: Readyness = Readyness.Ready;
-  catchAndReleaseMode = false;
-
-  logAnalyticsEvent(_action: string, _other?: Map<string, string>, _ctx?: ClientContext) {
-    throw new Error("Method not implemented.");
-  }
-
-  hasFeature(_key: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  feature(_key: string): FeatureStateHolder<any> {
-    throw new Error("Method not implemented.");
-  }
-
-  getFeatureState<T = any>(_key: string): FeatureStateHolder<T> {
-    throw new Error("Method not implemented.");
-  }
-
-  release(_disableCatchAndRelease?: boolean): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  simpleFeatures(): Map<string, string> {
-    throw new Error("Method not implemented.");
-  }
-
-  getFlag(_key: string): boolean {
-    throw new Error("Method not implemented.");
-  }
-
-  getString(_key: string): string {
-    throw new Error("Method not implemented.");
-  }
-
-  getJson(_key: string): string {
-    throw new Error("Method not implemented.");
-  }
-
-  getNumber(_key: string): number {
-    throw new Error("Method not implemented.");
-  }
-
-  isSet(_key: string): boolean {
-    throw new Error("Method not implemented.");
-  }
-
-  addValueInterceptor(_interceptor: FeatureStateValueInterceptor): void {
-    throw new Error("Method not implemented.");
-  }
-
-  addReadynessListener(_listener: ReadynessListener): number {
-    throw new Error("Method not implemented.");
-  }
-
-  addReadinessListener(_listener: ReadynessListener, _ignoreNotReadyOnRegister?: boolean): number {
-    throw new Error("Method not implemented.");
-  }
-
-  removeReadinessListener(_listener: number | ReadynessListener) {
-    throw new Error("Method not implemented.");
-  }
-
-  addAnalyticCollector(_collector: AnalyticsCollector): void {
-    throw new Error("Method not implemented.");
-  }
-
-  addPostLoadNewFeatureStateAvailableListener(
-    _listener: PostLoadNewFeatureStateAvailableListener,
-  ): number {
-    throw new Error("Method not implemented.");
-  }
-
-  removePostLoadNewFeatureStateAvailableListener(
-    _listener: number | PostLoadNewFeatureStateAvailableListener,
-  ) {
-    throw new Error("Method not implemented.");
-  }
-}
 
 describe("When checking for listeners triggering on strategy changes", () => {
   let repo: FakeInternalRepository;

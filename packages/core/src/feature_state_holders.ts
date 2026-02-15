@@ -56,6 +56,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getRawJson();
   }
 
+  // this is a real feature or a placeholder one
   get exists(): boolean {
     return this.internalFeatureState !== undefined;
   }
@@ -144,7 +145,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   /// returns true if the value changed, _only_ the repository should call this
   /// as it is dereferenced via the parentHolder
   setFeatureState(fs: FeatureState | undefined): boolean {
-    const existingValue = this._getValue();
+    const existingValue = this._getValue(fs?.type, false, false);
     const existingLocked = this.locked;
 
     // capture all the original values of the listeners
@@ -160,7 +161,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     // the lock changing is not part of the contextual evaluation of values changing, and is constant across all listeners.
     const changedLocked = existingLocked !== this.featureState()?.l;
     // did at least the default value change, even if there are no listeners for the state?
-    let changed = changedLocked || existingValue !== this._getValue(fs?.type);
+    let changed = changedLocked || existingValue !== this._getValue(fs?.type, false, false);
 
     this.listeners.forEach((value, key) => {
       const original = listenerValues.get(key);
@@ -187,6 +188,10 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     const c = this._copy();
     c.internalFeatureState = this.internalFeatureState;
     return c;
+  }
+
+  get id(): string | undefined {
+    return this.featureState()?.id;
   }
 
   getType(): FeatureValueType | undefined {
@@ -230,7 +235,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.internalFeatureState;
   }
 
-  private _getValue(type?: FeatureValueType, parseJson = false): any | undefined {
+  private _getValue(type?: FeatureValueType, parseJson = false, triggerUsage = true): any | undefined {
     if (!type) {
       type = this.getType();
     }
@@ -238,15 +243,19 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
       return undefined;
     }
 
+    const featureState = this.featureState();
     if (!this.isLocked()) {
       const intercept = this._repo.valueInterceptorMatched(this._key);
 
       if (intercept?.value) {
-        return this._castType(type, intercept.value, parseJson);
+        const val = this._castType(type, intercept.value, parseJson);
+
+        return triggerUsage && featureState?.id ?
+          this.used(featureState.key, featureState.id, val, type) :
+          val;
       }
     }
 
-    const featureState = this.featureState();
     if (!featureState || featureState.type !== type) {
       return undefined;
     }
@@ -260,11 +269,29 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
       );
 
       if (matched.matched) {
-        return this._castType(type, matched.value, parseJson);
+        const sVal = this._castType(type, matched.value, parseJson);
+        return triggerUsage ? this.used(featureState.key, featureState.id, sVal, type) : sVal;
       }
     }
 
-    return featureState?.value;
+    return triggerUsage ?
+      this.used(featureState.key, featureState.id, featureState.value, type) :
+      featureState.value;
+  }
+
+  private used(key: string, id: string, value: any|undefined, type: FeatureValueType) : any|undefined {
+    if (this._ctx) {
+      this._ctx.used(key, id, value, type);
+    } else {
+      const usageProvider = this._repo.usageProvider;
+      if (usageProvider) { // in testing with substitutions this can be undefined
+        this._repo.recordUsageEvent(
+          usageProvider.createUsageFeature(
+            usageProvider.createFeatureHubUsageValueFromFields(id, key, value, type)));
+      }
+    }
+
+    return value;
   }
 
   private _castType(type: FeatureValueType, value?: any, parseJson = false): any | undefined {
@@ -302,6 +329,10 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
   get value(): T {
     return this._getValue(this.getType(), true);
+  }
+
+  get untrackedValue(): T {
+    return this._getValue(this.getType(), true, false);
   }
 
   get featureProperties(): Record<string, string> | undefined {

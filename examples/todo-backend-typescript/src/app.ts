@@ -3,7 +3,6 @@ import express from "express";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
-  featurehubMiddleware,
   FeatureHubPollingClient,
   FHLog,
   Readyness,
@@ -78,7 +77,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(featurehubMiddleware(fhConfig.repository()));
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, "todo-frontend")));
@@ -100,7 +98,7 @@ class TodoController implements ITodoApiController {
 
   async removeTodo(parameters: { id: string; user: string }): Promise<Array<Todo>> {
     const ctx = await this.ctx(parameters.user);
-    ctx.logAnalyticsEvent("todo-remove", new Map([["gaValue", "5"]]));
+    ctx.recordNamedUsage("todo-remove", {"gaValue": "5"});
     const index: number = todos.findIndex((todo) => todo.id === parameters.id);
     todos.splice(index, 1);
     return this.listTodos(ctx);
@@ -113,7 +111,7 @@ class TodoController implements ITodoApiController {
         throw new Error("Todo body is required");
       }
 
-      ctx.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
+      ctx.recordNamedUsage("todo-add", {"gaValue": "10"});
 
       const todo: Todo = {
         id: Math.floor(Math.random() * 20).toString(),

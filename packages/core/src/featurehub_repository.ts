@@ -1,9 +1,8 @@
-import type { AnalyticsCollector } from "./analytics";
-import type { ClientContext } from "./client_context";
 import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type {UsageEventListener, UsageProvider} from "./usage/usage";
 
 export enum Readyness {
   NotReady = "NotReady",
@@ -24,11 +23,13 @@ export interface FeatureHubRepository {
   readyness: Readyness;
   catchAndReleaseMode: boolean;
 
-  // allows us to log an analytics event with this set of features
-  logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext): void;
-
   // returns undefined if the feature does not exist
   hasFeature(key: string): undefined | FeatureStateHolder;
+
+  // allows one to override the usage provider for this repository. Replace the global defaultUsageProvider
+  // if you want it everywhere regardless.
+  set usageProvider(provider: UsageProvider);
+  get usageProvider(): UsageProvider;
 
   // synonym for getFeatureState
   feature(key: string): FeatureStateHolder;
@@ -41,6 +42,13 @@ export interface FeatureHubRepository {
 
   // primary used to pass down the line in headers
   simpleFeatures(): Map<string, string | undefined>;
+
+  // allow getting of known keys
+  get featureKeys(): Array<string>;
+
+  // only those keys that have come from the the server not ones used in anticipation of
+  // state
+  get serverProvidedFeatureKeys(): Array<string>;
 
   getFlag(key: string): boolean | undefined;
 
@@ -88,13 +96,6 @@ export interface FeatureHubRepository {
   removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle): void;
 
   /**
-   * Adds an analytics collector so that requests to record the feature state will be sent there.
-   *
-   * @param collector
-   */
-  addAnalyticCollector(collector: AnalyticsCollector): void;
-
-  /**
    * Used by catch/release to indicate that new updates are available to release into the repository. You would generally
    * attach a single handler to this to update your UI recommending a refresh in a single page application.
    *
@@ -111,4 +112,9 @@ export interface FeatureHubRepository {
   removePostLoadNewFeatureStateAvailableListener(
     listener: PostLoadNewFeatureStateAvailableListener | CatchReleaseListenerHandler,
   ): void;
+
+  // this will ensure that as features get evaluated, your listener will get updates
+  registerUsageStream(listener: UsageEventListener): number;
+
+  removeUsageStream(handler: number) : void;
 }

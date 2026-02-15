@@ -1,4 +1,3 @@
-import type { AnalyticsCollector } from "./analytics";
 import type { ClientContext } from "./client_context";
 import type { EdgeService } from "./edge_service";
 import type { FeatureStateHolder } from "./feature_state";
@@ -9,6 +8,7 @@ import {
 } from "./featurehub_repository";
 import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type {UsagePlugin} from "./usage/usage";
 
 export type EdgeServiceProvider = (
   repository: InternalFeatureRepository,
@@ -124,9 +124,8 @@ export interface FeatureHubConfig {
   ): ReadinessListenerHandle;
   removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle): void;
 
-  // add an analytics collector
-  addAnalyticCollector(collector: AnalyticsCollector): void;
-
   // add a value interceptor (e.g. baggage handler)
   addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
+
+  addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig;
 }

@@ -129,13 +129,13 @@ class App extends React.Component<object, { todos: TodoData }> {
     };
 
     // Send an event to Google Analytics
-    fhClient.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
+    fhClient.recordNamedUsage("todo-add", {"gaValue": "10"});
     const todoResult = (await todoApi.addTodo(user, todo)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   async removeToDo(id: string) {
-    fhClient.logAnalyticsEvent("todo-remove", new Map([["gaValue", "5"]]));
+    fhClient.recordNamedUsage("todo-remove", {"gaValue": "5"});
     const todoResult = (await todoApi.removeTodo(user, id)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }

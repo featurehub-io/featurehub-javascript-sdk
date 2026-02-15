@@ -6,7 +6,6 @@ import {
   EdgeFeatureHubConfig,
   FeatureHubPollingClient,
   Readyness,
-  w3cBaggageHeader,
 } from "featurehub-javascript-client-sdk";
 import * as React from "react";
 
@@ -44,30 +43,6 @@ class ConfigData {
   fhEdgeUrl: string = "";
   fhApiKey: string = "";
 }
-
-globalAxios.interceptors.request.use(
-  function (config: any) {
-    if (fhConfig !== undefined) {
-      // this requires  a  server evaluation key
-      const baggage = w3cBaggageHeader({
-        repo: fhConfig.repository(),
-        header: (config.headers as any).Baggage,
-      });
-      // const baggage = w3cBaggageHeader({});
-      if (baggage) {
-        console.log("baggage is ", baggage);
-        (config.headers as any).Baggage = baggage;
-      } else {
-        console.log("no baggage");
-      }
-    }
-    return config;
-  },
-  function (error: any) {
-    // Do something with request error
-    return Promise.reject(error);
-  },
-);
 
 class App extends React.Component<object, { todos: TodoData }> {
   private titleInput!: HTMLInputElement;
@@ -149,13 +124,13 @@ class App extends React.Component<object, { todos: TodoData }> {
     };
 
     // Send an event to Google Analytics
-    fhClient.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
+    fhClient.recordNamedUsage("todo-add", {"gaValue": "10"});
     const todoResult = (await todoApi.addTodo(userName, todo)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   async removeToDo(id: string) {
-    fhClient.logAnalyticsEvent("todo-remove", new Map([["gaValue", "5"]]));
+    fhClient.recordNamedUsage("todo-remove", {"gaValue": "5"});
     const todoResult = (await todoApi.removeTodo(userName, id)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }

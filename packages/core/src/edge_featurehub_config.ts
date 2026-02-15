@@ -1,4 +1,3 @@
-import type { AnalyticsCollector } from "./analytics";
 import type { ClientContext } from "./client_context";
 import { ClientFeatureRepository } from "./client_feature_repository";
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
@@ -9,6 +8,8 @@ import { Readyness, type ReadynessListener } from "./featurehub_repository";
 import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { FeatureHubPollingClient } from "./polling_sdk";
+import type {UsagePlugin} from "./usage/usage";
+import {UsageAdapter} from "./usage/usage_adapter";
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _host: string;
@@ -21,6 +22,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _edgeServices: Array<EdgeService> = [];
   private _clientContext: ServerEvalFeatureContext | undefined;
   private _initialized = false;
+  private _usageAdapter : UsageAdapter | undefined;
 
   static defaultEdgeServiceSupplier: EdgeServiceProvider = (repository, config) =>
     new FeatureHubPollingClient(repository, config, 30000);
@@ -75,10 +77,6 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
    */
   public addReadynessListener(listener: ReadynessListener): number {
     return this.addReadinessListener(listener);
-  }
-
-  public addAnalyticCollector(collector: AnalyticsCollector): void {
-    this.repository().addAnalyticCollector(collector);
   }
 
   public addValueInterceptor(interceptor: FeatureStateValueInterceptor): void {
@@ -223,12 +221,24 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._edgeService;
   }
 
+  addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig {
+    if (!this._initialized || !this._repository) {
+      this.repository();
+    }
+
+    this._usageAdapter!.registerPlugin(plugin);
+
+    return this;
+  }
+
   repository(repository?: InternalFeatureRepository): InternalFeatureRepository {
     if (repository != null) {
       this._repository = repository;
     } else if (this._repository == null) {
       this._repository = new ClientFeatureRepository();
     }
+
+    this._usageAdapter = new UsageAdapter(this._repository);
 
     return this._repository;
   }

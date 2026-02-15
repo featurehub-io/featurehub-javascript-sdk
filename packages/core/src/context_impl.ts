@@ -1,108 +1,109 @@
-import type { ClientContext } from "./client_context";
+import {
+  caToString,
+  type ClientContext,
+  type ContextAttribute,
+  type ContextRecord} from "./client_context";
 import type { EdgeService } from "./edge_service";
 import { type EdgeServiceSupplier, type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import {
+  FeatureValueType,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "./models";
+import {
+  type UsageEvent,
+} from "./usage/usage";
 
 export abstract class BaseClientContext implements ClientContext {
   protected readonly _repository: InternalFeatureRepository;
+  protected _currentEdge : EdgeService|undefined;
 
-  protected _attributes = new Map<string, Array<string>>();
+  protected _userKey: string|undefined = undefined;
+  protected _attributes = new Map<string, ContextAttribute>();
 
   protected constructor(repository: InternalFeatureRepository) {
     this._repository = repository;
   }
 
   userKey(value: string): ClientContext {
-    this._attributes.set("userkey", [value]);
+    this._userKey = value;
     return this;
   }
 
   sessionKey(value: string): ClientContext {
-    this._attributes.set("session", [value]);
+    this._attributes.set("session", value);
     return this;
   }
 
   country(value: StrategyAttributeCountryName): ClientContext {
-    this._attributes.set("country", [value]);
+    this._attributes.set("country", value);
     return this;
   }
 
   device(value: StrategyAttributeDeviceName): ClientContext {
-    this._attributes.set("device", [value]);
+    this._attributes.set("device", value);
     return this;
   }
 
   platform(value: StrategyAttributePlatformName): ClientContext {
-    this._attributes.set("platform", [value]);
+    this._attributes.set("platform", value);
     return this;
   }
 
   version(version: string): ClientContext {
-    this._attributes.set("version", [version]);
+    this._attributes.set("version", version);
     return this;
   }
 
-  /**
-   * @deprecated - use attributeValue
-   * @param key
-   * @param value
-   */
 
-  attribute_value(key: string, value: string): ClientContext {
-    return this.attributeValue(key, value);
-  }
-
-  attributeValue(key: string, value: string): ClientContext {
-    this._attributes.set(key, [value]);
+  attributeValue(key: string, value: ContextAttribute): ClientContext {
+    this._attributes.set(key, value);
     return this;
   }
 
-  /**
-   * @deprecated - use attributeValues
-   * @param key
-   * @param values
-   */
-
-  attribute_values(key: string, values: Array<string>): ClientContext {
-    return this.attributeValues(key, values);
-  }
-
-  attributeValues(key: string, values: Array<string>): ClientContext {
-    this._attributes.set(key, values);
-    return this;
-  }
 
   clear(): ClientContext {
     this._attributes.clear();
     return this;
   }
 
-  getAttr(key: string, defaultValue?: string): string | undefined {
+  get attributes(): ContextRecord {
+    const base = this._userKey ? {userkey: this._userKey} : {};
+    return Object.assign(base, Object.fromEntries(this._attributes.entries()));
+  }
+
+  set attributes(data: ContextRecord) {
+    // copy everything except the user key
+    Object.entries(data).forEach(([key, val]) => {
+      if (key !== 'userkey') {
+        this._attributes.set(key, val);
+      }
+    });
+  }
+
+  getAttr(key: string, defaultValue?: ContextAttribute): ContextAttribute | undefined {
+    if (key === 'userkey') {
+      return this._userKey;
+    }
+
     if (this._attributes.has(key)) {
-      return this._attributes.get(key)![0];
+      return this._attributes.get(key);
     }
 
     return defaultValue;
   }
 
-  getAttrs(key: string): Array<string> {
-    if (this._attributes.has(key)) {
-      return this._attributes.get(key)!;
-    }
-
-    return [];
-  }
-
   defaultPercentageKey(): string | undefined {
-    return this._attributes.has("session") ? this.getAttr("session") : this.getAttr("userkey");
+    return this._attributes.has("session") ?
+      this._attributes.get('session')?.toString() :
+      this._userKey;
   }
+
+  // ---- feature related
 
   isEnabled(name: string): boolean {
     return this.feature(name).isEnabled();
@@ -159,28 +160,86 @@ export abstract class BaseClientContext implements ClientContext {
     return this._repository;
   }
 
-  logAnalyticsEvent(action: string, other?: Map<string, string>, user?: string): void {
-    if (user == null) {
-      user = this.getAttr("userkey");
-    }
-    if (user != null) {
-      if (other == null) {
-        other = new Map<string, string>();
-      }
+  // --- usage tracking
 
-      other.set("cid", user);
+  usageUserKey() { return this._userKey || this.getAttr('session')?.toString(); }
+
+  private get usageAttributes() : ContextRecord {
+    return Object.assign({}, Object.fromEntries(this._attributes.entries()));
+  }
+
+  used(key: string, id: string, value: string|number|boolean|undefined, valueType: FeatureValueType): void {
+    const usageProvider = this._repository.usageProvider;
+    this.recordUsageEvent(
+      usageProvider.createUsageFeature(
+        usageProvider.createFeatureHubUsageValueFromFields(id, key, value, valueType),
+        this.usageAttributes, this.usageUserKey()));
+
+    // because we evaluated a feature, we might be allowed to poll for a new one
+    this._currentEdge?.poll();
+  }
+
+  protected recordFeatureChangedForUser(feature: FeatureStateHolder) {
+    const usageProvider = this._repository.usageProvider;
+    this._repository.recordUsageEvent(usageProvider.createUsageFeature(
+        usageProvider.createFeatureHubUsageValue(feature.withContext(this)),
+        this.usageAttributes,
+        this.usageUserKey())
+    );
+  }
+
+  protected recordRelativeValuesForUser(): void {
+    this.recordUsageEvent(this._repository.usageProvider.createUsageContextCollectionEvent());
+  }
+
+  protected mapRepositoryFeaturesToUsageValues() {
+    return this._repository.serverProvidedFeatureKeys.map(k =>
+      this._repository.usageProvider.createFeatureHubUsageValue(this._repository.feature(k)));
+  }
+
+  public fillEvent(event: any|UsageEvent) : any {
+    if (Object.hasOwn(event, 'userKey')) {
+      event.userKey = this.usageUserKey();
+    } else if (typeof event.userKey === 'function') {
+      event.userKey(this.usageUserKey());
     }
 
-    this._repository.logAnalyticsEvent(action, other);
+    if (Object.hasOwn(event, 'featureValues')) {
+      event.featureValues =
+        this.mapRepositoryFeaturesToUsageValues();
+    } else if (typeof event.featureValues === 'function') {
+      event.featureValues(this.mapRepositoryFeaturesToUsageValues());
+    }
+
+    if (Object.hasOwn(event,'contextAttributes')) {
+      event.contextAttributes = this.usageAttributes;
+    } else if (typeof event.contextAttributes === 'function') {
+      event.contextAttributes = this.usageAttributes;
+    }
+
+    return event;
+  }
+
+  recordUsageEvent(event: any|UsageEvent): any {
+    this._repository.recordUsageEvent(this.fillEvent(event));
+  }
+
+  recordNamedUsage(name: string, additionalParams?: Record<string, any>): void {
+    this._repository.recordUsageEvent(
+      this.fillEvent(this._repository.usageProvider.createNamedUsageCollection(name, additionalParams)));
+  }
+
+  getContextUsage(): UsageEvent {
+    return this.fillEvent(this._repository.usageProvider.createUsageContextCollectionEvent());
   }
 }
 
 export class ServerEvalFeatureContext extends BaseClientContext {
   private readonly _edgeServiceSupplier: EdgeServiceSupplier;
-  private _currentEdge: EdgeService | undefined;
   private _config?: FeatureHubConfig;
   private _xHeader: string | undefined;
   private _clientCount = 0;
+  private readonly newFeatureStateHandler;
 
   constructor(
     repository: InternalFeatureRepository,
@@ -191,6 +250,11 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
     this._edgeServiceSupplier = edgeServiceSupplier;
     this._config = config;
+
+    // a feature has updated its state
+    this.newFeatureStateHandler = repository.addPostLoadNewFeatureStateAvailableListener(() => {
+      this.recordRelativeValuesForUser();
+    });
   }
 
   addClient(): void {
@@ -204,8 +268,9 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
   async build(): Promise<ClientContext> {
     try {
-      const newHeader = Array.from(this._attributes.entries())
-        .map((key) => key[0] + "=" + encodeURIComponent(key[1].join(",")))
+      const newHeader =
+        Object.entries(this.attributes)
+        .map((key) => key[0] + "=" + encodeURIComponent(caToString(key[1])))
         .sort()
         .join(",");
 
@@ -242,6 +307,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
     if (this._clientCount <= 1 && this._config !== undefined) {
       fhLog.trace("closing because client count is ", this._clientCount);
       this._config.close(); // tell the config to close us down
+      this._repository.removePostLoadNewFeatureStateAvailableListener(this.newFeatureStateHandler);
     } else if (this._currentEdge) {
       fhLog.trace("closing because directly requested close.");
       this._currentEdge.close();
@@ -258,16 +324,14 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 }
 
 export class ClientEvalFeatureContext extends BaseClientContext {
-  private readonly _edgeService: EdgeService;
-
   constructor(repository: InternalFeatureRepository, edgeService: EdgeService) {
     super(repository);
 
-    this._edgeService = edgeService;
+    this._currentEdge = edgeService;
   }
 
   async build(): Promise<ClientContext> {
-    this._edgeService
+    this._currentEdge!
       .poll()
       ?.then(() => {})
       .catch(() => {}); // in case it hasn't already been initialized
@@ -276,11 +340,11 @@ export class ClientEvalFeatureContext extends BaseClientContext {
   }
 
   close(): void {
-    this._edgeService.close();
+    this._currentEdge!.close();
   }
 
   edgeService(): EdgeService {
-    return this._edgeService;
+    return this._currentEdge!;
   }
 
   feature(name: string): FeatureStateHolder {

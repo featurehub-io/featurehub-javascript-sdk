@@ -101,6 +101,9 @@ export interface FeatureStateHolder<T = any> {
   /** the value of the feature flag */
   get value(): T | undefined;
 
+  /** the value of the feature flag but not triggering any usage */
+  get untrackedValue(): T | undefined;
+
   /**
    * getVersion: returns feature update version number (every change on the feature causes its version to update).
    */
@@ -116,4 +119,6 @@ export interface FeatureStateHolder<T = any> {
   withContext(param: ClientContext): FeatureStateHolder;
 
   get featureProperties(): Record<string, string> | undefined;
+
+  get id(): string | undefined;
 }
