@@ -10,6 +10,7 @@ Before(function (details: any) {
   if (process.env["DEBUG"]) {
     console.log(`------------- (started ${details?.pickle?.name})`);
   }
+  (this as CustomWorld).increaseCukeId();
 });
 
 After(function (details: any) {

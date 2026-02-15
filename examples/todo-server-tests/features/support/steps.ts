@@ -5,6 +5,7 @@ import waitForExpect from "wait-for-expect";
 
 import { Configuration, Todo, TodoServiceApi } from "../../src/client-axios";
 import { Config } from "./config";
+import { CustomWorld } from "./world";
 
 const todoApi = new TodoServiceApi(new Configuration({ basePath: Config.baseApplicationPath }));
 
@@ -58,7 +59,7 @@ Then("I should not be able to update the value", function () {
 });
 
 Given("I lock the feature {string}", async function (featureKey: string) {
-  await this["lockFeature"](featureKey);
+  await (this as CustomWorld).lockFeature(featureKey);
 });
 
 When(
