@@ -48,8 +48,8 @@ export default defineConfig([
     files: ["**/*.test.ts", "**/*.spec.ts"],
     rules: {
       "no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-expressions": "off"
-    }
+      "@typescript-eslint/no-unused-expressions": "off",
+    },
   },
   //
   // ────────────────────────────────

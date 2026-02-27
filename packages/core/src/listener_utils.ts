@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ListenerUtils {
   public static newListenerKey(where: Map<number, any>): number {
     // find a unique slot, we can't keep a counter as we can bump from context to context

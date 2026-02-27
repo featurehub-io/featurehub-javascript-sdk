@@ -1,9 +1,9 @@
 /* eslint-disable */
-import type { EdgeService } from "./edge_service";
-import { type FeatureHubConfig, fhLog } from "./feature_hub_config";
-import type { InternalFeatureRepository } from "./internal_feature_repository";
-import { SSEResultState } from "./models";
-import { Readyness } from "./featurehub_repository";
+import type { EdgeService } from "../edge_service";
+import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
+import type { InternalFeatureRepository } from "../internal_feature_repository";
+import { SSEResultState } from "../models";
+import { Readyness } from "../featurehub_repository";
 
 export declare class EventSource {
   static readonly CLOSED: number;

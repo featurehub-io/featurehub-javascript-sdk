@@ -1,7 +1,7 @@
-import {Arg, Substitute, type SubstituteOf} from "@fluffy-spoon/substitute";
-import {beforeEach, describe, expect, it} from "vitest";
+import { Arg, Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import {ClientEvalFeatureContext, ServerEvalFeatureContext} from "../context_impl";
+import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "../context_impl";
 import {
   type EdgeService,
   type FeatureStateHolder,
@@ -9,7 +9,7 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "../index";
-import type {InternalFeatureRepository} from "../internal_feature_repository";
+import type { InternalFeatureRepository } from "../internal_feature_repository";
 
 describe("Client context should be able to encode as expected", () => {
   let repo: SubstituteOf<InternalFeatureRepository>;

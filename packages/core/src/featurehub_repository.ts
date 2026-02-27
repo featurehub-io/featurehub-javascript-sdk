@@ -1,14 +1,27 @@
-import type { CatchReleaseListenerHandler, ReadinessListenerHandle } from "./feature_hub_config";
+import type { EdgeService } from "./edge_service";
+import {
+  type CatchReleaseListenerHandler,
+  EdgeType,
+  type FeatureHubConfig,
+  type ReadinessListenerHandle,
+} from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import type {UsageEventListener, UsageProvider} from "./usage/usage";
+import type { UsageEventListener, UsageProvider } from "./usage/usage";
 
 export enum Readyness {
   NotReady = "NotReady",
   Ready = "Ready",
   Failed = "Failed",
 }
+
+export type EdgeServiceProvider = (
+  repository: InternalFeatureRepository,
+  config: FeatureHubConfig,
+  edgeType: EdgeType,
+  timeout: number,
+) => EdgeService;
 
 export interface ReadynessListener {
   (state: Readyness, firstTimeReady: boolean): void;
@@ -116,5 +129,5 @@ export interface FeatureHubRepository {
   // this will ensure that as features get evaluated, your listener will get updates
   registerUsageStream(listener: UsageEventListener): number;
 
-  removeUsageStream(handler: number) : void;
+  removeUsageStream(handler: number): void;
 }

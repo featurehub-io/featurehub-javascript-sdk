@@ -1,15 +1,24 @@
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
 import { ClientFeatureRepository } from "./client_feature_repository";
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
 import type { EdgeService } from "./edge_service";
-import { type EdgeServiceProvider, type FeatureHubConfig, fhLog } from "./feature_hub_config";
+import { EdgeType, type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
-import { Readyness, type ReadynessListener } from "./featurehub_repository";
+import {
+  type EdgeServiceProvider,
+  Readyness,
+  type ReadynessListener,
+} from "./featurehub_repository";
 import type { FeatureStateValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import { FeatureHubPollingClient } from "./polling_sdk";
-import type {UsagePlugin} from "./usage/usage";
-import {UsageAdapter} from "./usage/usage_adapter";
+import { FeatureHubNetwork } from "./network";
+import { type UsagePlugin } from "./usage/usage";
+import { UsageAdapter } from "./usage/usage_adapter";
+
+export const defaultEdgeTypeProviderConfig = {
+  defaultTimeoutInSeconds: 180,
+  defaultEdgeProvider: EdgeType.REST_ACTIVE,
+};
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _host: string;
@@ -22,10 +31,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _edgeServices: Array<EdgeService> = [];
   private _clientContext: ServerEvalFeatureContext | undefined;
   private _initialized = false;
-  private _usageAdapter : UsageAdapter | undefined;
-
-  static defaultEdgeServiceSupplier: EdgeServiceProvider = (repository, config) =>
-    new FeatureHubPollingClient(repository, config, 30000);
+  private _usageAdapter: UsageAdapter | undefined;
+  private _timeout: number = 180;
+  private _edgeType: EdgeType = EdgeType.STREAMING;
 
   private static _singleton: any | undefined;
 
@@ -49,6 +57,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   constructor(host: string, apiKey: string) {
     this._apiKey = apiKey;
     this._host = host;
+
+    this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;
+    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInSeconds * 1000;
 
     fhLog.trace("creating new featurehub config.");
 
@@ -118,6 +129,16 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._host;
   }
 
+  context(context?: ContextRecord): ClientContext {
+    const ctx = this.newContext();
+
+    if (context) {
+      ctx.attributes = context;
+    }
+
+    return ctx;
+  }
+
   newContext(
     repository?: InternalFeatureRepository,
     edgeService?: EdgeServiceProvider,
@@ -161,7 +182,12 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     edgeServSupplier: EdgeServiceProvider,
     repository?: InternalFeatureRepository,
   ): EdgeService {
-    const es = edgeServSupplier(repository || this.repository(), this);
+    const es = edgeServSupplier(
+      repository || this.repository(),
+      this,
+      this._edgeType,
+      this._timeout,
+    );
 
     this._initialized = true;
 
@@ -215,7 +241,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     if (edgeServ != null) {
       this._edgeService = edgeServ;
     } else if (this._edgeService == null) {
-      this._edgeService = EdgeFeatureHubConfig.defaultEdgeServiceSupplier;
+      this._edgeService = FeatureHubNetwork.defaultEdgeServiceSupplier;
     }
 
     return this._edgeService;
@@ -253,5 +279,37 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   removeReadinessListener(listener: ReadynessListener | number) {
     this.repository().removeReadinessListener(listener);
+  }
+
+  restActive(intervalInMilliseconds?: number): FeatureHubConfig {
+    if (intervalInMilliseconds) {
+      this._timeout = intervalInMilliseconds;
+    }
+
+    this._edgeType = EdgeType.REST_ACTIVE;
+    return this;
+  }
+
+  restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig {
+    if (cacheTimeoutInMilliseconds) {
+      this._timeout = cacheTimeoutInMilliseconds;
+    }
+
+    this._edgeType = EdgeType.REST_PASSIVE;
+
+    return this;
+  }
+
+  streaming(): FeatureHubConfig {
+    this._edgeType = EdgeType.STREAMING;
+    return this;
+  }
+
+  get edgeSupplierTimeout(): number {
+    return this._timeout;
+  }
+
+  get edgeType(): EdgeType {
+    return this._edgeType;
   }
 }

@@ -23,3 +23,4 @@ target/
 yalc.lock
 .pnpm-debug.log*
 /packages/core/coverage/
+/examples/local.env

@@ -1,17 +1,18 @@
 {
-  "name": "featurehub-javascript-client-sdk",
-  "version": "2.0.0",
-  "description": "FeatureHub client/browser SDK",
+  "name": "featurehub-usage-opentelemetry",
+  "version": "1.0.0",
+  "description": "FeatureHub OpenTelemetry Usage Adapter",
   "author": "info@featurehub.io",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
   "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
   "files": [
     "dist"
   ],
-  "homepage": "https://featurehub.io",
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",
@@ -27,7 +28,6 @@
     "feature-flag-react",
     "featurehub"
   ],
-  "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -35,34 +35,26 @@
       "require": "./dist/index.cjs"
     }
   },
-  "publishConfig": {
-    "provenance": true,
-    "access": "public"
-  },
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
     "clean": "rimraf node_modules dist",
-    "tsc": "node ./node_modules/typescript/bin/tsc -p",
-    "release": "cp ../../README.md . && pnpm run build && pnpm publish --no-git-checks --access public",
-    "prepublishOnly": "pnpm run build",
+    "setup": "pnpm link ../js",
+    "link": "pnpm link --global",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "compile": "pnpm run build && pnpm run link",
+    "release": "cp ../../README.md . && pnpm run build && pnpm publish --no-git-checks --access public",
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "bundle": "vite build",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
-    "@types/jsdom": "^27.0.0",
-    "@types/netmask": "^2.0.5",
     "@types/node": "catalog:node",
-    "@types/semver-compare": "^1.0.3",
-    "@vitest/coverage-istanbul": "catalog:vitest",
     "featurehub-tsconfig": "workspace:*",
-    "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
@@ -71,9 +63,7 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "murmurhash": "^2.0.1",
-    "netmask": "^2.0.2",
-    "semver-compare": "^1.0.0",
+    "@opentelemetry/api": "^1.9.0",
     "featurehub-javascript-core-sdk": "workspace:*"
   },
   "engines": {

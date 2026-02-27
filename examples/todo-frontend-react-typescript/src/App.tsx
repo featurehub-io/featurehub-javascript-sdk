@@ -85,13 +85,13 @@ class App extends React.Component<object, { todos: TodoData }> {
     };
 
     // Send an event to Google Analytics
-    FeatureHub.context.recordNamedUsage("todo-add", {"gaValue": "10"});
+    FeatureHub.context.recordNamedUsage("todo-add", { gaValue: "10" });
     const todoResult = (await todoApi.addTodo(user, todo)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }
 
   async removeToDo(id: string) {
-    FeatureHub.context.recordNamedUsage("todo-remove", {"gaValue": "5"});
+    FeatureHub.context.recordNamedUsage("todo-remove", { gaValue: "5" });
     const todoResult = (await todoApi.removeTodo(user, id)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });
   }

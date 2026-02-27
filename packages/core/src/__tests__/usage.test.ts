@@ -1,26 +1,27 @@
-import {Substitute} from "@fluffy-spoon/substitute";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import { Substitute } from "@fluffy-spoon/substitute";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type {ClientContext} from "../client_context";
-import {ClientFeatureRepository} from "../client_feature_repository";
-import {ServerEvalFeatureContext} from "../context_impl";
-import {EdgeFeatureHubConfig} from "../edge_featurehub_config";
-import type {EdgeServiceSupplier, FeatureHubConfig} from "../feature_hub_config";
+import type { ClientContext } from "../client_context";
+import { ClientFeatureRepository } from "../client_feature_repository";
+import { ServerEvalFeatureContext } from "../context_impl";
+import { EdgeFeatureHubConfig } from "../edge_featurehub_config";
+import type { EdgeServiceSupplier, FeatureHubConfig } from "../feature_hub_config";
 import {
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
   FeatureValueType,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
-  SSEResultState
+  SSEResultState,
 } from "../models";
 import {
   setUsageConvertFunction,
   type UsageEvent,
   UsageEventWithFeature,
-  UsageFeaturesCollectionContext, UsagePlugin,
+  UsageFeaturesCollectionContext,
+  UsagePlugin,
 } from "../usage/usage";
-import {TestingContext} from "./testing_context";
+import { TestingContext } from "./testing_context";
 
 class NeuteredServerEvalContext extends ServerEvalFeatureContext {
   override async build(): Promise<ClientContext> {
@@ -30,28 +31,48 @@ class NeuteredServerEvalContext extends ServerEvalFeatureContext {
 }
 
 class NeuteredUsagePlugin extends UsagePlugin {
-  public event: UsageEvent|undefined;
+  public event: UsageEvent | undefined;
 
   override send(event: UsageEvent) {
     this.event = event;
   }
 }
 
-describe('usage plugin system works as expected', function () {
+describe("usage plugin system works as expected", function () {
   let repo: ClientFeatureRepository;
   let usageStreamHandler: number;
-  let event: UsageEvent|undefined = undefined;
+  let event: UsageEvent | undefined = undefined;
   let eventCount = 0;
   let ctx: ClientContext;
 
-  const fruitFeature =
-    {id: "1", key: "fruit", version: 0, type: FeatureValueType.String, value: 'pear'};
-  const boolFeature =
-    {id: "2", key: "alive", version: 0, type: FeatureValueType.Boolean, value: true};
-  const numberFeature =
-    {id: "3", key: "fruitCount", version: 0, type: FeatureValueType.Number, value: 4};
-  const jsonFeature  =
-    {id: "4", key: "fruitWarehouse", version: 0, type: FeatureValueType.Json, value: '{"warehouseId":6}'};
+  const fruitFeature = {
+    id: "1",
+    key: "fruit",
+    version: 0,
+    type: FeatureValueType.String,
+    value: "pear",
+  };
+  const boolFeature = {
+    id: "2",
+    key: "alive",
+    version: 0,
+    type: FeatureValueType.Boolean,
+    value: true,
+  };
+  const numberFeature = {
+    id: "3",
+    key: "fruitCount",
+    version: 0,
+    type: FeatureValueType.Number,
+    value: 4,
+  };
+  const jsonFeature = {
+    id: "4",
+    key: "fruitWarehouse",
+    version: 0,
+    type: FeatureValueType.Json,
+    value: '{"warehouseId":6}',
+  };
 
   beforeEach(() => {
     repo = new ClientFeatureRepository();
@@ -66,7 +87,7 @@ describe('usage plugin system works as expected', function () {
     usageStreamHandler = repo.registerUsageStream((e) => {
       console.log(JSON.stringify(e));
       event = e;
-      eventCount ++;
+      eventCount++;
     });
 
     ctx = new TestingContext(repo);
@@ -78,12 +99,12 @@ describe('usage plugin system works as expected', function () {
     }
   });
 
-  it('evaluation check', () => {
-    ctx.userKey('gorgon');
+  it("evaluation check", () => {
+    ctx.userKey("gorgon");
     expect(ctx.feature(fruitFeature.key).value).to.eq(fruitFeature.value);
     expect(eventCount).to.eq(1);
     expect(event).to.not.be.undefined;
-    expect(event!.userKey).to.eq('gorgon');
+    expect(event!.userKey).to.eq("gorgon");
     const evt = event! as UsageEventWithFeature;
     expect(evt.feature).to.not.be.undefined;
     expect(evt.feature.key).to.eq(fruitFeature.key);
@@ -91,15 +112,18 @@ describe('usage plugin system works as expected', function () {
     expect(evt.feature.value).to.eq(fruitFeature.value);
   });
 
-  it('should trigger full feature dump when features are delivered', () => {
-    const userKey = 'อ้วนจ๋า';
+  it("should trigger full feature dump when features are delivered", () => {
+    const userKey = "อ้วนจ๋า";
     // this one should automatically listen for
-    ctx = new NeuteredServerEvalContext(repo, Substitute.for<EdgeServiceSupplier>(),
-      Substitute.for<FeatureHubConfig>()).userKey(userKey);
+    ctx = new NeuteredServerEvalContext(
+      repo,
+      Substitute.for<EdgeServiceSupplier>(),
+      Substitute.for<FeatureHubConfig>(),
+    ).userKey(userKey);
 
     // the existing object is embedded in the feature, so we can't change it directly, we need to make a clone
     const newFruit = Object.assign({}, fruitFeature);
-    newFruit.value = 'orange';
+    newFruit.value = "orange";
     newFruit.version = newFruit.version++;
 
     repo.notify(SSEResultState.Features, [newFruit, boolFeature, numberFeature, jsonFeature]);
@@ -107,70 +131,74 @@ describe('usage plugin system works as expected', function () {
     expect(eventCount).to.eq(1);
     const evt = event! as UsageFeaturesCollectionContext;
     expect(evt.userKey).to.eq(userKey);
-    expect(evt.contextAttributes['userkey']).to.be.undefined;
+    expect(evt.contextAttributes["userkey"]).to.be.undefined;
     expect(evt.featureValues.length).to.eq(4);
-    const fruit = evt.featureValues.find(f => f.key === 'fruit');
+    const fruit = evt.featureValues.find((f) => f.key === "fruit");
     expect(fruit).to.not.be.undefined;
-    expect(fruit!.value).to.eq('orange');
+    expect(fruit!.value).to.eq("orange");
   });
 
-  it('should take into consideration the context and strategies when recording usage', () => {
-     const userKey = 'ออม';
-     ctx.userKey(userKey);
-     ctx.attributeValue('delight', true);
+  it("should take into consideration the context and strategies when recording usage", () => {
+    const userKey = "ออม";
+    ctx.userKey(userKey);
+    ctx.attributeValue("delight", true);
 
-     const newBool = {
-       id: "10", key: "smile", version: 0, type: FeatureValueType.Boolean, value: false,
-       strategies: [
-         {
-           id: "1",
-           value: true,
-           attributes: [
-             {
-               type: RolloutStrategyFieldType.Boolean,
-               fieldName: "delight",
-               values: [true],
-               conditional: RolloutStrategyAttributeConditional.Equals,
-             } as FeatureRolloutStrategyAttribute,
-           ],
-         } as FeatureRolloutStrategy,
-       ]
-     };
+    const newBool = {
+      id: "10",
+      key: "smile",
+      version: 0,
+      type: FeatureValueType.Boolean,
+      value: false,
+      strategies: [
+        {
+          id: "1",
+          value: true,
+          attributes: [
+            {
+              type: RolloutStrategyFieldType.Boolean,
+              fieldName: "delight",
+              values: [true],
+              conditional: RolloutStrategyAttributeConditional.Equals,
+            } as FeatureRolloutStrategyAttribute,
+          ],
+        } as FeatureRolloutStrategy,
+      ],
+    };
 
     repo.notify(SSEResultState.Feature, newBool);
-    expect(ctx.feature('smile').value).to.eq(true);
+    expect(ctx.feature("smile").value).to.eq(true);
     expect(eventCount).to.eq(1);
     const evt = event! as UsageEventWithFeature;
     expect(evt.feature.id).to.eq(newBool.id);
-    expect(evt.feature.value).to.eq('on');
+    expect(evt.feature.value).to.eq("on");
   });
 
-  it('if we register a usage plugin with the edge config, it should render out the usage object correctly', () => {
-    const fh = new EdgeFeatureHubConfig('http://localhost', '1234*567');
+  it("if we register a usage plugin with the edge config, it should render out the usage object correctly", () => {
+    const fh = new EdgeFeatureHubConfig("http://localhost", "1234*567");
     // pre-set the repository to our one
     fh.repository(repo);
     const plugin = new NeuteredUsagePlugin();
     fh.addUsagePlugin(plugin);
-    ctx.userKey('tofu').attributes = {'boiled': true};
+    ctx.userKey("tofu").attributes = { boiled: true };
 
     // evaluate the feature
     expect(ctx.feature(boolFeature.key).value).to.be.true;
     expect(plugin.event).to.not.be.undefined;
     const data = plugin.event!.collectUsageRecord();
-    expect(data['feature']).to.eq(boolFeature.key);
-    expect(data['id']).to.eq(boolFeature.id);
-    expect(data['value']).to.eq('on');
-    expect(data['boiled']).to.eq(true);
+    expect(data["feature"]).to.eq(boolFeature.key);
+    expect(data["id"]).to.eq(boolFeature.id);
+    expect(data["value"]).to.eq("on");
+    expect(data["boiled"]).to.eq(true);
   });
 
-  describe('it should allow us to replace the default type converter', () => {
+  describe("it should allow us to replace the default type converter", () => {
     afterEach(() => {
       // restore it
       setUsageConvertFunction(undefined);
     });
 
-    it('should allow us to control how types are converted', () => {
-      ctx.userKey('char-siu').attributeValue('dogBreeds', ['pomeranian', 'golden retriever'] );
+    it("should allow us to control how types are converted", () => {
+      ctx.userKey("char-siu").attributeValue("dogBreeds", ["pomeranian", "golden retriever"]);
 
       setUsageConvertFunction((value, type) => {
         if (!value) return undefined;
@@ -186,13 +214,15 @@ describe('usage plugin system works as expected', function () {
       });
 
       // send the event
-      ctx.recordNamedUsage('user-clicked', {'mouse': 'hole', 'tender': 23.4});
+      ctx.recordNamedUsage("user-clicked", { mouse: "hole", tender: 23.4 });
       expect(eventCount).to.eq(1);
 
       // ensure the event is properly constructed
       expect(event instanceof UsageFeaturesCollectionContext).to.be.true;
       const evt = event! as UsageFeaturesCollectionContext;
-      const f = (key: string) => { return evt.featureValues.find(f => f.key === key )};
+      const f = (key: string) => {
+        return evt.featureValues.find((f) => f.key === key);
+      };
       const fruit = f(fruitFeature.key);
       const bool = f(boolFeature.key);
       const num = f(numberFeature.key);
@@ -203,22 +233,22 @@ describe('usage plugin system works as expected', function () {
       expect(json).to.not.be.undefined;
       expect(fruit?.value).to.eq(fruit?.value);
       expect(num?.value).to.eq(num?.value);
-      expect(bool?.value).to.eq('yes');
-      expect(json?.value).to.deep.eq({"warehouseId": 6});
+      expect(bool?.value).to.eq("yes");
+      expect(json?.value).to.deep.eq({ warehouseId: 6 });
 
-      expect(evt.userKey).to.eq('char-siu');
-      expect(evt.contextAttributes).to.deep.eq({'dogBreeds': ['pomeranian', 'golden retriever']});
-      expect(evt.eventName).to.eq('user-clicked');
+      expect(evt.userKey).to.eq("char-siu");
+      expect(evt.contextAttributes).to.deep.eq({ dogBreeds: ["pomeranian", "golden retriever"] });
+      expect(evt.eventName).to.eq("user-clicked");
 
       // ensure the even is properly converted
       const converted = evt.collectUsageRecord();
-      expect(converted['mouse']).to.eq('hole');
-      expect(converted['tender']).to.eq(23.4);
+      expect(converted["mouse"]).to.eq("hole");
+      expect(converted["tender"]).to.eq(23.4);
       expect(converted[fruitFeature.key]).to.eq(fruitFeature.value);
       expect(converted[numberFeature.key]).to.eq(numberFeature.value);
-      expect(converted[jsonFeature.key]).to.deep.eq({"warehouseId": 6});
-      expect(converted[boolFeature.key]).to.eq('yes');
-      expect(converted['dogBreeds']).to.deep.eq(['pomeranian', 'golden retriever']);
+      expect(converted[jsonFeature.key]).to.deep.eq({ warehouseId: 6 });
+      expect(converted[boolFeature.key]).to.eq("yes");
+      expect(converted["dogBreeds"]).to.deep.eq(["pomeranian", "golden retriever"]);
     });
   });
 });

@@ -1,5 +1,5 @@
-import type {ContextRecord} from "../client_context";
-import type {FeatureStateHolder} from "../feature_state";
+import type { ContextRecord } from "../client_context";
+import type { FeatureStateHolder } from "../feature_state";
 import { FeatureValueType } from "../models";
 
 export interface UsageEvent {
@@ -33,7 +33,10 @@ export interface UsageEventName {
   eventName: string;
 }
 
-export type UsageConvertFunction = (value: any | undefined, type: FeatureValueType) => any | undefined;
+export type UsageConvertFunction = (
+  value: any | undefined,
+  type: FeatureValueType,
+) => any | undefined;
 
 function convert(value: any | undefined, type: FeatureValueType): any | undefined {
   if (!value) return undefined;
@@ -51,7 +54,7 @@ function convert(value: any | undefined, type: FeatureValueType): any | undefine
 
 /**
  * replace this if you want to change the way feature values convert
-*/
+ */
 
 export let useageConvertFunction: UsageConvertFunction = convert;
 
@@ -59,7 +62,7 @@ export let useageConvertFunction: UsageConvertFunction = convert;
  * set or reset the default function that converts feature values to strings for usage data
  * @param ucf
  */
-export function setUsageConvertFunction(ucf: UsageConvertFunction|undefined) {
+export function setUsageConvertFunction(ucf: UsageConvertFunction | undefined) {
   if (ucf) {
     useageConvertFunction = ucf;
   } else {
@@ -71,7 +74,7 @@ export function setUsageConvertFunction(ucf: UsageConvertFunction|undefined) {
 export interface FeatureHubUsageValue {
   id: string;
   key: string;
-  value: any|undefined;
+  value: any | undefined;
 }
 
 export class UsageValue implements FeatureHubUsageValue {
@@ -95,17 +98,13 @@ export class UsageEventWithFeature extends BaseUsageEvent implements UsageEventN
   private _feature: FeatureHubUsageValue;
   public readonly eventName = "feature";
 
-  constructor(
-    feature: FeatureHubUsageValue,
-    contextAttributes?: ContextRecord,
-    userKey?: string
-  ) {
+  constructor(feature: FeatureHubUsageValue, contextAttributes?: ContextRecord, userKey?: string) {
     super(userKey);
     this._contextAttributes = contextAttributes;
     this._feature = feature;
   }
 
-  get attributes(): ContextRecord| undefined {
+  get attributes(): ContextRecord | undefined {
     return this._contextAttributes;
   }
 
@@ -130,8 +129,7 @@ export class UsageFeaturesCollection extends BaseUsageEvent implements UsageEven
 
   override collectUsageRecord(): Readonly<Record<string, any>> {
     const features = {} as Record<string, any | undefined>;
-    this.featureValues.forEach((fv) => (
-      features[fv.key] = fv.value));
+    this.featureValues.forEach((fv) => (features[fv.key] = fv.value));
     return Object.assign(super.collectUsageRecord(), features);
   }
 }
@@ -174,18 +172,22 @@ export interface UsageEventListener {
 }
 
 export class UsageProvider {
-  public createFeatureHubUsageValue(feature: FeatureStateHolder) : FeatureHubUsageValue {
+  public createFeatureHubUsageValue(feature: FeatureStateHolder): FeatureHubUsageValue {
     return UsageValue.fromFeature(feature);
   }
 
-  public createFeatureHubUsageValueFromFields(id: string, key: string,
-        value: string | number | boolean | undefined, type: FeatureValueType)  : FeatureHubUsageValue {
+  public createFeatureHubUsageValueFromFields(
+    id: string,
+    key: string,
+    value: string | number | boolean | undefined,
+    type: FeatureValueType,
+  ): FeatureHubUsageValue {
     return new UsageValue(id, key, value, type);
   }
 
   public createUsageFeature(
     feature: FeatureHubUsageValue,
-    contextAttributes?: ContextRecord|undefined,
+    contextAttributes?: ContextRecord | undefined,
     userKey?: string,
   ) {
     return new UsageEventWithFeature(feature, contextAttributes, userKey);

@@ -235,7 +235,11 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.internalFeatureState;
   }
 
-  private _getValue(type?: FeatureValueType, parseJson = false, triggerUsage = true): any | undefined {
+  private _getValue(
+    type?: FeatureValueType,
+    parseJson = false,
+    triggerUsage = true,
+  ): any | undefined {
     if (!type) {
       type = this.getType();
     }
@@ -250,9 +254,9 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
       if (intercept?.value) {
         const val = this._castType(type, intercept.value, parseJson);
 
-        return triggerUsage && featureState?.id ?
-          this.used(featureState.key, featureState.id, val, type) :
-          val;
+        return triggerUsage && featureState?.id
+          ? this.used(featureState.key, featureState.id, val, type)
+          : val;
       }
     }
 
@@ -274,20 +278,28 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
       }
     }
 
-    return triggerUsage ?
-      this.used(featureState.key, featureState.id, featureState.value, type) :
-      featureState.value;
+    return triggerUsage
+      ? this.used(featureState.key, featureState.id, featureState.value, type)
+      : featureState.value;
   }
 
-  private used(key: string, id: string, value: any|undefined, type: FeatureValueType) : any|undefined {
+  private used(
+    key: string,
+    id: string,
+    value: any | undefined,
+    type: FeatureValueType,
+  ): any | undefined {
     if (this._ctx) {
       this._ctx.used(key, id, value, type);
     } else {
       const usageProvider = this._repo.usageProvider;
-      if (usageProvider) { // in testing with substitutions this can be undefined
+      if (usageProvider) {
+        // in testing with substitutions this can be undefined
         this._repo.recordUsageEvent(
           usageProvider.createUsageFeature(
-            usageProvider.createFeatureHubUsageValueFromFields(id, key, value, type)));
+            usageProvider.createFeatureHubUsageValueFromFields(id, key, value, type),
+          ),
+        );
       }
     }
 

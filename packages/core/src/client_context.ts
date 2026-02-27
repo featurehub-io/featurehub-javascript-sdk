@@ -6,28 +6,34 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "./models";
-import type {UsageEvent} from "./usage/usage";
+import type { UsageEvent } from "./usage/usage";
 
-export type ContextAttribute = number|string|boolean|Array<number>|Array<string>|Array<boolean>;
+export type ContextAttribute =
+  | number
+  | string
+  | boolean
+  | Array<number>
+  | Array<string>
+  | Array<boolean>;
 export type ContextRecord = Record<string, ContextAttribute>;
 
-export function caToString(ca: ContextAttribute, joinSep = ','): string {
+export function caToString(ca: ContextAttribute, joinSep = ","): string {
   if (Array.isArray(ca)) {
-    return (ca as Array<any>).map(c => c.toString()).join(joinSep);
+    return (ca as Array<any>).map((c) => c.toString()).join(joinSep);
   }
 
   return ca.toString();
 }
 
 export interface ClientContext {
-  userKey(value: string): ClientContext;
-  sessionKey(value: string): ClientContext;
-  country(value: StrategyAttributeCountryName): ClientContext;
-  device(value: StrategyAttributeDeviceName): ClientContext;
-  platform(value: StrategyAttributePlatformName): ClientContext;
-  version(version: string): ClientContext;
+  userKey(value: string | undefined): ClientContext;
+  sessionKey(value: string | undefined): ClientContext;
+  country(value: StrategyAttributeCountryName | undefined): ClientContext;
+  device(value: StrategyAttributeDeviceName | undefined): ClientContext;
+  platform(value: StrategyAttributePlatformName | undefined): ClientContext;
+  version(version: string | undefined): ClientContext;
 
-  attributeValue(key: string, value: ContextAttribute): ClientContext;
+  attributeValue(key: string, value: ContextAttribute | undefined): ClientContext;
 
   clear(): ClientContext;
   build(): Promise<ClientContext>;
@@ -51,7 +57,12 @@ export interface ClientContext {
   isSet(name: string): boolean;
   repository(): FeatureHubRepository;
 
-  used(key: string, id: string, value: string|number|boolean|undefined, valueType: FeatureValueType): void;
+  used(
+    key: string,
+    id: string,
+    value: string | number | boolean | undefined,
+    valueType: FeatureValueType,
+  ): void;
 
   /**
    * If you give it an event, it will pass it through the usage plugins and attempt to fill it in with details
@@ -61,7 +72,7 @@ export interface ClientContext {
    *
    * @param event - something that can have "toMap()" called on it
    */
-  recordUsageEvent(event: any|UsageEvent): any;
+  recordUsageEvent(event: any | UsageEvent): any;
 
   /**
    * This gives a full

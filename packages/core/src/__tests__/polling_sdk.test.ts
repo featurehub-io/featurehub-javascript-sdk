@@ -60,7 +60,6 @@ describe("basic polling sdk works as expected", () => {
 
     callback!([]);
 
-     
     repo.received(1).notify;
   });
 
@@ -156,17 +155,18 @@ describe("basic polling sdk works as expected", () => {
       class StubPoller extends PollingBase {
         constructor() {
           super(
-            "",
+            "http://localhost",
             200,
             async () => {
               return "";
             },
+            {},
             () => {},
           );
           this._busy = false;
         }
 
-        poll(): Promise<void> {
+        override poll(): Promise<void> {
           counter++;
           this._busy = true;
 

@@ -2,7 +2,8 @@ import {
   caToString,
   type ClientContext,
   type ContextAttribute,
-  type ContextRecord} from "./client_context";
+  type ContextRecord,
+} from "./client_context";
 import type { EdgeService } from "./edge_service";
 import { type EdgeServiceSupplier, type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
@@ -14,57 +15,57 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "./models";
-import {
-  type UsageEvent,
-} from "./usage/usage";
+import { type UsageEvent } from "./usage/usage";
 
 export abstract class BaseClientContext implements ClientContext {
   protected readonly _repository: InternalFeatureRepository;
-  protected _currentEdge : EdgeService|undefined;
+  protected _currentEdge: EdgeService | undefined;
 
-  protected _userKey: string|undefined = undefined;
+  protected _userKey: string | undefined = undefined;
   protected _attributes = new Map<string, ContextAttribute>();
 
   protected constructor(repository: InternalFeatureRepository) {
     this._repository = repository;
   }
 
-  userKey(value: string): ClientContext {
+  private setOrClear(key: string, value: ContextAttribute | undefined): ClientContext {
+    if (value === undefined) {
+      this._attributes.delete(key);
+    } else {
+      this._attributes.set(key, value);
+    }
+
+    return this;
+  }
+
+  userKey(value: string | undefined): ClientContext {
     this._userKey = value;
     return this;
   }
 
-  sessionKey(value: string): ClientContext {
-    this._attributes.set("session", value);
-    return this;
+  sessionKey(value: string | undefined): ClientContext {
+    return this.setOrClear("session", value);
   }
 
-  country(value: StrategyAttributeCountryName): ClientContext {
-    this._attributes.set("country", value);
-    return this;
+  country(value: StrategyAttributeCountryName | undefined): ClientContext {
+    return this.setOrClear("country", value);
   }
 
-  device(value: StrategyAttributeDeviceName): ClientContext {
-    this._attributes.set("device", value);
-    return this;
+  device(value: StrategyAttributeDeviceName | undefined): ClientContext {
+    return this.setOrClear("device", value);
   }
 
-  platform(value: StrategyAttributePlatformName): ClientContext {
-    this._attributes.set("platform", value);
-    return this;
+  platform(value: StrategyAttributePlatformName | undefined): ClientContext {
+    return this.setOrClear("platform", value);
   }
 
-  version(version: string): ClientContext {
-    this._attributes.set("version", version);
-    return this;
+  version(version: string | undefined): ClientContext {
+    return this.setOrClear("version", version);
   }
 
-
-  attributeValue(key: string, value: ContextAttribute): ClientContext {
-    this._attributes.set(key, value);
-    return this;
+  attributeValue(key: string, value: ContextAttribute | undefined): ClientContext {
+    return this.setOrClear(key, value);
   }
-
 
   clear(): ClientContext {
     this._attributes.clear();
@@ -72,21 +73,21 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   get attributes(): ContextRecord {
-    const base = this._userKey ? {userkey: this._userKey} : {};
+    const base = this._userKey ? { userkey: this._userKey } : {};
     return Object.assign(base, Object.fromEntries(this._attributes.entries()));
   }
 
   set attributes(data: ContextRecord) {
     // copy everything except the user key
     Object.entries(data).forEach(([key, val]) => {
-      if (key !== 'userkey') {
+      if (key !== "userkey") {
         this._attributes.set(key, val);
       }
     });
   }
 
   getAttr(key: string, defaultValue?: ContextAttribute): ContextAttribute | undefined {
-    if (key === 'userkey') {
+    if (key === "userkey") {
       return this._userKey;
     }
 
@@ -98,9 +99,9 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   defaultPercentageKey(): string | undefined {
-    return this._attributes.has("session") ?
-      this._attributes.get('session')?.toString() :
-      this._userKey;
+    return this._attributes.has("session")
+      ? this._attributes.get("session")?.toString()
+      : this._userKey;
   }
 
   // ---- feature related
@@ -162,29 +163,41 @@ export abstract class BaseClientContext implements ClientContext {
 
   // --- usage tracking
 
-  usageUserKey() { return this._userKey || this.getAttr('session')?.toString(); }
+  usageUserKey() {
+    return this._userKey || this.getAttr("session")?.toString();
+  }
 
-  private get usageAttributes() : ContextRecord {
+  private get usageAttributes(): ContextRecord {
     return Object.assign({}, Object.fromEntries(this._attributes.entries()));
   }
 
-  used(key: string, id: string, value: string|number|boolean|undefined, valueType: FeatureValueType): void {
+  used(
+    key: string,
+    id: string,
+    value: string | number | boolean | undefined,
+    valueType: FeatureValueType,
+  ): void {
     const usageProvider = this._repository.usageProvider;
     this.recordUsageEvent(
       usageProvider.createUsageFeature(
         usageProvider.createFeatureHubUsageValueFromFields(id, key, value, valueType),
-        this.usageAttributes, this.usageUserKey()));
+        this.usageAttributes,
+        this.usageUserKey(),
+      ),
+    );
 
     // because we evaluated a feature, we might be allowed to poll for a new one
-    this._currentEdge?.poll();
+    this._currentEdge?.poll(true);
   }
 
   protected recordFeatureChangedForUser(feature: FeatureStateHolder) {
     const usageProvider = this._repository.usageProvider;
-    this._repository.recordUsageEvent(usageProvider.createUsageFeature(
+    this._repository.recordUsageEvent(
+      usageProvider.createUsageFeature(
         usageProvider.createFeatureHubUsageValue(feature.withContext(this)),
         this.usageAttributes,
-        this.usageUserKey())
+        this.usageUserKey(),
+      ),
     );
   }
 
@@ -193,40 +206,43 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   protected mapRepositoryFeaturesToUsageValues() {
-    return this._repository.serverProvidedFeatureKeys.map(k =>
-      this._repository.usageProvider.createFeatureHubUsageValue(this._repository.feature(k)));
+    return this._repository.serverProvidedFeatureKeys.map((k) =>
+      this._repository.usageProvider.createFeatureHubUsageValue(this._repository.feature(k)),
+    );
   }
 
-  public fillEvent(event: any|UsageEvent) : any {
-    if (Object.hasOwn(event, 'userKey')) {
+  public fillEvent(event: any | UsageEvent): any {
+    if (Object.hasOwn(event, "userKey")) {
       event.userKey = this.usageUserKey();
-    } else if (typeof event.userKey === 'function') {
+    } else if (typeof event.userKey === "function") {
       event.userKey(this.usageUserKey());
     }
 
-    if (Object.hasOwn(event, 'featureValues')) {
-      event.featureValues =
-        this.mapRepositoryFeaturesToUsageValues();
-    } else if (typeof event.featureValues === 'function') {
+    if (Object.hasOwn(event, "featureValues")) {
+      event.featureValues = this.mapRepositoryFeaturesToUsageValues();
+    } else if (typeof event.featureValues === "function") {
       event.featureValues(this.mapRepositoryFeaturesToUsageValues());
     }
 
-    if (Object.hasOwn(event,'contextAttributes')) {
+    if (Object.hasOwn(event, "contextAttributes")) {
       event.contextAttributes = this.usageAttributes;
-    } else if (typeof event.contextAttributes === 'function') {
+    } else if (typeof event.contextAttributes === "function") {
       event.contextAttributes = this.usageAttributes;
     }
 
     return event;
   }
 
-  recordUsageEvent(event: any|UsageEvent): any {
+  recordUsageEvent(event: any | UsageEvent): any {
     this._repository.recordUsageEvent(this.fillEvent(event));
   }
 
   recordNamedUsage(name: string, additionalParams?: Record<string, any>): void {
     this._repository.recordUsageEvent(
-      this.fillEvent(this._repository.usageProvider.createNamedUsageCollection(name, additionalParams)));
+      this.fillEvent(
+        this._repository.usageProvider.createNamedUsageCollection(name, additionalParams),
+      ),
+    );
   }
 
   getContextUsage(): UsageEvent {
@@ -268,8 +284,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
   async build(): Promise<ClientContext> {
     try {
-      const newHeader =
-        Object.entries(this.attributes)
+      const newHeader = Object.entries(this.attributes)
         .map((key) => key[0] + "=" + encodeURIComponent(caToString(key[1])))
         .sort()
         .join(",");
@@ -331,8 +346,7 @@ export class ClientEvalFeatureContext extends BaseClientContext {
   }
 
   async build(): Promise<ClientContext> {
-    this._currentEdge!
-      .poll()
+    this._currentEdge!.poll()
       ?.then(() => {})
       .catch(() => {}); // in case it hasn't already been initialized
 

@@ -7,5 +7,5 @@ export interface EdgeService {
 
   close(): void;
 
-  poll(): Promise<void>;
+  poll(fromUsage?: boolean): Promise<void>;
 }

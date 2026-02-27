@@ -1,6 +1,6 @@
-import {FHLog} from "../feature_hub_config";
-import type {FeatureHubRepository} from "../featurehub_repository";
-import  {type UsagePlugin} from "./usage";
+import { FHLog } from "../feature_hub_config";
+import type { FeatureHubRepository } from "../featurehub_repository";
+import { type UsagePlugin } from "./usage";
 
 export class UsageAdapter {
   private readonly plugins: Array<UsagePlugin> = [];
@@ -16,7 +16,7 @@ export class UsageAdapter {
         } catch (e) {
           FHLog.fhLog.error(`Failed to publish usage to plugin ${p} with error ${e}`);
         }
-      })
+      });
     });
   }
 

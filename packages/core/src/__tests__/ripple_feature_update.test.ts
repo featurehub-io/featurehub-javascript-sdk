@@ -1,6 +1,6 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import {FeatureStateBaseHolder} from "../feature_state_holders";
+import { FeatureStateBaseHolder } from "../feature_state_holders";
 import {
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
@@ -10,8 +10,7 @@ import {
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
 } from "../index";
-import {FakeInternalRepository, TestingContext} from "./testing_context";
-
+import { FakeInternalRepository, TestingContext } from "./testing_context";
 
 describe("When checking for listeners triggering on strategy changes", () => {
   let repo: FakeInternalRepository;

@@ -1,5 +1,5 @@
-import {UsageEvent, UsagePlugin, ClientContext} from "featurehub-javascript-core-sdk";
-import {CoreAnalytics, CorePlugin, CoreContext} from "@segment/analytics-core";
+import { UsageEvent, UsagePlugin, ClientContext } from "featurehub-javascript-core-sdk";
+import { CoreAnalytics, CorePlugin, CoreContext } from "@segment/analytics-core";
 
 // using docs from https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/server/node#track
 
@@ -17,18 +17,20 @@ export class SegmentUsagePlugin extends UsagePlugin {
   }
 
   override send(event: UsageEvent) {
-    if (Object.hasOwn(event, 'eventName')) {
+    if (Object.hasOwn(event, "eventName")) {
       const eventName = (event as any).eventName;
 
-      const properties = Object.assign({},
+      const properties = Object.assign(
+        {},
         this.defaultPluginAttributes,
-        event.collectUsageRecord());
+        event.collectUsageRecord(),
+      );
 
       this.segmentSource().track({
         userId: event.userKey || this.anonymous,
 
         event: eventName,
-        properties: properties
+        properties: properties,
       });
     }
   }
@@ -39,14 +41,16 @@ export interface FeatureHubCoreContextSource {
 }
 
 export class FeatureHubSegmentEnrichmentPlugin implements CorePlugin {
-  public readonly name = 'featurehub-segment-enrichment-plugin';
-  public readonly version = '1.0.0';
-  public readonly type = 'enrichment';
+  public readonly name = "featurehub-segment-enrichment-plugin";
+  public readonly version = "1.0.0";
+  public readonly type = "enrichment";
   public readonly alternativeNames = [];
 
-  private _contextSource: FeatureHubCoreContextSource|undefined;
+  private _contextSource: FeatureHubCoreContextSource | undefined;
 
-  public contextSource(contextSource: FeatureHubCoreContextSource) : FeatureHubSegmentEnrichmentPlugin {
+  public contextSource(
+    contextSource: FeatureHubCoreContextSource,
+  ): FeatureHubSegmentEnrichmentPlugin {
     this._contextSource = contextSource;
     return this;
   }
@@ -87,7 +91,7 @@ export class FeatureHubSegmentEnrichmentPlugin implements CorePlugin {
     if (this._contextSource) {
       const source = this._contextSource().getContextUsage();
 
-      ctx.updateEvent('context', source.collectUsageRecord());
+      ctx.updateEvent("context", source.collectUsageRecord());
     }
 
     return ctx;
@@ -96,5 +100,4 @@ export class FeatureHubSegmentEnrichmentPlugin implements CorePlugin {
   unload(ctx: CoreContext, _instance: CoreAnalytics): Promise<unknown> | unknown {
     return ctx;
   }
-
 }

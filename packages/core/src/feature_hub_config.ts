@@ -1,20 +1,15 @@
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
 import type { EdgeService } from "./edge_service";
 import type { FeatureStateHolder } from "./feature_state";
 import {
+  type EdgeServiceProvider,
   type FeatureHubRepository,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
 import type { FeatureStateValueInterceptor } from "./interceptors";
-import type { InternalFeatureRepository } from "./internal_feature_repository";
-import type {UsagePlugin} from "./usage/usage";
+import type { UsagePlugin } from "./usage/usage";
 
-export type EdgeServiceProvider = (
-  repository: InternalFeatureRepository,
-
-  config: FeatureHubConfig,
-) => EdgeService;
 export type EdgeServiceSupplier = () => EdgeService;
 
 export type FHLogMethod = (...args: unknown[]) => void;
@@ -46,6 +41,12 @@ export class FHLog {
 
 export const fhLog = FHLog.fhLog;
 
+export enum EdgeType {
+  STREAMING,
+  REST_PASSIVE,
+  REST_ACTIVE,
+}
+
 export interface FeatureHubConfig {
   /**
    * indicates the system is ready
@@ -68,8 +69,11 @@ export interface FeatureHubConfig {
   // enable you to override the repository
   repository(repository?: FeatureHubRepository): FeatureHubRepository;
 
-  // allow you to override the edge service provider
+  // allow you to override the edge service provider, not required any longer because
+  // of the control of the edge type via the restActive(), restPassive() and streaming() functions
   edgeServiceProvider(edgeService?: EdgeServiceProvider): EdgeServiceProvider;
+
+  context(context?: ContextRecord): ClientContext;
 
   // create a new context and allow you to pass in a repository and edge service
   newContext(repository?: FeatureHubRepository, edgeService?: EdgeServiceProvider): ClientContext;
@@ -128,4 +132,14 @@ export interface FeatureHubConfig {
   addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
 
   addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig;
+
+  restActive(intervalInMilliseconds?: number): FeatureHubConfig;
+
+  restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig;
+
+  streaming(): FeatureHubConfig;
+
+  // internal APIs
+  get edgeType(): EdgeType;
+  get edgeSupplierTimeout(): number;
 }

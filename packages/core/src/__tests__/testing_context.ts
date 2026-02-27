@@ -1,24 +1,25 @@
-import type {ClientContext, ContextRecord} from "../client_context";
+import type { ClientContext, ContextRecord } from "../client_context";
 import { BaseClientContext } from "../context_impl";
-import type {FeatureStateHolder} from "../feature_state";
+import type { FeatureStateHolder } from "../feature_state";
 import {
-  type PostLoadNewFeatureStateAvailableListener, Readyness,
-  type ReadynessListener
+  type PostLoadNewFeatureStateAvailableListener,
+  Readyness,
+  type ReadynessListener,
 } from "../featurehub_repository";
-import {type FeatureStateValueInterceptor,InterceptorValueMatch} from "../interceptors";
-import type {InternalFeatureRepository} from "../internal_feature_repository";
+import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "../interceptors";
+import type { InternalFeatureRepository } from "../internal_feature_repository";
 import {
   type FeatureRolloutStrategy,
   type FeatureState,
   FeatureValueType,
-  SSEResultState
+  SSEResultState,
 } from "../models";
-import {Applied, ApplyFeature} from "../strategy_matcher";
+import { Applied, ApplyFeature } from "../strategy_matcher";
 import {
   defaultUsageProvider,
   type UsageEvent,
   type UsageEventListener,
-  UsageProvider
+  UsageProvider,
 } from "../usage/usage";
 
 export class TestingContext extends BaseClientContext {
@@ -49,24 +50,25 @@ export class FakeInternalRepository implements InternalFeatureRepository {
     return [];
   }
 
-  removeFeatureUpdateAvailableListener(_handler: number): void {
-  }
+  removeFeatureUpdateAvailableListener(_handler: number): void {}
 
-  removeUsageStream(_handler: number): void {
-  }
+  removeUsageStream(_handler: number): void {}
 
   get serverProvidedFeatureKeys(): Array<string> {
     return [];
   }
 
-  recordUsageEvent(_event: UsageEvent): void {
-  }
-  used(_key: string, _id: string, _valueType: FeatureValueType, _value: any,
-       _contextAttributes?: ContextRecord, _usageUserKey?: string): void {
-  }
+  recordUsageEvent(_event: UsageEvent): void {}
+  used(
+    _key: string,
+    _id: string,
+    _valueType: FeatureValueType,
+    _value: any,
+    _contextAttributes?: ContextRecord,
+    _usageUserKey?: string,
+  ): void {}
 
-  set usageProvider(_provider: UsageProvider) {
-  }
+  set usageProvider(_provider: UsageProvider) {}
 
   get usageProvider(): UsageProvider {
     return defaultUsageProvider;

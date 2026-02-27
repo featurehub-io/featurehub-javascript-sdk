@@ -18,7 +18,7 @@ describe("test the strategy matchers", () => {
   function equals(
     condition: RolloutStrategyAttributeConditional,
     vals: unknown[],
-    suppliedVal: string|number|boolean,
+    suppliedVal: string | number | boolean,
     matches: boolean,
   ): void {
     const rsa = {

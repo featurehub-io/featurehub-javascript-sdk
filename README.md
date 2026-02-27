@@ -29,26 +29,37 @@ Interested in contributing to the FeatureHub JavaScript SDK? Please see our [Con
 
 ## SDK installation
 
-Run to install the dependency:
+There are four different packages, which you can install using the package manager of your choice (we use pnpm):
 
-if you are intending to use this SDK with React, Angular and other browser frameworks:
+- `featurehub-javascript-client-sdk` - this installs the basic Browser compatible SDK. All Browser based frameworks are compatible with this library. It ships in both CommonJS and ES Modules format.
+- `featurehub-javascript-react-sdk` - this installs the `client` SDK + the React compatible extra layer on top.
+- `featurehub-javascript-solid-sdk` - this installs the `client` SDK + the SolidJS compatible extra layer on top.
+- `featurehub-javascript-node-sdk` - if you are running a NodeJS compatible (node, bun, etc) server side application, this is the library you would choose.
 
-`pnpm install featurehub-javascript-client-sdk`
+All of these libraries use the `core` sdk which provides all common functionality, but the `client` and `node` adapt to their own environments.
 
-if you are using NodeJS use
+## Changes from the 1.x Version
 
-`pnpm install featurehub-javascript-node-sdk`
-
-(and further imports you see below should refer to this node library instead of the client library)
+- There are now 3 ways to use the client, SSE ("near realtime"), Active REST (you set a polling interval and it polls at that interval regardless), and Passive REST (you set a polling interval and only if a feature is evaluated at or after that interval is a request for a data refresh made). Passive REST is new.
+- The Client Context (the per user evaluation context for features) is now essentially `Record<string,number|string|boolean|Array<number>|Array<string>|Array<boolean>`
+  from being a `Record<string,string>`. The signature of the ClientContext has changed to match this.
+- The API now has a Usage Tracking feature for feature evaluation, which is completely pluggable and able
+  to collect information on individual evaluations as well as collections of feature updates and user's
+  context while evaluating. A Twilio Segment plugin and OpenTelemetry plugin are provided as examples. This usage
+  tracking is what is used to enable the Passive REST capability.
+-
 
 ## Options to get feature updates
 
-There are 2 ways to request for feature updates via this SDK:
+There are 3 ways to request for feature updates via this SDK:
 
-- **FeatureHub polling client (GET request updates)**
+- **FeatureHub Active REST polling client (GET request updates)**
 
-  In this mode, you make a GET request, which you can choose to either do once, when specific things happen in your application,
-  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The `featurehub-javascript-client-sdk` defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this.
+  In this mode, updates to feature state are under your control but are regularly fetched (or only fetched once if you set your polling interval to 0). Regardless of what is going on with the user, the features will keep getting fetched at the interval you set. As feature updates are fairly rare and you may wish to see them as soon as possible within an interval, this is ideal for low cost serving and browser based applications.
+
+- **FeatureHub Passive REST polling client (GET request updates)**
+  In this mode, updates to feature state are set at a threshold, after which a poll will happen but only if the user is actively evaluating features. If no path in your application is taken where a feature is evaluated or the user has moved away from the application (a different browser tab, a different mobile
+  application for example), then polling will stop until evaluation occurs again. You can trigger it yourself if you wish simply by making an API call when your application comes active.
 
 - **SSE (Server Sent Events) realtime updates mechanism**
 
@@ -188,10 +199,10 @@ export function userMiddleware(fhConfig: FeatureHubConfig) {
   return (req: any, res: any, next: any) => {
     const user = detectUser(req); // function to analyse the Bearer token and determine who the user is
 
-    let fhClient = fhConfig.newContext();
+    let fhClient = fhConfig.context();
 
     if (user) {
-      fhClient = fhClient.userKey(user.email);
+      fhClient.userKey(user.email);
       // add anything else relevant to the context
     }
 

@@ -1,4 +1,4 @@
-import type {ClientContext} from "./client_context";
+import type { ClientContext } from "./client_context";
 import {
   type CatchReleaseListenerHandler,
   fhLog,
@@ -26,7 +26,7 @@ import {
   defaultUsageProvider,
   type UsageEvent,
   type UsageEventListener,
-  type UsageProvider
+  type UsageProvider,
 } from "./usage/usage";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
@@ -39,7 +39,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     ReadynessListener
   >();
   private _listenerCounter = 1;
-  private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>;
+  private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
@@ -50,7 +50,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _matchers: Array<FeatureStateValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
-  private _usageProvider : UsageProvider = defaultUsageProvider;
+  private _usageProvider: UsageProvider = defaultUsageProvider;
 
   constructor(applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
@@ -65,7 +65,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   get featureKeys(): Array<string> {
-    return this.features.values().map(f => f.key).toArray();
+    return this.features
+      .values()
+      .map((f) => f.key)
+      .toArray();
   }
 
   removeUsageStream(handler: number): void {
@@ -73,9 +76,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   get serverProvidedFeatureKeys(): Array<string> {
-    return this.features.values()
-      .filter(f => f.exists)
-      .map(f => f.key).toArray();
+    return this.features
+      .values()
+      .filter((f) => f.exists)
+      .map((f) => f.key)
+      .toArray();
   }
 
   public set usageProvider(provider: UsageProvider) {

@@ -1,3 +1,4 @@
+import { Analytics } from "@segment/analytics-node";
 import cors from "cors";
 import express from "express";
 import {
@@ -10,6 +11,8 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
+import { OpenTelemetryUsagePlugin } from "featurehub-usage-opentelemetry";
+import { SegmentUsagePlugin } from "featurehub-usage-segment";
 import fs from "fs";
 import path from "path";
 
@@ -34,6 +37,18 @@ const fhConfig = new EdgeFeatureHubConfig(
   process.env["FEATUREHUB_EDGE_URL"]!,
   process.env["FEATUREHUB_CLIENT_API_KEY"]!,
 );
+
+// if a Segment key is defined, set it up and register it as a usage plugin
+if (process.env["SEGMENT_WRITE_KEY"] && process.env["SEGMENT_ENABLED"]) {
+  console.log("configuring Segment plugin");
+  const analytics = new Analytics({ writeKey: process.env["SEGMENT_WRITE_KEY"] });
+  fhConfig.addUsagePlugin(new SegmentUsagePlugin(() => analytics));
+}
+
+if (process.env["OTEL_USAGE_ENABLED"]) {
+  console.log("configuring otel plugin");
+  fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin());
+}
 
 fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
 
@@ -98,7 +113,7 @@ class TodoController implements ITodoApiController {
 
   async removeTodo(parameters: { id: string; user: string }): Promise<Array<Todo>> {
     const ctx = await this.ctx(parameters.user);
-    ctx.recordNamedUsage("todo-remove", {"gaValue": "5"});
+    ctx.recordNamedUsage("todo-remove", { gaValue: "5" });
     const index: number = todos.findIndex((todo) => todo.id === parameters.id);
     todos.splice(index, 1);
     return this.listTodos(ctx);
@@ -111,7 +126,7 @@ class TodoController implements ITodoApiController {
         throw new Error("Todo body is required");
       }
 
-      ctx.recordNamedUsage("todo-add", {"gaValue": "10"});
+      ctx.recordNamedUsage("todo-add", { gaValue: "10" });
 
       const todo: Todo = {
         id: Math.floor(Math.random() * 20).toString(),

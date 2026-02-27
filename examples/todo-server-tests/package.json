@@ -6,19 +6,28 @@
   "scripts": {
     "setup": "pnpm link ../../packages/js ../../packages/node",
     "test": "cucumber-js --require-module ts-node/register --require 'features/support/**/*.ts'",
+    "segment": "SEGMENT_ENABLED=true cucumber-js --require-module ts-node/register --require 'features/support/**/*.ts'",
+    "otel": "OTEL_USAGE_ENABLED=true cucumber-js --require-module ts-node/register --require 'features/support/**/*.ts'",
     "generate:specs": "openapi-generator-cli generate -g typescript-axios -i ../todo-api/todo-api.yaml -o ./src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.70.0",
+    "@opentelemetry/sdk-node": "^0.212.0",
+    "@opentelemetry/sdk-trace-node": "^2.5.1",
+    "@segment/analytics-node": "^2.3.0",
+    "dotenv": "^17.3.1",
     "@cucumber/cucumber": "^12.3.0",
     "@types/chai": "^5.2.3",
     "@types/node": "catalog:node",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "chai": "^6.2.0",
     "featurehub-javascript-node-sdk": "workspace:*",
     "ts-node": "^10.9.2",
     "tsup": "catalog:tsup",
-    "wait-for-expect": "^4.0.0"
+    "wait-for-expect": "^4.0.0",
+    "featurehub-usage-opentelemetry": "workspace:*",
+    "featurehub-usage-segment": "workspace:*"
   },
   "devDependencies": {
     "featurehub-tsconfig": "workspace:*",
