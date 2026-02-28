@@ -171,12 +171,30 @@ export abstract class BaseClientContext implements ClientContext {
     return Object.assign({}, Object.fromEntries(this._attributes.entries()));
   }
 
+  /**
+   * This is the public interface API, it is synchronous and isn't required to be async for the internal
+   * poll, but tests want to be able to rely on knowing when its finished its async'ness so that is exposed.
+   *
+   * @param key
+   * @param id
+   * @param value
+   * @param valueType
+   */
   used(
     key: string,
     id: string,
     value: string | number | boolean | undefined,
     valueType: FeatureValueType,
-  ): void {
+  ) {
+    this._used(key, id, value, valueType);
+  }
+
+  public async _used(
+    key: string,
+    id: string,
+    value: string | number | boolean | undefined,
+    valueType: FeatureValueType,
+  ): Promise<void> {
     const usageProvider = this._repository.usageProvider;
     this.recordUsageEvent(
       usageProvider.createUsageFeature(
@@ -187,7 +205,7 @@ export abstract class BaseClientContext implements ClientContext {
     );
 
     // because we evaluated a feature, we might be allowed to poll for a new one
-    this._currentEdge?.poll(true);
+    await this._currentEdge?.poll(true);
   }
 
   protected recordFeatureChangedForUser(feature: FeatureStateHolder) {

@@ -45,8 +45,15 @@ export class FeatureHub {
 }
 
 // tell it what kind of client to create by default
-defaultEdgeTypeProviderConfig.defaultEdgeProvider = EdgeType.STREAMING;
-defaultEdgeTypeProviderConfig.defaultTimeoutInSeconds = 0; // streaming doesn't use a timeout
+defaultEdgeTypeProviderConfig.defaultEdgeProvider = process.env["FEATUREHUB_POLLING_INTERVAL"]
+  ? process.env["FEATUREHUB_POLLING_PASSIVE"]
+    ? EdgeType.REST_PASSIVE
+    : EdgeType.REST_ACTIVE
+  : EdgeType.STREAMING;
+defaultEdgeTypeProviderConfig.defaultTimeoutInSeconds = parseInt(
+  process.env["FEATUREHUB_POLLING_INTERVAL"] || "0",
+);
+// streaming doesn't use a timeout
 
 // we need to know how to construct a NodeJS EventSource
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {

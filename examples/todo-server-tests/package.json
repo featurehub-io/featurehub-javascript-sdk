@@ -32,7 +32,6 @@
   "devDependencies": {
     "featurehub-tsconfig": "workspace:*",
     "@openapitools/openapi-generator-cli": "^2.25.0",
-    "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript"
   },
   "packageManager": "pnpm@10.18.3"

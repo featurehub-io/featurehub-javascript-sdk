@@ -233,7 +233,7 @@ export type PollingClientProvider = (
 ) => PollingService;
 
 export class FeatureHubPollingClient implements EdgeService {
-  private readonly _frequency: number;
+  private _frequency: number;
   private readonly _url: string;
   private _repository: InternalFeatureRepository;
   private _pollingService: PollingService | undefined;
@@ -297,11 +297,19 @@ export class FeatureHubPollingClient implements EdgeService {
           await this._pollingService.attributeHeader(header);
         }
 
-        this._cancelTimerAndForcePollIfNotBusy();
+        await this._pollFunc();
       }
     }
 
     return new Promise<void>((resolve) => resolve());
+  }
+
+  private _cancelTimer() {
+    // stop the timeout if one is going on
+    if (this._currentTimer) {
+      clearTimeout(this._currentTimer);
+      this._currentTimer = undefined;
+    }
   }
 
   public clientEvaluated(): boolean {
@@ -318,11 +326,7 @@ export class FeatureHubPollingClient implements EdgeService {
 
   private stop() {
     fhLog.trace("polling stopping");
-    // stop the timeout if one is going on
-    if (this._currentTimer) {
-      clearTimeout(this._currentTimer);
-      this._currentTimer = undefined;
-    }
+    this._cancelTimer();
 
     if (this._pollPromiseReject !== undefined) {
       this._pollPromiseReject("Never came live");
@@ -339,10 +343,13 @@ export class FeatureHubPollingClient implements EdgeService {
     // we are active but the poll request came from usage and there is already a timer
     // we are active polling and someone has already requested a poll and the timer is going OR
     // we are passive polling and the cache hasn't expired yet
+    // or its from usage, we are passive polling and the polling service is already doing something
     if (
-      (this._options.active && isFromUsage && this._currentTimer) ||
-      (this._options.active && this._pollPromiseResolve !== undefined) ||
-      (!this._options.active && this._whenPollingCacheExpires >= Date.now())
+      (this._options.active &&
+        isFromUsage &&
+        (this._currentTimer || this._pollPromiseResolve || this._pollingService?.busy)) ||
+      (!this._options.active && this._whenPollingCacheExpires >= Date.now()) ||
+      (isFromUsage && !this._options.active && this._pollingService?.busy)
     ) {
       return new Promise<void>((resolve) => resolve());
     }
@@ -362,11 +369,7 @@ export class FeatureHubPollingClient implements EdgeService {
         this._pollPromiseReject = reject;
         this._pollPromiseResolve = resolve;
 
-        if (this._options.active) {
-          this._cancelTimerAndForcePollIfNotBusy();
-        } else {
-          this._pollFunc();
-        }
+        this._pollFunc();
       } else {
         resolve();
       }
@@ -381,6 +384,10 @@ export class FeatureHubPollingClient implements EdgeService {
     return this._pollingService?.frequency;
   }
 
+  public get isTimerSet(): boolean {
+    return this._currentTimer !== undefined;
+  }
+
   public get nextCacheExpiry(): undefined | number {
     return this._options.active ? undefined : this._whenPollingCacheExpires;
   }
@@ -393,22 +400,10 @@ export class FeatureHubPollingClient implements EdgeService {
     return this._pollPromiseReject !== undefined;
   }
 
-  private _cancelTimerAndForcePollIfNotBusy() {
-    if (this._pollingService === undefined || !this._startable || !this._options.active) {
-      return;
-    }
-
-    fhLog.trace("polling restarting");
-
-    if (this._currentTimer) {
-      clearTimeout(this._currentTimer);
-      this._currentTimer = undefined;
-    }
-
-    this._pollFunc();
-  }
-
   private _pollFunc() {
+    // only be true for active polling
+    this._cancelTimer();
+
     this._pollingService!.poll()
       .then(() => {
         fhLog.trace("poll successful");
@@ -461,21 +456,22 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   private _readyNextPoll() {
-    if (this._pollingService && this._pollingService.frequency > 0 && this._options.active) {
+    const frequency = this._pollingService?.frequency || this._frequency;
+
+    if (frequency > 0 && this._options.active) {
       // in case we got a 404, and it was shut down
-      fhLog.trace("starting timer for poll", this._pollingService.frequency);
-      this._currentTimer = setTimeout(
-        () => this._cancelTimerAndForcePollIfNotBusy(),
-        this._pollingService.frequency,
-      );
+      fhLog.trace("starting timer for poll", frequency);
+      this._currentTimer = setTimeout(() => this._pollFunc(), frequency);
     } else if (this._options.active) {
       fhLog.trace(
-        `no polling service or 0 frequency, stopping polling. defined? ${this._pollingService} frequency: ${this._pollingService?.frequency}`,
+        `no polling service or 0 frequency, stopping polling. defined? ${this._pollingService} frequency: ${frequency}`,
       );
     } else {
       // passive polling
-      this._whenPollingCacheExpires = Date.now() + this._frequency;
+      this._whenPollingCacheExpires = Date.now() + frequency;
     }
+
+    this._frequency = frequency;
   }
 
   private response(environments: Array<FeatureEnvironmentCollection>): void {
