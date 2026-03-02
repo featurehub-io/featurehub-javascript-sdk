@@ -4,7 +4,6 @@ import express from "express";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
-  FeatureHubPollingClient,
   FHLog,
   Readyness,
   StrategyAttributeCountryName,
@@ -51,21 +50,6 @@ if (process.env["OTEL_USAGE_ENABLED"]) {
 }
 
 fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
-
-if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
-  fhConfig.edgeServiceProvider(
-    (repo, config) =>
-      new FeatureHubPollingClient(
-        repo,
-        config,
-        parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!),
-      ),
-  );
-}
-
-// Add override to use polling client
-// const FREQUENCY = 5000; // 5 seconds
-// fhConfig.edgeServiceProvider((repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY));
 
 fhConfig.init();
 

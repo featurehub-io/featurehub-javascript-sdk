@@ -170,19 +170,20 @@ describe("basic polling sdk works as expected", () => {
           counter++;
           this._busy = true;
 
-          fhLog.trace(`counter is ${counter} ${p.awaitingFirstSuccess} ${p.active}`);
+          fhLog.trace(`counter is ${counter} ${p.active}`);
 
           if (counter <= 2) {
-            expect(p.awaitingFirstSuccess).toBe(true);
             expect(p.active).toBe(true);
           }
 
           this._busy = false;
           if (counter == 1) {
             fhLog.trace("rejecting with 503");
+            this.rejectOutstanding(503);
             return Promise.reject(503);
           }
 
+          this.resolveOutstanding();
           return Promise.resolve();
         }
       }

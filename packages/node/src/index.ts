@@ -50,7 +50,7 @@ defaultEdgeTypeProviderConfig.defaultEdgeProvider = process.env["FEATUREHUB_POLL
     ? EdgeType.REST_PASSIVE
     : EdgeType.REST_ACTIVE
   : EdgeType.STREAMING;
-defaultEdgeTypeProviderConfig.defaultTimeoutInSeconds = parseInt(
+defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
   process.env["FEATUREHUB_POLLING_INTERVAL"] || "0",
 );
 // streaming doesn't use a timeout

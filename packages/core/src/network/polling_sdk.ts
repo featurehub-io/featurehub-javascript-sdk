@@ -20,6 +20,8 @@ export interface PollingService {
   attributeHeader(header: string): Promise<void>;
 
   busy: boolean;
+
+  awaitingFirstPollResult: boolean;
 }
 
 export type FeaturesFunction = (environments: Array<FeatureEnvironmentCollection>) => void;
@@ -48,6 +50,7 @@ export class PollingBase implements PollingService {
   protected _shaHeader: string;
   protected _etag: string | undefined | null;
   protected _busy = false;
+  protected _awaitingFirstPollResult = true;
   protected _outstandingPromises: Array<PromiseLikeData> = [];
   protected readonly _createBase64UrlSafeHash: CryptoProvider;
   private readonly uri: URL;
@@ -81,6 +84,7 @@ export class PollingBase implements PollingService {
 
   public stop(): void {
     this._stopped = true;
+    this.rejectOutstanding("stopped");
   }
 
   public get stopped(): boolean {
@@ -150,40 +154,47 @@ export class PollingBase implements PollingService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), req.timeout || 8000);
 
-    const response = await fetch(url, {
-      headers: headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (await this.postload(response)) {
-      return;
-    }
-
-    if (!response.ok && response.status !== 304) {
-      this.rejectOutstanding(response.status);
-      throw new Error(`Failed to fetch features: ${response.statusText}`, {
-        cause: response.status,
+    try {
+      const response = await fetch(url, {
+        headers: headers,
+        signal: controller.signal,
       });
-    }
 
-    this.parseCacheControl(response.headers.get("cache-control"));
+      clearTimeout(timeoutId);
 
-    if (response.status === 304) {
+      if (await this.postload(response)) {
+        return;
+      }
+
+      if (!response.ok && response.status !== 304) {
+        this.rejectOutstanding(response.status);
+        throw new Error(`Failed to fetch features: ${response.statusText}`, {
+          cause: response.status,
+        });
+      }
+
+      this.parseCacheControl(response.headers.get("cache-control"));
+
+      if (response.status === 304) {
+        this.resolveOutstanding();
+        return;
+      }
+
+      this._etag = response.headers.get("etag");
+
+      const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
+      if (!(await this.postdecode(environments))) {
+        this._callback(environments);
+      }
+
+      this._stopped = response.status === 236;
       this.resolveOutstanding();
-      return;
+    } catch (e) {
+      this.rejectOutstanding(e);
+      throw e;
+    } finally {
+      this._awaitingFirstPollResult = false;
     }
-
-    this._etag = response.headers.get("etag");
-
-    const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
-    if (!(await this.postdecode(environments))) {
-      this._callback(environments);
-    }
-
-    this._stopped = response.status === 236;
-    this.resolveOutstanding();
   }
 
   /**
@@ -197,7 +208,7 @@ export class PollingBase implements PollingService {
       fhLog.trace(`max age is ${maxAge}`);
       if (maxAge) {
         const newFreq = parseInt(maxAge[1]!, 10);
-        fhLog.trace(`new freq is ${newFreq} ${newFreq > 0}`);
+        fhLog.trace(`cache header tried to set new freq to ${newFreq}`);
         if (newFreq > 0) {
           this._frequency = newFreq * 1000;
         }
@@ -207,6 +218,10 @@ export class PollingBase implements PollingService {
 
   public get busy() {
     return this._busy;
+  }
+
+  public get awaitingFirstPollResult() {
+    return this._awaitingFirstPollResult;
   }
 
   protected resolveOutstanding(): void {
@@ -241,8 +256,6 @@ export class FeatureHubPollingClient implements EdgeService {
   private _startable: boolean;
   private readonly _config: FeatureHubConfig;
   private _xHeader: string | undefined;
-  private _pollPromiseResolve: ((value: PromiseLike<void> | void) => void) | undefined;
-  private _pollPromiseReject: ((reason?: any) => void) | undefined;
   private _currentTimer: any;
   private _whenPollingCacheExpires: number;
 
@@ -297,7 +310,9 @@ export class FeatureHubPollingClient implements EdgeService {
           await this._pollingService.attributeHeader(header);
         }
 
-        await this._pollFunc();
+        return new Promise<void>((resolve, reject) => {
+          this._pollFunc(resolve, reject);
+        });
       }
     }
 
@@ -328,10 +343,6 @@ export class FeatureHubPollingClient implements EdgeService {
     fhLog.trace("polling stopping");
     this._cancelTimer();
 
-    if (this._pollPromiseReject !== undefined) {
-      this._pollPromiseReject("Never came live");
-    }
-
     // stop the polling service and clear it
     this._pollingService?.stop();
     this._pollingService = undefined;
@@ -340,18 +351,20 @@ export class FeatureHubPollingClient implements EdgeService {
   public poll(fromUsage?: boolean): Promise<void> {
     const isFromUsage = fromUsage || false;
 
-    // we are active but the poll request came from usage and there is already a timer
+    // we are active but the poll request came from usage and there is already a timer or there is no actual polling service or its busy
     // we are active polling and someone has already requested a poll and the timer is going OR
     // we are passive polling and the cache hasn't expired yet
     // or its from usage, we are passive polling and the polling service is already doing something
     if (
-      (this._options.active &&
-        isFromUsage &&
-        (this._currentTimer || this._pollPromiseResolve || this._pollingService?.busy)) ||
-      (!this._options.active && this._whenPollingCacheExpires >= Date.now()) ||
+      (this._options.active && isFromUsage && (this._currentTimer || this._pollingService?.busy)) ||
+      (!this._options.active && this._whenPollingCacheExpires > Date.now()) ||
       (isFromUsage && !this._options.active && this._pollingService?.busy)
     ) {
       return new Promise<void>((resolve) => resolve());
+    }
+
+    if (!this._options.active && this._whenPollingCacheExpires < Date.now()) {
+      fhLog.trace(`cache has expired, allowing call ${isFromUsage}`);
     }
 
     // if we can't start because the server has told us we aren't allowed to
@@ -366,10 +379,7 @@ export class FeatureHubPollingClient implements EdgeService {
       const forcePoll = this._options.active || this._whenPollingCacheExpires < Date.now();
 
       if (forcePoll) {
-        this._pollPromiseReject = reject;
-        this._pollPromiseResolve = resolve;
-
-        this._pollFunc();
+        this._pollFunc(resolve, reject);
       } else {
         resolve();
       }
@@ -397,30 +407,36 @@ export class FeatureHubPollingClient implements EdgeService {
   }
 
   public get awaitingFirstSuccess(): boolean {
-    return this._pollPromiseReject !== undefined;
+    return this._pollingService?.awaitingFirstPollResult || false;
   }
 
-  private _pollFunc() {
+  private _pollFunc(
+    resolve?: (value: void | PromiseLike<void>) => void,
+    reject?: (reason?: any) => void,
+  ) {
     // only be true for active polling
     this._cancelTimer();
 
+    // we will only call readyNextPoll if this was the FIRST poll being requested, the polling service
+    // can stack up callers and call them all back and we don't want readyNextPoll being triggered multiple times
+    const pollingBusy = this._pollingService?.busy || false;
+    console.log("polling busy", pollingBusy);
     this._pollingService!.poll()
       .then(() => {
         fhLog.trace("poll successful");
 
         // set the next one going before we resolve as otherwise the test will fail
-        this._readyNextPoll();
+        if (!pollingBusy) {
+          this._readyNextPoll();
+        }
         fhLog.trace("next polled finished");
-        if (this._pollPromiseResolve !== undefined) {
+        if (resolve !== undefined) {
           try {
-            this._pollPromiseResolve();
+            resolve();
           } catch (e) {
             fhLog.error("Failed to process resolve", e);
           }
         }
-
-        this._pollPromiseReject = undefined;
-        this._pollPromiseResolve = undefined;
       })
       .catch((status) => {
         fhLog.trace("poll failed", status);
@@ -434,34 +450,35 @@ export class FeatureHubPollingClient implements EdgeService {
 
           this.stop();
 
-          if (this._pollPromiseReject) {
+          if (reject) {
             try {
-              this._pollPromiseReject(status);
+              reject(status);
             } catch (e) {
               fhLog.error("Failed to process reject", e);
             }
           }
-
-          this._pollPromiseReject = undefined;
-          this._pollPromiseResolve = undefined;
         } else {
-          this._readyNextPoll();
+          if (!pollingBusy) {
+            this._readyNextPoll(resolve, reject);
+          }
 
           if (status == 503) {
             fhLog.log("The backend is not ready, waiting for the next poll.");
           }
         }
-      })
-      .finally(() => {});
+      });
   }
 
-  private _readyNextPoll() {
+  private _readyNextPoll(
+    resolve?: (value: void | PromiseLike<void>) => void,
+    reject?: (reason?: any) => void,
+  ) {
     const frequency = this._pollingService?.frequency || this._frequency;
 
     if (frequency > 0 && this._options.active) {
       // in case we got a 404, and it was shut down
       fhLog.trace("starting timer for poll", frequency);
-      this._currentTimer = setTimeout(() => this._pollFunc(), frequency);
+      this._currentTimer = setTimeout(() => this._pollFunc(resolve, reject), frequency);
     } else if (this._options.active) {
       fhLog.trace(
         `no polling service or 0 frequency, stopping polling. defined? ${this._pollingService} frequency: ${frequency}`,
@@ -469,6 +486,7 @@ export class FeatureHubPollingClient implements EdgeService {
     } else {
       // passive polling
       this._whenPollingCacheExpires = Date.now() + frequency;
+      fhLog.trace(`passive polling means cache will expire in ${frequency}ms`);
     }
 
     this._frequency = frequency;

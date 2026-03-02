@@ -104,7 +104,7 @@ describe("usage will trigger polling appropriately", async () => {
     }
   });
 
-  it("usage should not trigger polling when active polling is used", async () => {
+  it("usage should trigger polling when active polling is used if no polling service exists, ", async () => {
     // and a passive polling context
     const edge = new FeatureHubPollingClient(repo, config, 5000, { active: true } as RestOptions);
     const pollingService = Substitute.for<PollingService>();
@@ -115,8 +115,8 @@ describe("usage will trigger polling appropriately", async () => {
     pollingService.frequency.returns(5000);
     // and: tell it the polling service is already busy
     // @ts-expect-error tslint doesn't understand usage
-    pollingService.busy.returns(true);
-    await edge.poll(false);
+    pollingService.busy.returns(false);
+    await edge.poll(true);
     pollingService.received(1).poll();
     expect(edge.isTimerSet).to.be.true;
 

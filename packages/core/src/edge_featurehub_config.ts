@@ -16,23 +16,23 @@ import { type UsagePlugin } from "./usage/usage";
 import { UsageAdapter } from "./usage/usage_adapter";
 
 export const defaultEdgeTypeProviderConfig = {
-  defaultTimeoutInSeconds: 180,
+  defaultTimeoutInMilliseconds: 180000,
   defaultEdgeProvider: EdgeType.REST_ACTIVE,
 };
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
-  private _host: string;
-  private _apiKey: string;
-  private _apiKeys: Array<string>;
+  private readonly _host: string;
+  private readonly _apiKey: string;
+  private readonly _apiKeys: Array<string>;
   private _clientEval: boolean;
-  private _url: string;
+  private readonly _url: string;
   private _repository: InternalFeatureRepository | undefined;
   private _edgeService: EdgeServiceProvider | undefined;
   private _edgeServices: Array<EdgeService> = [];
   private _clientContext: ServerEvalFeatureContext | undefined;
   private _initialized = false;
   private _usageAdapter: UsageAdapter | undefined;
-  private _timeout: number = 180;
+  private _timeout: number | undefined = undefined;
   private _edgeType: EdgeType = EdgeType.STREAMING;
 
   private static _singleton: any | undefined;
@@ -59,9 +59,11 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     this._host = host;
 
     this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;
-    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInSeconds * 1000;
+    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
 
-    fhLog.trace("creating new featurehub config.");
+    fhLog.trace(
+      `creating new featurehub config with edge type ${this._edgeType} and timeout ${this._timeout}.`,
+    );
 
     if (apiKey == null || host == null) {
       throw new Error("apiKey and host must not be null");
@@ -186,7 +188,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       repository || this.repository(),
       this,
       this._edgeType,
-      this._timeout,
+      this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds,
     );
 
     this._initialized = true;
@@ -306,7 +308,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   get edgeSupplierTimeout(): number {
-    return this._timeout;
+    return this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
   }
 
   get edgeType(): EdgeType {

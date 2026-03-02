@@ -18,9 +18,9 @@ export class FeatureHubNetwork {
     timeout,
   ) => {
     if (edgeType === EdgeType.REST_PASSIVE) {
-      return new FeatureHubPollingClient(repository, config, timeout, { active: true });
-    } else if (edgeType === EdgeType.REST_ACTIVE) {
       return new FeatureHubPollingClient(repository, config, timeout, { active: false });
+    } else if (edgeType === EdgeType.REST_ACTIVE) {
+      return new FeatureHubPollingClient(repository, config, timeout, { active: true });
     } else {
       return new FeatureHubEventSourceClient(config, repository);
     }

@@ -47,7 +47,6 @@ All of these libraries use the `core` sdk which provides all common functionalit
   to collect information on individual evaluations as well as collections of feature updates and user's
   context while evaluating. A Twilio Segment plugin and OpenTelemetry plugin are provided as examples. This usage
   tracking is what is used to enable the Passive REST capability.
--
 
 ## Options to get feature updates
 
@@ -98,7 +97,19 @@ In your page's HTML, add the following (replacing the urls and keys with your ow
 <meta name="featurehub-interval" content="15000" />
 ```
 
-The interval indicates polling frequency to get feature updates and set at 15 seconds. It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments.
+The interval indicates the polling frequency in milliseconds, set to 15 seconds here. By default this uses Active REST polling. To use Passive REST instead (polling only when features are actually evaluated), add:
+
+```html
+<meta name="featurehub-client" content="passive" />
+```
+
+To use SSE real-time streaming instead of polling:
+
+```html
+<meta name="featurehub-client" content="streaming" />
+```
+
+It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments.
 
 ```typescript
 import { FeatureHub } from "featurehub-javascript-client-sdk";
@@ -310,37 +321,24 @@ You can always ask the config what the readiness is.
 fhConfig.readiness();
 ```
 
-### Changing the polling interval
+### Choosing a connection mode
 
-If you are directly creating the EdgeFeatureHubConfig or you are using polling in your app for some other reason,
-you may wish to change the interval. So you can change it by setting the
-provider for the "Edge Connector". An example that sets it to five seconds is as follows:
+Call one of these fluent methods on your `EdgeFeatureHubConfig` **before** calling `.init()` or `.build()`:
 
 ```typescript
-import { FeatureHubPollingClient } from "featurehub-javascript-client-sdk";
-const FREQUENCY = 5000; // 5 seconds
-EdgeFeatureHubConfig.edgeServiceProvider(
-  (repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY),
-);
+const fhConfig = new EdgeFeatureHubConfig(url, apiKey);
+
+// Active REST — polls at a fixed interval regardless of user activity (default for browser SDK)
+fhConfig.restActive(5000); // every 5 seconds
+
+// Passive REST — only polls after the cache expires AND a feature is evaluated
+fhConfig.restPassive(15000); // cache expires after 15 seconds
+
+// SSE — real-time streaming updates (default for Node SDK)
+fhConfig.streaming();
 ```
 
-You can specify however many seconds you want. FeatureHub also has the ability for the server to
-override the polling interval, either globally or per environment, but that is not covered here. Note,
-NodeJS servers use the SSE real time streaming updater, they can swap to using polling via the same
-mechanism as above.
-
-Please note - you should do this before doing an `EdgeFeatureHubConfig.config()`.
-
-### Changing to SSE (Server Sent Events) - real time streaming updates
-
-If you are keen to see real time updates, then swapping to the Streaming connector is achieved by:
-
-```typescript
-EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) =>
-  new FeatureHubEventSourceClient(config, repository);
-```
-
-This is a default method for feature updates in the featurehub-node-sdk.
+FeatureHub also has the ability for the server to override the polling interval via cache-control headers, either globally or per environment.
 
 ## General Documentation
 
@@ -642,65 +640,60 @@ export enum Readyness {
 }
 ```
 
-## Analytics
+## Usage Tracking
 
-Allows you to connect your application and see your features performing in Google Analytics.
+The SDK has a pluggable usage tracking system that fires whenever a feature is evaluated through a context. This
+serves two purposes: it powers the Passive REST polling mode (a feature evaluation can trigger a poll when the
+cache has expired), and it lets you send evaluation data to external analytics or observability tools.
 
-When you log an event on the repository,
-it will capture the value of all of the feature flags and feature values (in case they change),
-and log that event against your Google Analytics, once for each feature. This allows you to
-slice and dice your events by state each of the features were in. We send them as a batch, so it
-is only one request.
+### Writing a plugin
 
-Note that if you log the analytics event _on the client context_ (`ctx.logAnalyticsEvent`) it captures that user's features. If you log
-them on the repository itself (`fhConfig.repository().logAnalyticsEvent...`) then it logs the features as they are
-handed back from the server. If you are using a Server Evaluated Key, these will be the same, but you should try
-and always use the Client Context to log analytics events.
-
-There are two different implementations, one for when you are in the browser and one for when you
-are in the server, like nodejs. You don't need to worry about this, the code detects which one it is in and
-creates the correct instance.
-
-There is a plan to support other Analytics tools in the future. The only one we
-currently support is Google Analytics, so you need:
-
-- a Google analytics key - usually in the form `UA-123456`. You must provide this up front.
-- a CID - a customer id this is associate with this. You can provide this up front or you can
-  provide it with each call, or you can set it later.
-
-1. You can set it in the constructor:
+Extend `UsagePlugin` and implement `send(event: UsageEvent)`:
 
 ```typescript
-const collector = new GoogleAnalyticsCollector("UA-123456", "some-CID");
+import { UsagePlugin, UsageEvent } from "featurehub-javascript-client-sdk";
+
+class MyPlugin extends UsagePlugin {
+  send(event: UsageEvent) {
+    const record = event.collectUsageRecord(); // plain object of key/value pairs
+    // send to your analytics system...
+  }
+}
 ```
 
-2. You can tell the collector later.
+Register it with your config before any features are evaluated:
 
 ```typescript
-const collector = new GoogleAnalyticsCollector("UA-123456");
-collector.cid = "some-value"; // you can set it here
+fhConfig.addUsagePlugin(new MyPlugin());
 ```
 
-3. When you log an event, you can pass it in the map:
+### Provided plugins
+
+Two reference plugins are available as separate packages:
+
+#### Twilio Segment (`featurehub-usage-segment`)
 
 ```typescript
-const data = new Map<string, string>();
-data.set("cid", "some-cid");
+import { SegmentUsagePlugin } from "featurehub-usage-segment";
 
-ctx.logAnalyticsEvent("event-name", data);
+fhConfig.addUsagePlugin(new SegmentUsagePlugin(() => analytics));
 ```
 
-4. For a NODE server, you can set as an environment variable named `GA_CID`.
+Each feature evaluation is sent as a Segment `track` call with the feature key, value, and any context attributes as event properties. A companion `FeatureHubSegmentEnrichmentPlugin` is also provided to enrich all outgoing Segment events with the current FeatureHub context.
+
+#### OpenTelemetry (`featurehub-usage-opentelemetry`)
 
 ```typescript
-fhConfig.addAnalyticCollector(collector);
+import { OpenTelemetryUsagePlugin } from "featurehub-usage-opentelemetry";
+
+// Attaches feature evaluations as span attributes (prefixed with "featurehub.")
+fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin());
+
+// Or attach as span events instead of attributes:
+fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin("featurehub.", true));
 ```
 
-As you can see from above (in option 3), to log an event, you simply tell the repository to
-log an analytics event. It will take care of bundling everything up, passing it off to the
-Google Analytics collector which will post it off.
-
-Read more on how to interpret events in Google Analytics [here](https://docs.featurehub.io/featurehub/latest/analytics.html)
+The plugin writes to the active OpenTelemetry span. If there is no active span, the event is silently dropped.
 
 ## FeatureHub Test API
 
