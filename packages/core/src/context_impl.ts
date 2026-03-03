@@ -29,7 +29,7 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   private setOrClear(key: string, value: ContextAttribute | undefined): ClientContext {
-    if (key === 'userkey') {
+    if (key === "userkey") {
       this._userKey = value?.toString();
     } else {
       if (value === undefined) {
