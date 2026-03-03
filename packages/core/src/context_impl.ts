@@ -29,10 +29,14 @@ export abstract class BaseClientContext implements ClientContext {
   }
 
   private setOrClear(key: string, value: ContextAttribute | undefined): ClientContext {
-    if (value === undefined) {
-      this._attributes.delete(key);
+    if (key === 'userkey') {
+      this._userKey = value?.toString();
     } else {
-      this._attributes.set(key, value);
+      if (value === undefined) {
+        this._attributes.delete(key);
+      } else {
+        this._attributes.set(key, value);
+      }
     }
 
     return this;

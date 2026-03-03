@@ -1,4 +1,3 @@
-import { URL } from "url";
 
 import type { HashAlgorithm } from "../crypto/types";
 import type { EdgeService } from "../edge_service";
