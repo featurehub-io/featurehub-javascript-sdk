@@ -646,12 +646,18 @@ importers:
       '@fluffy-spoon/substitute':
         specifier: ^1.208.0
         version: 1.208.0
+      '@types/jsdom':
+        specifier: ^27.0.0
+        version: 27.0.0
       '@types/node':
         specifier: catalog:node
         version: 22.18.10
       featurehub-tsconfig:
         specifier: workspace:*
         version: link:../../packages/tsconfig
+      jsdom:
+        specifier: ^27.1.0
+        version: 27.1.0
       rimraf:
         specifier: catalog:rimraf
         version: 6.1.3
