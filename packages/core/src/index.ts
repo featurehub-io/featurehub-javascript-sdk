@@ -13,3 +13,4 @@ export * from "./internal_feature_repository";
 export * from "./models/models";
 export * from "./network";
 export * from "./usage/usage";
+export * from "./utils";

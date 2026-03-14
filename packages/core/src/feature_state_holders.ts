@@ -183,13 +183,6 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this._copy();
   }
 
-  // we need the internal feature state set to be consistent
-  analyticsCopy(): FeatureStateBaseHolder {
-    const c = this._copy();
-    c.internalFeatureState = this.internalFeatureState;
-    return c;
-  }
-
   get id(): string | undefined {
     return this.featureState()?.id;
   }
@@ -223,6 +216,12 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return bh;
   }
 
+  get environmentId(): string | undefined {
+    const envId = this.featureState()?.environmentId;
+    // use == instead of === as we want undefined and null to be equal here
+    return envId == null ? undefined : envId;
+  }
+
   private featureState(): FeatureState | undefined {
     if (this.internalFeatureState !== undefined) {
       return this.internalFeatureState;
@@ -249,14 +248,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
     const featureState = this.featureState();
     if (!this.isLocked()) {
-      const intercept = this._repo.valueInterceptorMatched(this._key);
+      const intercept = this._repo.valueInterceptorMatched(this._key, featureState);
 
       if (intercept?.value) {
         const val = this._castType(type, intercept.value, parseJson);
 
-        return triggerUsage && featureState?.id
-          ? this.used(featureState.key, featureState.id, val, type)
-          : val;
+        // we only trigger usage for featureState's that exist.
+        return triggerUsage && featureState?.id ? this.used(featureState, val) : val;
       }
     }
 
@@ -274,30 +272,29 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
       if (matched.matched) {
         const sVal = this._castType(type, matched.value, parseJson);
-        return triggerUsage ? this.used(featureState.key, featureState.id, sVal, type) : sVal;
+        return triggerUsage ? this.used(featureState, sVal) : sVal;
       }
     }
 
-    return triggerUsage
-      ? this.used(featureState.key, featureState.id, featureState.value, type)
-      : featureState.value;
+    return triggerUsage ? this.used(featureState, featureState.value) : featureState.value;
   }
 
-  private used(
-    key: string,
-    id: string,
-    value: any | undefined,
-    type: FeatureValueType,
-  ): any | undefined {
+  private used(fs: FeatureState, value: any | undefined): any | undefined {
     if (this._ctx) {
-      this._ctx.used(key, id, value, type);
+      this._ctx.used(fs.key, fs.id, value, fs.type!, fs.environmentId!);
     } else {
       const usageProvider = this._repo.usageProvider;
       if (usageProvider) {
         // in testing with substitutions this can be undefined
         this._repo.recordUsageEvent(
           usageProvider.createUsageFeature(
-            usageProvider.createFeatureHubUsageValueFromFields(id, key, value, type),
+            usageProvider.createFeatureHubUsageValueFromFields(
+              fs.id,
+              fs.key,
+              value,
+              fs.type!,
+              fs.environmentId!,
+            ),
           ),
         );
       }

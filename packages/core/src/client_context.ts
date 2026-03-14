@@ -62,6 +62,7 @@ export interface ClientContext {
     id: string,
     value: string | number | boolean | undefined,
     valueType: FeatureValueType,
+    environmentId: string,
   ): void;
 
   /**

@@ -695,6 +695,77 @@ fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin("featurehub.", true));
 
 The plugin writes to the active OpenTelemetry span. If there is no active span, the event is silently dropped.
 
+## Feature Value Interceptors
+
+Feature value interceptors let you override the value of any feature before it is returned to the caller. This is useful for local development overrides, test harnesses, or loading values from a custom source (e.g. a query parameter or a local config file).
+
+### The interface
+
+Implement `FeatureStateValueInterceptor` from the SDK:
+
+```typescript
+import {
+  FeatureStateValueInterceptor,
+  InterceptorValueMatch,
+  InternalFeatureRepository,
+  FeatureState,
+} from "featurehub-javascript-client-sdk";
+
+class MyInterceptor implements FeatureStateValueInterceptor {
+  // Called once so the interceptor can hold a reference to the repository if needed.
+  repository(repo: InternalFeatureRepository): void {}
+
+  // Called on every feature value read. Return an InterceptorValueMatch to override
+  // the value, or undefined to let the normal value through.
+  matched(key: string, featureState?: FeatureState): InterceptorValueMatch | undefined {
+    if (key === "MY_FLAG") {
+      return new InterceptorValueMatch(true); // force the flag on
+    }
+    return undefined; // no override
+  }
+}
+```
+
+`InterceptorValueMatch` wraps the replacement value (`string | boolean | number | undefined`). Returning `new InterceptorValueMatch(undefined)` overrides the feature to have no value (null/unset). Returning `undefined` from `matched` means "no override, use the real value".
+
+### Registering an interceptor
+
+```typescript
+fhConfig.addValueInterceptor(new MyInterceptor());
+```
+
+Or directly on the repository:
+
+```typescript
+fhConfig.repository().addValueInterceptor(new MyInterceptor());
+```
+
+Multiple interceptors can be registered; they are evaluated in registration order and the first match wins.
+
+### Provided interceptor: `LocalSessionInterceptor` (`featurehub-browser-interceptor`)
+
+The `featurehub-browser-interceptor` package provides `LocalSessionInterceptor`, which persists feature overrides in browser `localStorage` and restores them on every page load. It implements both `FeatureStateValueInterceptor` (to intercept reads) and `UsagePlugin` (to keep the stored values in sync as features are evaluated).
+
+Install the package:
+
+```bash
+npm install featurehub-browser-interceptor
+# or
+pnpm add featurehub-browser-interceptor
+```
+
+Register a **single instance** as both an interceptor and a usage plugin:
+
+```typescript
+import { LocalSessionInterceptor } from "featurehub-browser-interceptor";
+
+const interceptor = new LocalSessionInterceptor();
+fhConfig.addValueInterceptor(interceptor);
+fhConfig.addUsagePlugin(interceptor);
+```
+
+Once registered, the interceptor writes evaluated feature values to `localStorage` using the keys `fh_value_<KEY>` (the serialised value) and `fh_null_<KEY>` (when the value is null/undefined). You can pre-seed overrides by setting these keys directly in the browser developer tools before the page loads, and the interceptor will return those values instead of the server-provided ones.
+
 ## FeatureHub Test API
 
 When writing automated integration tests, it is often desirable to update your feature values, particularly flags.

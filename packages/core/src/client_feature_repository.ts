@@ -27,6 +27,7 @@ import {
   type UsageEvent,
   type UsageEventListener,
   type UsageProvider,
+  UsageValue,
 } from "./usage/usage";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
@@ -185,14 +186,19 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     matcher.repository(this);
   }
 
-  public valueInterceptorMatched(key: string): InterceptorValueMatch | undefined {
+  public valueInterceptorMatched(
+    key: string,
+    featureState?: FeatureState,
+  ): InterceptorValueMatch | undefined {
     for (const matcher of this._matchers) {
-      const m = matcher.matched(key);
-      if (m?.value) {
+      const m = matcher.matched(key, featureState);
+
+      if (m) {
         return m;
       }
     }
 
+    // nothing matched
     return undefined;
   }
 
@@ -249,6 +255,19 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   public broadcastReadynessState(firstState: boolean): void {
+    // if there are usage listeners, give them all the features
+    if (this._usageStreams.size) {
+      const ready = this.usageProvider.createUsageCollectionEvent();
+
+      ready.eventName = "readyness";
+      ready.featureValues = this.features
+        .values()
+        .map((fs) => UsageValue.fromFeature(fs))
+        .toArray();
+
+      this._usageStreams.values().forEach((v) => v(ready));
+    }
+
     this._readinessListeners.forEach((l) => l(this.readynessState, firstState));
   }
 

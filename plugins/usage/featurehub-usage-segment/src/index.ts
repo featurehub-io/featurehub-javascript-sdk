@@ -1,4 +1,4 @@
-import { UsageEvent, UsagePlugin, ClientContext } from "featurehub-javascript-core-sdk";
+import { UsageEvent, DefaultUsagePlugin, ClientContext } from "featurehub-javascript-core-sdk";
 import { CoreAnalytics, CorePlugin, CoreContext } from "@segment/analytics-core";
 
 // using docs from https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/server/node#track
@@ -7,7 +7,7 @@ export interface SegmentAnalyticsSource {
   (): CoreAnalytics;
 }
 
-export class SegmentUsagePlugin extends UsagePlugin {
+export class SegmentUsagePlugin extends DefaultUsagePlugin {
   private readonly segmentSource: SegmentAnalyticsSource;
   public anonymous = "anonymous";
 

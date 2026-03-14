@@ -179,18 +179,20 @@ export abstract class BaseClientContext implements ClientContext {
    * This is the public interface API, it is synchronous and isn't required to be async for the internal
    * poll, but tests want to be able to rely on knowing when its finished its async'ness so that is exposed.
    *
-   * @param key
-   * @param id
-   * @param value
-   * @param valueType
+   * @param key - feature's current user-facing key
+   * @param id - feature's immutable key
+   * @param value - feature's evaluated value in this context
+   * @param valueType - feature's type
+   * @param environmentId - the environment this feature comes form (stored in featurestate)
    */
   used(
     key: string,
     id: string,
     value: string | number | boolean | undefined,
     valueType: FeatureValueType,
+    environmentId: string,
   ) {
-    this._used(key, id, value, valueType);
+    this._used(key, id, value, valueType, environmentId);
   }
 
   public async _used(
@@ -198,11 +200,18 @@ export abstract class BaseClientContext implements ClientContext {
     id: string,
     value: string | number | boolean | undefined,
     valueType: FeatureValueType,
+    environmentId: string,
   ): Promise<void> {
     const usageProvider = this._repository.usageProvider;
     this.recordUsageEvent(
       usageProvider.createUsageFeature(
-        usageProvider.createFeatureHubUsageValueFromFields(id, key, value, valueType),
+        usageProvider.createFeatureHubUsageValueFromFields(
+          id,
+          key,
+          value,
+          valueType,
+          environmentId,
+        ),
         this.usageAttributes,
         this.usageUserKey(),
       ),

@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "examples/*"
   - "plugins/usage/*"
+  - "plugins/featurehub-browser-interceptor"
 
 catalogs:
   prettier:

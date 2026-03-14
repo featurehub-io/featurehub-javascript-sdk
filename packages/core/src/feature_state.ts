@@ -121,4 +121,5 @@ export interface FeatureStateHolder<T = any> {
   get featureProperties(): Record<string, string> | undefined;
 
   get id(): string | undefined;
+  get environmentId(): string | undefined;
 }

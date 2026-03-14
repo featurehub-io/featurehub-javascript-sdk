@@ -2,7 +2,7 @@
 import type { EdgeService } from "../edge_service";
 import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
-import { SSEResultState } from "../models";
+import { type FeatureState, SSEResultState } from "../models";
 import { Readyness } from "../featurehub_repository";
 
 export declare class EventSource {
@@ -111,6 +111,15 @@ export class FeatureHubEventSourceClient implements EdgeService {
           if (fName === SSEResultState.Config) {
             this.processConfig(data);
           } else {
+            // ensure the environment id is set as its required in usage
+            const envId = this._config.environmentId;
+
+            if (fName === SSEResultState.Features) {
+              (data as Array<FeatureState>).forEach((fs) => (fs.environmentId = envId));
+            } else if (fName === SSEResultState.Feature || fName === SSEResultState.DeleteFeature) {
+              (data as FeatureState).environmentId = envId;
+            }
+
             this._repository.notify(name, data);
           }
         } catch (e) {
@@ -152,13 +161,16 @@ export class FeatureHubEventSourceClient implements EdgeService {
   }
 
   contextChange(header: string): Promise<void> {
-    this._header = header;
+    // ignore if not client evaluated
+    if (!this.clientEvaluated()) {
+      this._header = header;
 
-    if (this.eventSource !== undefined) {
-      this.close();
+      if (this.eventSource !== undefined) {
+        this.close();
+      }
+
+      this.init();
     }
-
-    this.init();
 
     return Promise.resolve(undefined);
   }

@@ -19,7 +19,7 @@ import {
   defaultUsageProvider,
   type UsageEvent,
   type UsageEventListener,
-  UsageProvider,
+  type UsageProvider,
 } from "../usage/usage";
 
 export class TestingContext extends BaseClientContext {

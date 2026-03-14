@@ -78,15 +78,27 @@ The `core` package is **not published for direct use** — it contains all share
 
 Key files:
 
-- **`edge_featurehub_config.ts`** — `EdgeFeatureHubConfig`: the main entry point for users. Manages connection lifecycle, context creation, and the `EdgeType` (STREAMING / REST_ACTIVE / REST_PASSIVE).
+- **`edge_featurehub_config.ts`** — `EdgeFeatureHubConfig`: the main entry point for users. Manages connection lifecycle, context creation, `UsageAdapter` wiring, and the `EdgeType` (STREAMING / REST_ACTIVE / REST_PASSIVE). Exposes `addUsagePlugin()` and an `environmentId` getter (parses it from the API key).
 - **`feature_hub_config.ts`** — `FeatureHubConfig` interface + `FHLog` logging class + `EdgeType` enum.
-- **`client_feature_repository.ts`** — `ClientFeatureRepository`: holds all feature states, processes updates, fires events.
-- **`context_impl.ts`** — `ClientEvalFeatureContext` (client-side key) and `ServerEvalFeatureContext` (server-side key): the per-user evaluation context.
+- **`featurehub_repository.ts`** — `FeatureHubRepository` interface + `Readyness` enum + `EdgeServiceProvider` type. The repository interface includes `registerUsageStream` / `removeUsageStream` and a `usageProvider` getter/setter.
+- **`internal_feature_repository.ts`** — `InternalFeatureRepository` extends `FeatureHubRepository` with internal methods: `notify`, `notReady`, `valueInterceptorMatched`, `recordUsageEvent`, `usageProvider`, and `apply` (for strategy matching).
+- **`client_feature_repository.ts`** — `ClientFeatureRepository`: holds all feature states, processes SSE/polling updates, fires readiness and usage events. On `broadcastReadynessState` it emits a `'readyness'` usage collection event to all registered usage streams.
+- **`context_impl.ts`** — `BaseClientContext` (abstract base with usage-tracking methods), `ClientEvalFeatureContext` (client-side key), and `ServerEvalFeatureContext` (server-side key). `BaseClientContext` provides `used()`, `recordUsageEvent()`, `recordNamedUsage()`, `fillEvent()`, and `getContextUsage()` for usage instrumentation.
+- **`interceptors.ts`** — `FeatureStateValueInterceptor` interface + `InterceptorValueMatch`: allows overriding feature values before they are returned (e.g. for local development overrides).
 - **`network/polling_sdk.ts`** — `PollingBase` (abstract, platform-agnostic polling logic) + `FeatureHubPollingClient` (orchestrates polling, handles active/passive modes and cache expiry).
-- **`network/featurehub_eventsource.ts`** — SSE streaming client.
+- **`network/featurehub_eventsource.ts`** — SSE streaming client. Injects `environmentId` (from config) into each `FeatureState` received, which is required for usage tracking.
 - **`network/index.ts`** — `FeatureHubNetwork.defaultEdgeServiceSupplier` chooses the right transport based on `EdgeType`.
-- **`usage/usage.ts`** — Usage tracking types: `UsagePlugin` (abstract base), `UsageEvent`, `UsageEventWithFeature`, `UsageFeaturesCollection`.
-- **`usage/usage_adapter.ts`** — `UsageAdapter`: bridges the repository's usage stream to registered `UsagePlugin` instances.
+- **`usage/usage.ts`** — Full usage tracking type system:
+  - `UsageEvent` interface + `BaseUsageEvent` base class (with `userKey` and `userAddedData`)
+  - `FeatureHubUsageValue` interface + `UsageValue` class (holds feature id, key, value, type, environmentId)
+  - `UsageEventWithFeature` — a single feature evaluation event with context attributes
+  - `UsageFeaturesCollection` — a batch of feature values (e.g. on readiness)
+  - `UsageFeaturesCollectionContext` — batch with context attributes
+  - `UsageNamedFeaturesCollection` — named custom collection event
+  - `UsagePlugin` interface + `DefaultUsagePlugin` abstract base
+  - `UsageProvider` interface + `DefaultUsageProvider` class — factory for creating usage events; override `defaultUsageProvider` globally or per-repository to customise event construction
+  - `useageConvertFunction` / `setUsageConvertFunction` — customise how feature values are serialised to strings
+- **`usage/usage_adapter.ts`** — `UsageAdapter`: bridges the repository's usage stream to registered `UsagePlugin` instances. Created automatically by `EdgeFeatureHubConfig` when the repository is initialised.
 
 ### Platform-Specific Polling
 
@@ -99,13 +111,25 @@ The `PollingBase` class in core uses the **Fetch API** (available in both browse
 
 Set on `EdgeFeatureHubConfig` before calling `.init()` or `.build()`:
 
-- **`config.streaming()`** — SSE (default for Node)
-- **`config.restActive(intervalMs)`** — Polls at fixed interval regardless of usage (default for browser)
-- **`config.restPassive(cacheMs)`** — Only polls after cache expires AND a feature is evaluated (new in v2)
+- **`config.streaming()`** — SSE long-lived connection
+- **`config.restActive(intervalMs)`** — Polls at fixed interval regardless of usage (current default for both platforms)
+- **`config.restPassive(cacheMs)`** — Only polls after cache expires AND a feature is evaluated
+
+The default edge type is `REST_ACTIVE` (set in `defaultEdgeTypeProviderConfig` in `edge_featurehub_config.ts`). Platform packages may override this default.
 
 ### Client vs Server Evaluated Keys
 
 API keys containing `*` are **client-evaluated** (all feature rules sent to the client). Keys without `*` are **server-evaluated** (server computes which variant applies per request context). The `EdgeFeatureHubConfig` detects this automatically from the key format.
+
+### Usage Tracking System
+
+Usage events flow as follows:
+
+1. Feature evaluation in `BaseClientContext.used()` → creates a `UsageEventWithFeature` via `UsageProvider`
+2. Event is passed to `InternalFeatureRepository.recordUsageEvent()` → fans out to all registered `UsageEventListener` streams
+3. `UsageAdapter` (created by `EdgeFeatureHubConfig`) registers one such stream and forwards events to all registered `UsagePlugin` instances
+
+Register a plugin with: `fhConfig.addUsagePlugin(myPlugin)`. Implement `UsagePlugin` or extend `DefaultUsagePlugin`.
 
 ### Usage Tracking Plugins (`plugins/usage/`)
 
@@ -114,7 +138,9 @@ Two reference implementations:
 - `featurehub-usage-segment/` — Twilio Segment integration
 - `featurehub-usage-opentelemetry/` — OpenTelemetry integration
 
-Register a plugin with: `fhConfig.addUsagePlugin(myPlugin)`.
+### Browser Interceptor Plugin (`plugins/featurehub-browser-interceptor/`)
+
+Provides `LocalSessionInterceptor` — a `FeatureStateValueInterceptor` that stores per-key overrides in browser `sessionStorage`. Formerly named `featurehub-baggage-userstate`.
 
 ### React SDK (`packages/react/src/`)
 

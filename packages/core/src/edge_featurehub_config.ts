@@ -314,4 +314,18 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   get edgeType(): EdgeType {
     return this._edgeType;
   }
+
+  get environmentId(): string {
+    const parts = this._apiKey.split("/");
+
+    if (parts.length >= 3) {
+      return parts[1]!;
+    }
+
+    if (parts.length == 2) {
+      return parts[0]!;
+    }
+
+    return "<unknown>";
+  }
 }

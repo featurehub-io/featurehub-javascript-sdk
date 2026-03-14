@@ -1,5 +1,3 @@
-import { URL } from "url";
-
 import { fhLog } from "../feature_hub_config";
 import type { FeatureStateUpdate } from "../models";
 import type { FetchRequestOptions } from "./common";

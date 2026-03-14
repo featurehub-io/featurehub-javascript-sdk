@@ -15,11 +15,11 @@ import {
   SSEResultState,
 } from "../models";
 import {
+  DefaultUsagePlugin,
   setUsageConvertFunction,
   type UsageEvent,
   UsageEventWithFeature,
   UsageFeaturesCollectionContext,
-  UsagePlugin,
 } from "../usage/usage";
 import { TestingContext } from "./testing_context";
 
@@ -30,7 +30,7 @@ class NeuteredServerEvalContext extends ServerEvalFeatureContext {
   }
 }
 
-class NeuteredUsagePlugin extends UsagePlugin {
+class NeuteredUsagePlugin extends DefaultUsagePlugin {
   public event: UsageEvent | undefined;
 
   override send(event: UsageEvent) {
@@ -51,6 +51,7 @@ describe("usage plugin system works as expected", function () {
     version: 0,
     type: FeatureValueType.String,
     value: "pear",
+    environmentId: "env1",
   };
   const boolFeature = {
     id: "2",
@@ -58,6 +59,7 @@ describe("usage plugin system works as expected", function () {
     version: 0,
     type: FeatureValueType.Boolean,
     value: true,
+    environmentId: "nine-eggs-a-day",
   };
   const numberFeature = {
     id: "3",
@@ -65,6 +67,7 @@ describe("usage plugin system works as expected", function () {
     version: 0,
     type: FeatureValueType.Number,
     value: 4,
+    environmentId: "env1",
   };
   const jsonFeature = {
     id: "4",
@@ -72,6 +75,7 @@ describe("usage plugin system works as expected", function () {
     version: 0,
     type: FeatureValueType.Json,
     value: '{"warehouseId":6}',
+    environmentId: "env1",
   };
 
   beforeEach(() => {
@@ -149,6 +153,7 @@ describe("usage plugin system works as expected", function () {
       version: 0,
       type: FeatureValueType.Boolean,
       value: false,
+      environmentId: "env1",
       strategies: [
         {
           id: "1",
@@ -171,6 +176,8 @@ describe("usage plugin system works as expected", function () {
     const evt = event! as UsageEventWithFeature;
     expect(evt.feature.id).to.eq(newBool.id);
     expect(evt.feature.value).to.eq("on");
+    expect(evt.feature.rawValue).to.be.true;
+    expect(evt.feature.environmentId).to.eq("env1");
   });
 
   it("if we register a usage plugin with the edge config, it should render out the usage object correctly", () => {
@@ -189,6 +196,7 @@ describe("usage plugin system works as expected", function () {
     expect(data["id"]).to.eq(boolFeature.id);
     expect(data["value"]).to.eq("on");
     expect(data["boiled"]).to.eq(true);
+    expect(data["environmentId"]).to.eq("nine-eggs-a-day");
   });
 
   describe("it should allow us to replace the default type converter", () => {

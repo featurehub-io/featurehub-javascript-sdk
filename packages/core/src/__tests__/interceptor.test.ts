@@ -12,20 +12,27 @@ import {
   InterceptorValueMatch,
   SSEResultState,
 } from "../index";
+import { featureValueFromString } from "../utils";
 
 class KeyValueInterceptor implements FeatureStateValueInterceptor {
   private readonly key: string;
-  private readonly value: string;
+  private readonly value: string | undefined;
 
-  constructor(key: string, value: string) {
+  constructor(key: string, value: string | undefined) {
     this.key = key;
     this.value = value;
   }
 
-  matched(key: string): InterceptorValueMatch {
-    return key === this.key
-      ? new InterceptorValueMatch(this.value)
-      : new InterceptorValueMatch(undefined);
+  matched(key: string, featureState?: FeatureState): InterceptorValueMatch | undefined {
+    if (key !== this.key) {
+      return undefined;
+    }
+
+    if (featureState) {
+      return new InterceptorValueMatch(featureValueFromString(featureState.type!, this.value));
+    }
+
+    return new InterceptorValueMatch(this.value);
   }
 
   repository(_repo: FeatureHubRepository): void {}

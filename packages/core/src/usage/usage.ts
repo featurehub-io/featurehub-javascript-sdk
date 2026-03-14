@@ -36,9 +36,9 @@ export interface UsageEventName {
 export type UsageConvertFunction = (
   value: any | undefined,
   type: FeatureValueType,
-) => any | undefined;
+) => string | undefined;
 
-function convert(value: any | undefined, type: FeatureValueType): any | undefined {
+function convert(value: any | undefined, type: FeatureValueType): string | undefined {
   if (!value) return undefined;
 
   switch (type) {
@@ -74,22 +74,43 @@ export function setUsageConvertFunction(ucf: UsageConvertFunction | undefined) {
 export interface FeatureHubUsageValue {
   id: string;
   key: string;
-  value: any | undefined;
+  value: string | undefined;
+  rawValue: string | number | boolean | undefined;
+  valueType: FeatureValueType;
+  environmentId: string;
 }
 
 export class UsageValue implements FeatureHubUsageValue {
   id: string;
   key: string;
-  value: string | number | boolean | undefined;
+  value: string | undefined;
+  rawValue: string | number | boolean | undefined;
+  valueType: FeatureValueType;
+  environmentId: string;
 
-  constructor(id: string, key: string, value: any | undefined, type: FeatureValueType) {
+  constructor(
+    id: string,
+    key: string,
+    value: string | number | boolean | undefined,
+    type: FeatureValueType,
+    environmentId: string,
+  ) {
     this.id = id;
     this.key = key;
+    this.rawValue = value;
+    this.valueType = type;
+    this.environmentId = environmentId;
     this.value = useageConvertFunction(value, type);
   }
 
   static fromFeature(feature: FeatureStateHolder): FeatureHubUsageValue {
-    return new UsageValue(feature.id!, feature.key!, feature.untrackedValue, feature.type!);
+    return new UsageValue(
+      feature.id!,
+      feature.key!,
+      feature.untrackedValue,
+      feature.type!,
+      feature.environmentId!,
+    );
   }
 }
 
@@ -117,6 +138,7 @@ export class UsageEventWithFeature extends BaseUsageEvent implements UsageEventN
       feature: this._feature.key,
       value: this._feature.value,
       id: this._feature.id,
+      environmentId: this._feature.environmentId,
     };
 
     return Object.assign(super.collectUsageRecord(), this._contextAttributes || {}, featureData);
@@ -157,7 +179,12 @@ export class UsageNamedFeaturesCollection extends UsageFeaturesCollectionContext
   }
 }
 
-export abstract class UsagePlugin {
+export interface UsagePlugin {
+  get defaultPluginAttributes(): Record<string, any>;
+  send(event: UsageEvent): void;
+}
+
+export abstract class DefaultUsagePlugin implements UsagePlugin {
   protected readonly _defaultPluginAttributes = {} as Record<string, any>;
 
   public get defaultPluginAttributes(): Record<string, any> {
@@ -171,7 +198,34 @@ export interface UsageEventListener {
   (event: UsageEvent): void;
 }
 
-export class UsageProvider {
+export interface UsageProvider {
+  createFeatureHubUsageValue(feature: FeatureStateHolder): FeatureHubUsageValue;
+
+  createFeatureHubUsageValueFromFields(
+    id: string,
+    key: string,
+    value: string | number | boolean | undefined,
+    type: FeatureValueType,
+    environmentId: string,
+  ): UsageValue;
+
+  createUsageFeature(
+    feature: FeatureHubUsageValue,
+    contextAttributes?: ContextRecord | undefined,
+    userKey?: string,
+  ): UsageEventWithFeature;
+
+  createUsageCollectionEvent(): UsageFeaturesCollection;
+
+  createUsageContextCollectionEvent(): UsageFeaturesCollectionContext;
+
+  createNamedUsageCollection(
+    name: string,
+    additionalParams?: Record<string, any>,
+  ): UsageNamedFeaturesCollection;
+}
+
+export class DefaultUsageProvider implements UsageProvider {
   public createFeatureHubUsageValue(feature: FeatureStateHolder): FeatureHubUsageValue {
     return UsageValue.fromFeature(feature);
   }
@@ -181,8 +235,9 @@ export class UsageProvider {
     key: string,
     value: string | number | boolean | undefined,
     type: FeatureValueType,
+    environmentId: string,
   ): FeatureHubUsageValue {
-    return new UsageValue(id, key, value, type);
+    return new UsageValue(id, key, value, type, environmentId);
   }
 
   public createUsageFeature(
@@ -207,4 +262,4 @@ export class UsageProvider {
 }
 
 // replace this globally with your own if you want to.
-export const defaultUsageProvider = new UsageProvider();
+export const defaultUsageProvider = new DefaultUsageProvider();

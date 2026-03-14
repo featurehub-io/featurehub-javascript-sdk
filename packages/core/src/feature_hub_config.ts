@@ -142,4 +142,5 @@ export interface FeatureHubConfig {
   // internal APIs
   get edgeType(): EdgeType;
   get edgeSupplierTimeout(): number;
+  get environmentId(): string;
 }
