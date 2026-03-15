@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
   workflow_dispatch:
 
 jobs:
@@ -13,6 +19,10 @@ jobs:
       contents: read
       packages: write
 
+    # Condition to run the job:
+    # Either the event is a push to the main branch,
+    # OR the event is a pull_request and it contains the 'your-label-name' label.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'build-e2e-image')) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,10 +34,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
+      - name: Determine branch names
+        id: branch-names
+        uses: tj-actions/branch-names@v9.0.2
+
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7 # uses node24
         with:
           context: .
           file: ./Dockerfile.e2e
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          build-args: |
+            branch=${{ steps.branch-names.outputs.current_branch }}
+          tags: ghcr.io/${{ github.repository }}:${{ steps.branch-names.outputs.current_branch }}
