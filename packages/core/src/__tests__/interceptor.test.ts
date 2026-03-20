@@ -7,14 +7,13 @@ import {
   type EdgeService,
   type FeatureHubRepository,
   type FeatureState,
-  type FeatureStateValueInterceptor,
+  type FeatureValueInterceptor,
   FeatureValueType,
-  InterceptorValueMatch,
   SSEResultState,
 } from "../index";
 import { featureValueFromString } from "../utils";
 
-class KeyValueInterceptor implements FeatureStateValueInterceptor {
+class KeyValueInterceptor implements FeatureValueInterceptor {
   private readonly key: string;
   private readonly value: string | undefined;
 
@@ -23,19 +22,21 @@ class KeyValueInterceptor implements FeatureStateValueInterceptor {
     this.value = value;
   }
 
-  matched(key: string, featureState?: FeatureState): InterceptorValueMatch | undefined {
+  matched(
+    key: string,
+    _repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
     if (key !== this.key) {
-      return undefined;
+      return [false, undefined];
     }
 
     if (featureState) {
-      return new InterceptorValueMatch(featureValueFromString(featureState.type!, this.value));
+      return [true, featureValueFromString(featureState.type!, this.value)];
     }
 
-    return new InterceptorValueMatch(this.value);
+    return [true, this.value];
   }
-
-  repository(_repo: FeatureHubRepository): void {}
 }
 
 describe("Interceptor functionality works as expected", () => {

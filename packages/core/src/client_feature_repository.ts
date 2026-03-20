@@ -11,7 +11,7 @@ import {
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
+import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { ListenerUtils } from "./listener_utils";
 // leave this here, prevents circular deps
@@ -48,7 +48,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     number,
     PostLoadNewFeatureStateAvailableListener
   > = new Map<number, PostLoadNewFeatureStateAvailableListener>();
-  private _matchers: Array<FeatureStateValueInterceptor> = [];
+  private _matchers: Array<FeatureValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
   private _usageProvider: UsageProvider = defaultUsageProvider;
@@ -180,26 +180,23 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     }
   }
 
-  public addValueInterceptor(matcher: FeatureStateValueInterceptor): void {
+  public addValueInterceptor(matcher: FeatureValueInterceptor): void {
     this._matchers.push(matcher);
-
-    matcher.repository(this);
   }
 
   public valueInterceptorMatched(
     key: string,
     featureState?: FeatureState,
-  ): InterceptorValueMatch | undefined {
+  ): [boolean, string | boolean | number | undefined] {
     for (const matcher of this._matchers) {
-      const m = matcher.matched(key, featureState);
+      const [matched, value] = matcher.matched(key, this, featureState);
 
-      if (m) {
-        return m;
+      if (matched) {
+        return [true, value];
       }
     }
 
-    // nothing matched
-    return undefined;
+    return [false, undefined];
   }
 
   public addPostLoadNewFeatureStateAvailableListener(

@@ -248,10 +248,13 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
     const featureState = this.featureState();
     if (!this.isLocked()) {
-      const intercept = this._repo.valueInterceptorMatched(this._key, featureState);
+      const [intercepted, interceptValue] = this._repo.valueInterceptorMatched(
+        this._key,
+        featureState,
+      );
 
-      if (intercept?.value) {
-        const val = this._castType(type, intercept.value, parseJson);
+      if (intercepted) {
+        const val = this._castType(type, interceptValue, parseJson);
 
         // we only trigger usage for featureState's that exist.
         return triggerUsage && featureState?.id ? this.used(featureState, val) : val;

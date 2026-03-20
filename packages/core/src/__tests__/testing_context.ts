@@ -6,7 +6,7 @@ import {
   Readyness,
   type ReadynessListener,
 } from "../featurehub_repository";
-import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "../interceptors";
+import type { FeatureValueInterceptor } from "../interceptors";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import {
   type FeatureRolloutStrategy,
@@ -87,8 +87,8 @@ export class FakeInternalRepository implements InternalFeatureRepository {
     throw new Error("Method not implemented.");
   }
 
-  valueInterceptorMatched(_key: string): InterceptorValueMatch {
-    return new InterceptorValueMatch(undefined);
+  valueInterceptorMatched(_key: string): [boolean, string | boolean | number | undefined] {
+    return [false, undefined];
   }
 
   apply(
@@ -143,7 +143,7 @@ export class FakeInternalRepository implements InternalFeatureRepository {
     throw new Error("Method not implemented.");
   }
 
-  addValueInterceptor(_interceptor: FeatureStateValueInterceptor): void {
+  addValueInterceptor(_interceptor: FeatureValueInterceptor): void {
     throw new Error("Method not implemented.");
   }
 

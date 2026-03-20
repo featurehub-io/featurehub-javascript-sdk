@@ -2,23 +2,23 @@
 // as both for it to work as expected.
 
 import {
-  type FeatureStateValueInterceptor,
-  InterceptorValueMatch,
+  type FeatureValueInterceptor,
   type UsagePlugin,
   type UsageEvent,
   UsageEventWithFeature,
   type FeatureHubUsageValue,
-  type InternalFeatureRepository,
+  type FeatureHubRepository,
   UsageFeaturesCollection,
   type FeatureState,
   featureValueFromString,
 } from "featurehub-javascript-core-sdk";
 
-export class LocalSessionInterceptor implements FeatureStateValueInterceptor, UsagePlugin {
+export class LocalSessionInterceptor implements FeatureValueInterceptor, UsagePlugin {
   private readonly _storage: Storage;
   private readonly _window: Window;
   // private _alreadySetListener: boolean = false;
   protected _defaultPluginAttributes: Record<string, any> = {};
+  public canSendAsync = true;
 
   constructor(win?: Window, storage?: Storage) {
     this._window = win ?? window;
@@ -30,9 +30,6 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor, Us
     //   this.storageChangedListener(e, this.repo!),
     // );
   }
-
-  // we don't need this data
-  public repository(_: InternalFeatureRepository): void {}
 
   public get defaultPluginAttributes(): Record<string, any> {
     return this._defaultPluginAttributes;
@@ -101,23 +98,26 @@ export class LocalSessionInterceptor implements FeatureStateValueInterceptor, Us
     }
   }
 
-  matched(key: string, featureState?: FeatureState): InterceptorValueMatch | undefined {
+  matched(
+    key: string,
+    _repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
     if (this._storage) {
       const nullCheck = this._storage[this._nullName(key)];
 
       if (nullCheck) {
-        return new InterceptorValueMatch(undefined);
+        return [true, undefined];
       }
 
       const val = this._storage[this._valueName(key)];
 
       if (val) {
-        return new InterceptorValueMatch(featureValueFromString(featureState?.type, val));
+        return [true, featureValueFromString(featureState?.type, val)];
       }
     }
 
-    // no match
-    return undefined;
+    return [false, undefined];
   }
 
   private _nullName = (key: string): string => `fh_null_${key}`;

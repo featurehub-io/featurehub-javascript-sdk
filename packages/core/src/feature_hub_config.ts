@@ -7,7 +7,7 @@ import {
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type { FeatureStateValueInterceptor } from "./interceptors";
+import type { FeatureValueInterceptor } from "./interceptors";
 import type { UsagePlugin } from "./usage/usage";
 
 export type EdgeServiceSupplier = () => EdgeService;
@@ -129,7 +129,7 @@ export interface FeatureHubConfig {
   removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle): void;
 
   // add a value interceptor (e.g. baggage handler)
-  addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
+  addValueInterceptor(interceptor: FeatureValueInterceptor): void;
 
   addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig;
 

@@ -7,7 +7,7 @@ import {
 } from "featurehub-javascript-node-sdk";
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
 import { Analytics } from "@segment/analytics-node";
-import { OpenTelemetryUsagePlugin } from "featurehub-usage-opentelemetry";
+import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
 import { OTEL_ENABLED } from "./instrumentation";
 
 function getApplicationServerUrl(): string {
@@ -43,7 +43,7 @@ function getFhConfig(): EdgeFeatureHubConfig {
   // forces instrumentation to be loaded first
   if (OTEL_ENABLED) {
     console.log("configuring otel plugin");
-    fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin());
+    fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
   }
 
   FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) => {

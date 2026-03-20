@@ -1,6 +1,6 @@
 import { FHLog } from "../feature_hub_config";
 import type { FeatureHubRepository } from "../featurehub_repository";
-import {type UsageEvent, type UsagePlugin} from "./usage";
+import { type UsageEvent, type UsagePlugin } from "./usage";
 
 export class UsageAdapter {
   private readonly plugins: Array<UsagePlugin> = [];

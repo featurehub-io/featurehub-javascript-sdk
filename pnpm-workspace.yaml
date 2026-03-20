@@ -3,6 +3,7 @@ packages:
   - "examples/*"
   - "plugins/usage/*"
   - "plugins/featurehub-browser-interceptor"
+  - "plugins/featurehub-yaml-interceptor"
 
 catalogs:
   prettier:

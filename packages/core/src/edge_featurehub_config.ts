@@ -1,24 +1,24 @@
-import type {ClientContext, ContextRecord} from "./client_context";
-import {ClientFeatureRepository} from "./client_feature_repository";
-import {ClientEvalFeatureContext, ServerEvalFeatureContext} from "./context_impl";
-import type {EdgeService} from "./edge_service";
-import {EdgeType, type FeatureHubConfig, fhLog} from "./feature_hub_config";
-import type {FeatureStateHolder} from "./feature_state";
+import type { ClientContext, ContextRecord } from "./client_context";
+import { ClientFeatureRepository } from "./client_feature_repository";
+import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
+import type { EdgeService } from "./edge_service";
+import { EdgeType, type FeatureHubConfig, fhLog } from "./feature_hub_config";
+import type { FeatureStateHolder } from "./feature_state";
 import {
   type EdgeServiceProvider,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type {FeatureStateValueInterceptor} from "./interceptors";
-import type {InternalFeatureRepository} from "./internal_feature_repository";
-import {FeatureHubNetwork} from "./network";
+import type { FeatureValueInterceptor } from "./interceptors";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
+import { FeatureHubNetwork } from "./network";
 import {
   DefaultUsagePlugin,
   type UsageEvent,
   UsageEventWithFeature,
-  type UsagePlugin
+  type UsagePlugin,
 } from "./usage/usage";
-import {UsageAdapter} from "./usage/usage_adapter";
+import { UsageAdapter } from "./usage/usage_adapter";
 
 export const defaultEdgeTypeProviderConfig = {
   defaultTimeoutInMilliseconds: 180000,
@@ -26,19 +26,22 @@ export const defaultEdgeTypeProviderConfig = {
 };
 
 class PassiveRestUsagePlugin extends DefaultUsagePlugin {
-  private readonly _config:  EdgeFeatureHubConfig;
+  private readonly _config: EdgeFeatureHubConfig;
 
-  constructor(config:  EdgeFeatureHubConfig) {
+  constructor(config: EdgeFeatureHubConfig) {
     super();
     this._config = config;
   }
 
   send(event: UsageEvent): void {
-    if (event instanceof UsageEventWithFeature && this._config.edgeType === EdgeType.REST_PASSIVE && this._config.edgeConnected) {
+    if (
+      event instanceof UsageEventWithFeature &&
+      this._config.edgeType === EdgeType.REST_PASSIVE &&
+      this._config.edgeConnected
+    ) {
       this._config.edgePollFromUsage();
     }
   }
-
 }
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
@@ -113,7 +116,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this.addReadinessListener(listener);
   }
 
-  public addValueInterceptor(interceptor: FeatureStateValueInterceptor): void {
+  public addValueInterceptor(interceptor: FeatureValueInterceptor): void {
     this.repository().addValueInterceptor(interceptor);
   }
 

@@ -10,7 +10,7 @@ import {
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
-import { OpenTelemetryUsagePlugin } from "featurehub-usage-opentelemetry";
+import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
 import fs from "fs";
 import path from "path";
@@ -46,7 +46,7 @@ if (process.env["SEGMENT_WRITE_KEY"] && process.env["SEGMENT_ENABLED"]) {
 
 if (process.env["OTEL_USAGE_ENABLED"]) {
   console.log("configuring otel plugin");
-  fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin());
+  fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
 }
 
 fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);

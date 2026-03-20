@@ -6,9 +6,9 @@ import {
   type ReadinessListenerHandle,
 } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
-import type { FeatureStateValueInterceptor } from "./interceptors";
+import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import type { UsageEventListener, UsageProvider } from "./usage/usage";
+import type { UsageEvent, UsageEventListener, UsageProvider } from "./usage/usage";
 
 export enum Readyness {
   NotReady = "NotReady",
@@ -79,7 +79,7 @@ export interface FeatureHubRepository {
    *
    * @param interceptor
    */
-  addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
+  addValueInterceptor(interceptor: FeatureValueInterceptor): void;
 
   /**
    * @deprecated - since version 1.1.6 - use addReadinessListener
@@ -130,4 +130,6 @@ export interface FeatureHubRepository {
   registerUsageStream(listener: UsageEventListener): number;
 
   removeUsageStream(handler: number): void;
+
+  recordUsageEvent(event: UsageEvent): void;
 }
