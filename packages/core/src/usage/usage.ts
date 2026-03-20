@@ -181,11 +181,13 @@ export class UsageNamedFeaturesCollection extends UsageFeaturesCollectionContext
 
 export interface UsagePlugin {
   get defaultPluginAttributes(): Record<string, any>;
+  canSendAsync: boolean;
   send(event: UsageEvent): void;
 }
 
 export abstract class DefaultUsagePlugin implements UsagePlugin {
   protected readonly _defaultPluginAttributes = {} as Record<string, any>;
+  public canSendAsync = true;
 
   public get defaultPluginAttributes(): Record<string, any> {
     return this._defaultPluginAttributes;

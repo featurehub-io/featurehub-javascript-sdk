@@ -59,7 +59,6 @@ describe("usage will trigger polling appropriately", async () => {
     ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
 
     repo.received(1).recordUsageEvent(Arg.any());
-    edge.received(1).poll(true);
   });
 
   it("usage should trigger polling when the cache timeout has expired", async () => {

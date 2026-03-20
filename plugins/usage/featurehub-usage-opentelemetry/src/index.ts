@@ -4,6 +4,7 @@ import { Attributes, Span, trace } from "@opentelemetry/api";
 export class OpenTelemetryUsagePlugin extends DefaultUsagePlugin {
   private readonly _prefix: string;
   private readonly _attachAsSpanEvents: boolean;
+  public override canSendAsync = false;
 
   constructor(prefix: string = "featurehub.", attachAsSpanEvents: boolean = false) {
     super();

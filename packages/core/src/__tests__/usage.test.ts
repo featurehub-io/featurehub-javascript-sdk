@@ -180,7 +180,7 @@ describe("usage plugin system works as expected", function () {
     expect(evt.feature.environmentId).to.eq("env1");
   });
 
-  it("if we register a usage plugin with the edge config, it should render out the usage object correctly", () => {
+  it("if we register a usage plugin with the edge config, it should render out the usage object correctly", async () => {
     const fh = new EdgeFeatureHubConfig("http://localhost", "1234*567");
     // pre-set the repository to our one
     fh.repository(repo);
@@ -190,6 +190,7 @@ describe("usage plugin system works as expected", function () {
 
     // evaluate the feature
     expect(ctx.feature(boolFeature.key).value).to.be.true;
+    await Promise.resolve(); // flush microtask queue since canSendAsync=true defers send()
     expect(plugin.event).to.not.be.undefined;
     const data = plugin.event!.collectUsageRecord();
     expect(data["feature"]).to.eq(boolFeature.key);

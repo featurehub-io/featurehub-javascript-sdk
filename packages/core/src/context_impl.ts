@@ -216,9 +216,6 @@ export abstract class BaseClientContext implements ClientContext {
         this.usageUserKey(),
       ),
     );
-
-    // because we evaluated a feature, we might be allowed to poll for a new one
-    await this._currentEdge?.poll(true);
   }
 
   protected recordFeatureChangedForUser(feature: FeatureStateHolder) {
