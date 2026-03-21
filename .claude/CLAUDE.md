@@ -38,6 +38,11 @@ make test-server-qa            # API-only tests, no FeatureHub server needed
 make test-server-tags TAGS=@smoke
 ```
 
+> **Important:** Plugin packages (under `plugins/`) resolve `featurehub-javascript-core-sdk` from
+> the compiled `dist/` output, not TypeScript source. After changing any file under `packages/core/src/`,
+> run `pnpm run build:core` before running tests in downstream plugin packages, or they will test
+> against stale compiled output.
+
 ### Lint and Format
 
 ```bash
@@ -167,3 +172,6 @@ ESLint flat config at `eslint.config.ts`. Rules:
 - `@typescript-eslint/no-non-null-assertion` is **off**
 - Unused vars prefixed with `_` are allowed
 - `plugins/**` is excluded from linting (TODO marker in config)
+         
+in each of the projects, to run formatting use `prettier . --write` and for linting
+use `eslint --fix .`. Use this after each code change in each project that has changed.

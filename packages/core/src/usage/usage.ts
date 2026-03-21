@@ -229,6 +229,7 @@ export interface UsagePlugin {
   get defaultPluginAttributes(): Record<string, any>;
   canSendAsync: boolean;
   send(event: UsageEvent): void;
+  close?(): void;
 }
 
 export abstract class DefaultUsagePlugin implements UsagePlugin {
@@ -240,6 +241,8 @@ export abstract class DefaultUsagePlugin implements UsagePlugin {
   }
 
   public abstract send(event: UsageEvent): void;
+
+  public close(): void {}
 }
 
 export interface UsageEventListener {

@@ -7,4 +7,6 @@ export interface FeatureValueInterceptor {
     repo: FeatureHubRepository,
     featureState?: FeatureState,
   ): [boolean, string | boolean | number | undefined];
+
+  close?(): void;
 }

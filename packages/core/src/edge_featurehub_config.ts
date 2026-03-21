@@ -251,6 +251,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     });
     this._edgeServices.length = 0;
     this._initialized = false;
+    this._usageAdapter?.close();
+    this._usageAdapter = undefined;
+    this._repository?.close();
   }
 
   get closed(): boolean {

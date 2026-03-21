@@ -182,6 +182,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._matchers.push(matcher);
   }
 
+  public close(): void {
+    this._matchers.forEach((m) => m.close?.());
+    this._matchers.length = 0;
+  }
+
   public valueInterceptorMatched(
     key: string,
     featureState?: FeatureState,

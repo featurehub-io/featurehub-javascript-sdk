@@ -8,6 +8,11 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
   // change the context
   notReady(): void;
 
+  /**
+   * Close all registered value interceptors.
+   */
+  close(): void;
+
   notify(state: SSEResultState, data: unknown): void;
 
   /**

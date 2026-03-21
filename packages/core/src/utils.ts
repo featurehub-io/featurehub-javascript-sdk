@@ -17,7 +17,7 @@ export function featureValueFromString(
       return parseFloat(value);
     case FeatureValueType.Boolean: {
       const val = value.toLowerCase();
-      return val === "true" || val === "false" || val === "yes" || val == "1" || val === "t";
+      return val === "true" || val === "yes" || val === "1" || val === "t";
     }
     case FeatureValueType.String:
     case FeatureValueType.Json:

@@ -34,6 +34,7 @@ export class UsageAdapter {
 
   public close() {
     this.repository.removeUsageStream(this.usageStreamHandler);
+    this.plugins.forEach((p) => p.close?.());
   }
 
   public registerPlugin(plugin: UsagePlugin) {

@@ -83,6 +83,8 @@ export class FakeInternalRepository implements InternalFeatureRepository {
     throw new Error("Method not implemented.");
   }
 
+  close(): void {}
+
   notify(_state: SSEResultState, _data: any) {
     throw new Error("Method not implemented.");
   }
