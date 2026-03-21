@@ -11,7 +11,7 @@ interface ListenerTracker {
 }
 
 interface ListenerOriginal {
-  value: any;
+  value: unknown;
 }
 
 export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {

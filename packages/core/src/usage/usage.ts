@@ -33,12 +33,9 @@ export interface UsageEventName {
   eventName: string;
 }
 
-export type UsageConvertFunction = (
-  value: any | undefined,
-  type: FeatureValueType,
-) => string | undefined;
+export type UsageConvertFunction = (value: unknown, type: FeatureValueType) => string | undefined;
 
-function convert(value: any | undefined, type: FeatureValueType): string | undefined {
+function convert(value: unknown, type: FeatureValueType): string | undefined {
   if (!value) return undefined;
 
   switch (type) {
@@ -46,7 +43,7 @@ function convert(value: any | undefined, type: FeatureValueType): string | undef
       return value ? "on" : "off";
     case FeatureValueType.String:
     case FeatureValueType.Number:
-      return value.toString();
+      return String(value);
     default:
       return undefined;
   }

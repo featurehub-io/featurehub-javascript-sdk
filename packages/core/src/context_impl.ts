@@ -233,7 +233,7 @@ export abstract class BaseClientContext implements ClientContext {
     );
   }
 
-  public fillEvent(event: UsageEvent): any {
+  public fillEvent(event: UsageEvent): UsageEvent {
     event.userKey = this.usageUserKey();
 
     if (isUsageFeaturesCollection(event)) {

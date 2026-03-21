@@ -47,6 +47,7 @@ class PassiveRestUsagePlugin extends DefaultUsagePlugin {
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _host: string;
+  private readonly _originalUrl: string;
   private readonly _apiKey: string;
   private readonly _apiKeys: Array<string>;
   private _clientEval: boolean;
@@ -60,7 +61,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _timeout: number | undefined = undefined;
   private _edgeType: EdgeType = EdgeType.STREAMING;
 
-  private static _singleton: any | undefined;
+  private static _singleton: EdgeFeatureHubConfig | undefined;
 
   public static config(url: string, apiKey: string): EdgeFeatureHubConfig {
     if (EdgeFeatureHubConfig._singleton) {
@@ -81,6 +82,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   constructor(host: string, apiKey: string) {
     this._apiKey = apiKey;
+    this._originalUrl = host;
     this._host = host;
 
     this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;

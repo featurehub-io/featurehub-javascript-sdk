@@ -1,6 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class ListenerUtils {
-  public static newListenerKey(where: Map<number, any>): number {
+  public static newListenerKey(where: Map<number, unknown>): number {
     // find a unique slot, we can't keep a counter as we can bump from context to context
     // and placeholder to real
     let pos = Math.round(Math.random() * 10000);
@@ -12,7 +12,7 @@ export class ListenerUtils {
     return pos;
   }
 
-  public static removeListener(listeners: Map<number, any>, listener: any) {
+  public static removeListener(listeners: Map<number, unknown>, listener: unknown) {
     if (typeof listener == "number") {
       if (listeners.has(listener)) {
         listeners.delete(listener);

@@ -230,7 +230,7 @@ export class PollingBase implements PollingService {
     outstanding.forEach((e) => e.resolve());
   }
 
-  public rejectOutstanding(result?: any) {
+  public rejectOutstanding(result?: unknown) {
     const outstanding = [...this._outstandingPromises];
     this._outstandingPromises = [];
     this._busy = false;
@@ -254,7 +254,7 @@ export class FeatureHubPollingClient implements EdgeService {
   private _startable: boolean;
   private readonly _config: FeatureHubConfig;
   private _xHeader: string | undefined;
-  private _currentTimer: any;
+  private _currentTimer: ReturnType<typeof setTimeout> | undefined;
   private _whenPollingCacheExpires: number;
 
   public static pollingClientProvider: PollingClientProvider;
@@ -410,7 +410,7 @@ export class FeatureHubPollingClient implements EdgeService {
 
   private _pollFunc(
     resolve?: (value: void | PromiseLike<void>) => void,
-    reject?: (reason?: any) => void,
+    reject?: (reason?: unknown) => void,
   ) {
     // only be true for active polling
     this._cancelTimer();
@@ -469,7 +469,7 @@ export class FeatureHubPollingClient implements EdgeService {
 
   private _readyNextPoll(
     resolve?: (value: void | PromiseLike<void>) => void,
-    reject?: (reason?: any) => void,
+    reject?: (reason?: unknown) => void,
   ) {
     const frequency = this._pollingService?.frequency || this._frequency;
 

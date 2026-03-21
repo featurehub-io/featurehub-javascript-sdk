@@ -217,7 +217,7 @@ describe("usage plugin system works as expected", function () {
           case FeatureValueType.Boolean:
             return value ? "yes" : "no";
           case FeatureValueType.Json:
-            return JSON.parse(value);
+            return JSON.parse(value as string);
           default:
             return value;
         }

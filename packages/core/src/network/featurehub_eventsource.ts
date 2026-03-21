@@ -57,7 +57,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
   private readonly _config: FeatureHubConfig;
   private readonly _repository: InternalFeatureRepository;
   private _header: string | undefined;
-  private _staleEnvironmentTimeoutId: any;
+  private _staleEnvironmentTimeoutId: ReturnType<typeof setTimeout> | undefined;
   private _stopped: boolean = false;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
@@ -83,7 +83,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
       return;
     }
 
-    const options: any = {};
+    const options: EventSource.EventSourceInitDict = {};
     if (this._header) {
       options.headers = {
         "x-featurehub": this._header,
@@ -128,12 +128,13 @@ export class FeatureHubEventSourceClient implements EdgeService {
       });
     }
 
-    this.eventSource.onerror = (e: any) => {
+    this.eventSource.onerror = (e: Event) => {
       if (!this._stopped) {
         // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
+        const status = (e as { status?: number }).status;
         if (
           this._repository.readyness !== Readyness.Ready ||
-          (e.status && (e.status > 504 || (e.status >= 400 && e.status < 500)))
+          (status && (status > 504 || (status >= 400 && status < 500)))
         ) {
           fhLog.error(
             "Connection failed and repository not in ready state indicating persistent failure",
@@ -187,8 +188,11 @@ export class FeatureHubEventSourceClient implements EdgeService {
     return true;
   }
 
-  private processConfig(data: any) {
-    if (data["edge.stale"]) {
+  private processConfig(data: unknown) {
+    const config = data as Record<string, unknown>;
+    const stale = config["edge.stale"] as number | undefined;
+
+    if (stale) {
       this._stopped = true;
       this.close();
 
@@ -197,7 +201,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
         this._staleEnvironmentTimeoutId = undefined;
         this._stopped = false;
         this.init();
-      }, data["edge.stale"] * 1000);
+      }, stale * 1000);
     }
   }
 }

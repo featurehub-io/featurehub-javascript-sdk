@@ -8,7 +8,7 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
   // change the context
   notReady(): void;
 
-  notify(state: SSEResultState, data: any): void;
+  notify(state: SSEResultState, data: unknown): void;
 
   /**
    * Is there an interception value for this feature

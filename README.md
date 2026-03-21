@@ -648,7 +648,7 @@ cache has expired), and it lets you send evaluation data to external analytics o
 
 UsagePlugins will operate _asynchronously_ but default, so when a UsageEvent is sent to them, it will be inside a "fire and forget"
 promise. If you want to ensure it affects something within the context of what the user is doing then it should be synchronous
-and you will need to override the `canSendAsync` to `false`. The OpenTelemetry plugins are *not* async because they need to modify the
+and you will need to override the `canSendAsync` to `false`. The OpenTelemetry plugins are _not_ async because they need to modify the
 baggage of the current context the user is in, the Twilio Segment however is async as it is just sending tracking information.
 
 ### Writing a plugin

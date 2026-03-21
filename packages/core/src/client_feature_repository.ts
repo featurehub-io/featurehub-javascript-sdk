@@ -105,14 +105,14 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.readynessState;
   }
 
-  public notify(state: SSEResultState, data: any) {
+  public notify(state: SSEResultState, data: unknown) {
     if (state !== null && state !== undefined) {
       switch (state) {
         case SSEResultState.Ack: // do nothing, expect state shortly
         case SSEResultState.Bye: // do nothing, we expect a reconnection shortly
           break;
         case SSEResultState.DeleteFeature:
-          this.deleteFeature(data);
+          this.deleteFeature(data as FeatureState);
           break;
         case SSEResultState.Failure:
           this.readynessState = Readyness.Failed;
@@ -135,9 +135,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           break;
         case SSEResultState.Features:
           {
-            const features = (data as [])
-              .filter((f: any) => f?.key !== undefined)
-              .map((f: any) => f as FeatureState);
+            const features = (data as FeatureState[]).filter((f) => f?.key !== undefined);
             if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
               this._catchUpdatedFeatures(features, true);
             } else {

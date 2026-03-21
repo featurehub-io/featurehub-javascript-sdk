@@ -77,7 +77,7 @@ export interface ClientContext {
    *
    * @param event - something that can have "toMap()" called on it
    */
-  recordUsageEvent(event: any | UsageEvent): void;
+  recordUsageEvent(event: UsageEvent): void;
 
   /**
    * This gives a full
