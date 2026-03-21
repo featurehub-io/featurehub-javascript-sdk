@@ -15,11 +15,12 @@ import {
   SSEResultState,
 } from "../models";
 import {
+  BaseUsageFeaturesCollectionContext,
   DefaultUsagePlugin,
   setUsageConvertFunction,
   type UsageEvent,
-  UsageEventWithFeature,
-  UsageFeaturesCollectionContext,
+  type UsageEventWithFeature,
+  type UsageFeaturesCollectionContext,
 } from "../usage/usage";
 import { TestingContext } from "./testing_context";
 
@@ -227,7 +228,7 @@ describe("usage plugin system works as expected", function () {
       expect(eventCount).to.eq(1);
 
       // ensure the event is properly constructed
-      expect(event instanceof UsageFeaturesCollectionContext).to.be.true;
+      expect(event instanceof BaseUsageFeaturesCollectionContext).to.be.true;
       const evt = event! as UsageFeaturesCollectionContext;
       const f = (key: string) => {
         return evt.featureValues.find((f) => f.key === key);

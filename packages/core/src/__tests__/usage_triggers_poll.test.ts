@@ -79,7 +79,7 @@ describe("usage will trigger polling appropriately", async () => {
     expect(nextCacheExpiry).to.not.be.undefined;
     // when: we issue a usage
     for (let count = 0; count < 10; count++) {
-      await ctx._used("feature", "id", 2, FeatureValueType.Number, "env1");
+      ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
     }
 
     // even a normal poll won't trigger it
@@ -93,9 +93,9 @@ describe("usage will trigger polling appropriately", async () => {
       expect(edge.nextCacheExpiry).to.be.lessThanOrEqual(Date.now() + 200);
       nextCacheExpiry = edge.nextCacheExpiry;
       // when: we sleep for the cache length
-      await sleep(200);
+      await sleep(201);
       // and: trigger used again
-      await ctx._used("feature", "id", 2, FeatureValueType.Number, "env1");
+      ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
       // and: even a normal poll won't trigger it
       await ctx.build();
       // then: the poll will fire as expected
@@ -122,7 +122,7 @@ describe("usage will trigger polling appropriately", async () => {
     // given: we have a context
     const ctx = new TestingContext(repo, edge);
     // when: we issue a usage
-    await ctx._used("feature", "id", 2, FeatureValueType.Number, "env1");
+    await ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
 
     // then: it should have not triggered another poll
     pollingService.received(1).poll();

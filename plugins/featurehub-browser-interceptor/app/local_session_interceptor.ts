@@ -5,10 +5,10 @@ import {
   type FeatureValueInterceptor,
   type UsagePlugin,
   type UsageEvent,
-  UsageEventWithFeature,
+  isUsageEventWithFeature,
+  isUsageFeaturesCollection,
   type FeatureHubUsageValue,
   type FeatureHubRepository,
-  UsageFeaturesCollection,
   type FeatureState,
   featureValueFromString,
 } from "featurehub-javascript-core-sdk";
@@ -39,12 +39,10 @@ export class LocalSessionInterceptor implements FeatureValueInterceptor, UsagePl
   // is, then it corrects them, then it triggers a storage event in case there is some nice UI
   // widget listening for these changes.
   public send(event: UsageEvent): void {
-    if (event instanceof UsageEventWithFeature) {
-      this.processUsageFeature((event as UsageEventWithFeature).feature);
-    } else if (event instanceof UsageFeaturesCollection) {
-      (event as UsageFeaturesCollection).featureValues.forEach((feature) =>
-        this.processUsageFeature(feature),
-      );
+    if (isUsageEventWithFeature(event)) {
+      this.processUsageFeature(event.feature);
+    } else if (isUsageFeaturesCollection(event)) {
+      event.featureValues.forEach((feature) => this.processUsageFeature(feature));
     }
   }
 

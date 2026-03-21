@@ -114,7 +114,16 @@ export class UsageValue implements FeatureHubUsageValue {
   }
 }
 
-export class UsageEventWithFeature extends BaseUsageEvent implements UsageEventName {
+export interface UsageEventWithFeature extends UsageEvent, UsageEventName {
+  get attributes(): ContextRecord | undefined;
+  get feature(): FeatureHubUsageValue;
+}
+
+export function isUsageEventWithFeature(event: UsageEvent): event is UsageEventWithFeature {
+  return "feature" in event;
+}
+
+export class BaseUsageEventWithFeature extends BaseUsageEvent implements UsageEventWithFeature {
   private _contextAttributes: ContextRecord | undefined;
   private _feature: FeatureHubUsageValue;
   public readonly eventName = "feature";
@@ -145,20 +154,45 @@ export class UsageEventWithFeature extends BaseUsageEvent implements UsageEventN
   }
 }
 
-export class UsageFeaturesCollection extends BaseUsageEvent implements UsageEventName {
+export interface UsageFeaturesCollection extends UsageEvent, UsageEventName {
+  featureValues: Array<FeatureHubUsageValue>;
+}
+
+export function isUsageFeaturesCollection(event: UsageEvent): event is UsageFeaturesCollection {
+  return "featureValues" in event;
+}
+
+export class BaseUsageFeaturesCollection extends BaseUsageEvent implements UsageFeaturesCollection {
   public featureValues = [] as Array<FeatureHubUsageValue>;
   public eventName = "feature-collection";
 
   override collectUsageRecord(): Readonly<Record<string, any>> {
     const features = {} as Record<string, any | undefined>;
-    this.featureValues.forEach((fv) => (features[fv.key] = fv.value));
+
+    this.featureValues.forEach((fv) => {
+      features[fv.key] = fv.value;
+      features[fv.key + "_raw"] = fv.rawValue;
+    });
+
+    features["fhub_keys"] = this.featureValues.map((fv) => fv.key);
+
     return Object.assign(super.collectUsageRecord(), features);
   }
 }
 
-export class UsageFeaturesCollectionContext
-  extends UsageFeaturesCollection
-  implements UsageEventName
+export interface UsageFeaturesCollectionContext extends UsageFeaturesCollection {
+  contextAttributes: ContextRecord;
+}
+
+export function isUsageFeaturesCollectionContext(
+  event: UsageEvent,
+): event is UsageFeaturesCollectionContext {
+  return "featureValues" in event && "contextAttributes" in event;
+}
+
+export class BaseUsageFeaturesCollectionContext
+  extends BaseUsageFeaturesCollection
+  implements UsageFeaturesCollectionContext
 {
   public contextAttributes = {} as ContextRecord;
 
@@ -172,7 +206,22 @@ export class UsageFeaturesCollectionContext
   }
 }
 
-export class UsageNamedFeaturesCollection extends UsageFeaturesCollectionContext {
+export interface UsageNamedFeaturesCollection extends UsageFeaturesCollectionContext {
+  eventName: string;
+}
+
+export function isUsageNamedFeaturesCollection(
+  event: UsageEvent,
+): event is UsageNamedFeaturesCollection {
+  return "featureValues" in event && "contextAttributes" in event && "eventName" in event;
+}
+
+export class BaseUsageNamedFeaturesCollection
+  extends BaseUsageFeaturesCollectionContext
+  implements UsageNamedFeaturesCollection
+{
+  public override eventName: string;
+
   constructor(name: string, userKey?: string, additionalParams?: Record<string, any>) {
     super(userKey, additionalParams);
     this.eventName = name;
@@ -209,7 +258,7 @@ export interface UsageProvider {
     value: string | number | boolean | undefined,
     type: FeatureValueType,
     environmentId: string,
-  ): UsageValue;
+  ): FeatureHubUsageValue;
 
   createUsageFeature(
     feature: FeatureHubUsageValue,
@@ -246,20 +295,23 @@ export class DefaultUsageProvider implements UsageProvider {
     feature: FeatureHubUsageValue,
     contextAttributes?: ContextRecord | undefined,
     userKey?: string,
-  ) {
-    return new UsageEventWithFeature(feature, contextAttributes, userKey);
+  ): UsageEventWithFeature {
+    return new BaseUsageEventWithFeature(feature, contextAttributes, userKey);
   }
 
-  public createUsageCollectionEvent() {
-    return new UsageFeaturesCollection();
+  public createUsageCollectionEvent(): UsageFeaturesCollection {
+    return new BaseUsageFeaturesCollection();
   }
 
-  public createUsageContextCollectionEvent() {
-    return new UsageFeaturesCollectionContext();
+  public createUsageContextCollectionEvent(): UsageFeaturesCollectionContext {
+    return new BaseUsageFeaturesCollectionContext();
   }
 
-  public createNamedUsageCollection(name: string, additionalParams?: Record<string, any>) {
-    return new UsageNamedFeaturesCollection(name, undefined, additionalParams);
+  public createNamedUsageCollection(
+    name: string,
+    additionalParams?: Record<string, any>,
+  ): UsageNamedFeaturesCollection {
+    return new BaseUsageNamedFeaturesCollection(name, undefined, additionalParams);
   }
 }
 

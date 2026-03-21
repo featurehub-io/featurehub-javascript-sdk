@@ -14,8 +14,8 @@ import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { FeatureHubNetwork } from "./network";
 import {
   DefaultUsagePlugin,
+  isUsageEventWithFeature,
   type UsageEvent,
-  UsageEventWithFeature,
   type UsagePlugin,
 } from "./usage/usage";
 import { UsageAdapter } from "./usage/usage_adapter";
@@ -25,6 +25,7 @@ export const defaultEdgeTypeProviderConfig = {
   defaultEdgeProvider: EdgeType.REST_ACTIVE,
 };
 
+// this is an async plugin so the process of polling will become async
 class PassiveRestUsagePlugin extends DefaultUsagePlugin {
   private readonly _config: EdgeFeatureHubConfig;
 
@@ -35,7 +36,7 @@ class PassiveRestUsagePlugin extends DefaultUsagePlugin {
 
   send(event: UsageEvent): void {
     if (
-      event instanceof UsageEventWithFeature &&
+      isUsageEventWithFeature(event) &&
       this._config.edgeType === EdgeType.REST_PASSIVE &&
       this._config.edgeConnected
     ) {

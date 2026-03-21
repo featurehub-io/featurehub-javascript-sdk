@@ -646,16 +646,37 @@ The SDK has a pluggable usage tracking system that fires whenever a feature is e
 serves two purposes: it powers the Passive REST polling mode (a feature evaluation can trigger a poll when the
 cache has expired), and it lets you send evaluation data to external analytics or observability tools.
 
+UsagePlugins will operate _asynchronously_ but default, so when a UsageEvent is sent to them, it will be inside a "fire and forget"
+promise. If you want to ensure it affects something within the context of what the user is doing then it should be synchronous
+and you will need to override the `canSendAsync` to `false`. The OpenTelemetry plugins are *not* async because they need to modify the
+baggage of the current context the user is in, the Twilio Segment however is async as it is just sending tracking information.
+
 ### Writing a plugin
 
-Extend `UsagePlugin` and implement `send(event: UsageEvent)`:
+Implement `UsagePlugin` (or extend `DefaultUsagePlugin`) and implement `send(event: UsageEvent)`:
 
 ```typescript
-import { UsagePlugin, UsageEvent } from "featurehub-javascript-client-sdk";
+import {
+  DefaultUsagePlugin,
+  type UsageEvent,
+  isUsageEventWithFeature,
+  isUsageFeaturesCollection,
+} from "featurehub-javascript-client-sdk";
 
-class MyPlugin extends UsagePlugin {
+class MyPlugin extends DefaultUsagePlugin {
+  // canSendAsync defaults to true — send() is called asynchronously.
+  // Set to false if your send() must run synchronously (e.g. inside a span).
+  // canSendAsync = false;
+
   send(event: UsageEvent) {
     const record = event.collectUsageRecord(); // plain object of key/value pairs
+
+    if (isUsageEventWithFeature(event)) {
+      // single feature evaluation — event.feature, event.attributes available
+    } else if (isUsageFeaturesCollection(event)) {
+      // batch of feature values — event.featureValues available
+    }
+
     // send to your analytics system...
   }
 }
@@ -684,16 +705,16 @@ Each feature evaluation is sent as a Segment `track` call with the feature key, 
 #### OpenTelemetry (`featurehub-usage-opentelemetry`)
 
 ```typescript
-import { OpenTelemetryUsagePlugin } from "featurehub-usage-opentelemetry";
+import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
 
 // Attaches feature evaluations as span attributes (prefixed with "featurehub.")
-fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin());
+fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
 
 // Or attach as span events instead of attributes:
-fhConfig.addUsagePlugin(new OpenTelemetryUsagePlugin("featurehub.", true));
+fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin("featurehub.", true));
 ```
 
-The plugin writes to the active OpenTelemetry span. If there is no active span, the event is silently dropped.
+The plugin writes to the active OpenTelemetry span. If there is no active span, the event is silently dropped. `OpenTelemetryTrackerUsagePlugin` sets `canSendAsync = false` so that span attribute writes happen synchronously within the calling context.
 
 ## Feature Value Interceptors
 
@@ -701,32 +722,32 @@ Feature value interceptors let you override the value of any feature before it i
 
 ### The interface
 
-Implement `FeatureStateValueInterceptor` from the SDK:
+Implement `FeatureValueInterceptor` from the SDK:
 
 ```typescript
 import {
-  FeatureStateValueInterceptor,
-  InterceptorValueMatch,
-  InternalFeatureRepository,
-  FeatureState,
+  type FeatureValueInterceptor,
+  type FeatureHubRepository,
+  type FeatureState,
 } from "featurehub-javascript-client-sdk";
 
-class MyInterceptor implements FeatureStateValueInterceptor {
-  // Called once so the interceptor can hold a reference to the repository if needed.
-  repository(repo: InternalFeatureRepository): void {}
-
-  // Called on every feature value read. Return an InterceptorValueMatch to override
-  // the value, or undefined to let the normal value through.
-  matched(key: string, featureState?: FeatureState): InterceptorValueMatch | undefined {
+class MyInterceptor implements FeatureValueInterceptor {
+  // Called on every feature value read.
+  // Return [true, value] to override, or [false, undefined] to let the normal value through.
+  // value can be string | boolean | number | undefined.
+  // Returning [true, undefined] overrides the feature to have no value (null/unset).
+  matched(
+    key: string,
+    repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
     if (key === "MY_FLAG") {
-      return new InterceptorValueMatch(true); // force the flag on
+      return [true, true]; // force the flag on
     }
-    return undefined; // no override
+    return [false, undefined]; // no override
   }
 }
 ```
-
-`InterceptorValueMatch` wraps the replacement value (`string | boolean | number | undefined`). Returning `new InterceptorValueMatch(undefined)` overrides the feature to have no value (null/unset). Returning `undefined` from `matched` means "no override, use the real value".
 
 ### Registering an interceptor
 
@@ -744,7 +765,7 @@ Multiple interceptors can be registered; they are evaluated in registration orde
 
 ### Provided interceptor: `LocalSessionInterceptor` (`featurehub-browser-interceptor`)
 
-The `featurehub-browser-interceptor` package provides `LocalSessionInterceptor`, which persists feature overrides in browser `localStorage` and restores them on every page load. It implements both `FeatureStateValueInterceptor` (to intercept reads) and `UsagePlugin` (to keep the stored values in sync as features are evaluated).
+The `featurehub-browser-interceptor` package provides `LocalSessionInterceptor`, which persists feature overrides in browser `localStorage` and restores them on every page load. It implements both `FeatureValueInterceptor` (to intercept reads) and `UsagePlugin` (to keep the stored values in sync as features are evaluated).
 
 Install the package:
 
@@ -765,6 +786,37 @@ fhConfig.addUsagePlugin(interceptor);
 ```
 
 Once registered, the interceptor writes evaluated feature values to `localStorage` using the keys `fh_value_<KEY>` (the serialised value) and `fh_null_<KEY>` (when the value is null/undefined). You can pre-seed overrides by setting these keys directly in the browser developer tools before the page loads, and the interceptor will return those values instead of the server-provided ones.
+
+### Provided interceptor: `LocalYamlValueInterceptor` (`featurehub-yaml-interceptor`)
+
+The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file at startup, making it useful for local development without connecting to a live FeatureHub server.
+
+Install the package:
+
+```bash
+npm install featurehub-yaml-interceptor
+# or
+pnpm add featurehub-yaml-interceptor
+```
+
+Create a `featurehub-features.yaml` file (or point to one via `FEATUREHUB_LOCAL_YAML`):
+
+```yaml
+flagValues:
+  MY_FLAG: true
+  PRICE_MULTIPLIER: 1.5
+  BANNER_TEXT: "Hello from local YAML"
+```
+
+Register the interceptor:
+
+```typescript
+import { LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
+
+fhConfig.addValueInterceptor(new LocalYamlValueInterceptor());
+```
+
+Value types are inferred automatically: YAML booleans become `boolean`, numbers become `number`, strings become `string`, and complex objects are JSON-serialised to a string. If a key is present but set to `null`, the feature is overridden to have no value.
 
 ## FeatureHub Test API
 

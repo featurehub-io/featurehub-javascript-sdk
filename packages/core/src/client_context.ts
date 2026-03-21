@@ -14,10 +14,14 @@ export type ContextAttribute =
   | boolean
   | Array<number>
   | Array<string>
-  | Array<boolean>;
+  | Array<boolean>
+  | undefined;
 export type ContextRecord = Record<string, ContextAttribute>;
 
-export function caToString(ca: ContextAttribute, joinSep = ","): string {
+export function caToString(ca: ContextAttribute, joinSep = ","): string | undefined {
+  if (ca === undefined) {
+    return undefined;
+  }
   if (Array.isArray(ca)) {
     return (ca as Array<any>).map((c) => c.toString()).join(joinSep);
   }
@@ -33,7 +37,7 @@ export interface ClientContext {
   platform(value: StrategyAttributePlatformName | undefined): ClientContext;
   version(version: string | undefined): ClientContext;
 
-  attributeValue(key: string, value: ContextAttribute | undefined): ClientContext;
+  attributeValue(key: string, value: ContextAttribute): ClientContext;
 
   clear(): ClientContext;
   build(): Promise<ClientContext>;
@@ -41,7 +45,7 @@ export interface ClientContext {
   get attributes(): ContextRecord;
   set attributes(data: ContextRecord);
 
-  getAttr(key: string, defaultValue?: ContextAttribute): ContextAttribute | undefined;
+  getAttr(key: string, defaultValue?: ContextAttribute): ContextAttribute;
 
   getNumber(name: string): number | undefined;
   getString(name: string): string | undefined;
@@ -67,13 +71,13 @@ export interface ClientContext {
 
   /**
    * If you give it an event, it will pass it through the usage plugins and attempt to fill it in with details
-   * along the way. There are some useful classes BaseUsageEvent, UsageEventWithFeature, UsageFeaturesCollection,
-   * and UsageFeaturesCollectionContext that we recommend you use as base classes, as they will have their fields
+   * along the way. There are some useful classes BaseUsageEvent, BaseUsageEventWithFeature, BaseUsageFeaturesCollection,
+   * and BaseUsageFeaturesCollectionContext that we recommend you use as base classes, as they will have their fields
    * detected and filled in.
    *
    * @param event - something that can have "toMap()" called on it
    */
-  recordUsageEvent(event: any | UsageEvent): any;
+  recordUsageEvent(event: any | UsageEvent): void;
 
   /**
    * This gives a full
