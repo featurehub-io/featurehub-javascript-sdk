@@ -31,6 +31,10 @@ class KeyValueInterceptor implements FeatureValueInterceptor {
       return [false, undefined];
     }
 
+    if (featureState?.l) {
+      return [false, undefined];
+    }
+
     if (featureState) {
       return [true, featureValueFromString(featureState.type!, this.value)];
     }

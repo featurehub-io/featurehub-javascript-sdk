@@ -2,7 +2,12 @@ import type { ClientContext, ContextRecord } from "./client_context";
 import { ClientFeatureRepository } from "./client_feature_repository";
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
 import type { EdgeService } from "./edge_service";
-import { EdgeType, type FeatureHubConfig, fhLog } from "./feature_hub_config";
+import {
+  ConfigurationClosedError,
+  EdgeType,
+  type FeatureHubConfig,
+  fhLog,
+} from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import {
   type EdgeServiceProvider,
@@ -60,6 +65,8 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _usageAdapter: UsageAdapter | undefined;
   private _timeout: number | undefined = undefined;
   private _edgeType: EdgeType = EdgeType.STREAMING;
+
+  private _isClosed = false;
 
   private static _singleton: EdgeFeatureHubConfig | undefined;
 
@@ -120,18 +127,22 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   public addValueInterceptor(interceptor: FeatureValueInterceptor): void {
+    if (this._isClosed) return;
     this.repository().addValueInterceptor(interceptor);
   }
 
   public get readyness(): Readyness {
+    if (this._isClosed) return Readyness.NotReady;
     return this.repository().readyness;
   }
 
   public get readiness(): Readyness {
+    if (this._isClosed) return Readyness.NotReady;
     return this.repository().readyness;
   }
 
   public feature<T = any>(name: string): FeatureStateHolder<T> {
+    if (this._isClosed) throw new ConfigurationClosedError("feature");
     if (this.clientEvaluated()) {
       throw new Error(
         "You cannot use this method for client evaluated keys, please get a context with .newContext()",
@@ -159,6 +170,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   context(context?: ContextRecord): ClientContext {
+    if (this._isClosed) throw new ConfigurationClosedError("context");
     const ctx = this.newContext();
 
     if (context) {
@@ -172,6 +184,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     repository?: InternalFeatureRepository,
     edgeService?: EdgeServiceProvider,
   ): ClientContext {
+    if (this._isClosed) throw new ConfigurationClosedError("newContext");
     repository = repository || this.repository();
     edgeService = edgeService || this.edgeServiceProvider();
 
@@ -201,6 +214,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   public edgePollFromUsage() {
+    if (this._isClosed) return;
     this._edgeServices.forEach((e) => e.poll(true));
   }
 
@@ -233,11 +247,11 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   close(): void {
+    if (this._isClosed) return;
     // we can have multiple consumers of the ServerEval context, and they may issue closes on this, which we don't want
     if (this._clientContext) {
       if (this._clientContext.removeClient()) {
         this.forceClose();
-        this._clientContext = undefined;
       }
     } else {
       this.forceClose();
@@ -251,19 +265,29 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     });
     this._edgeServices.length = 0;
     this._initialized = false;
+    this._isClosed = true;
     this._usageAdapter?.close();
     this._usageAdapter = undefined;
     this._repository?.close();
+    this._repository = undefined;
+    this._edgeService = undefined;
+    this._clientContext = undefined;
+  }
+
+  get isClosed(): boolean {
+    return this._isClosed;
   }
 
   get closed(): boolean {
     return !this._initialized;
   }
+
   get initialized(): boolean {
     return this._initialized;
   }
 
   init(): FeatureHubConfig {
+    if (this._isClosed) return this;
     if (!this._initialized) {
       // ensure the repository exists
       this.repository();
@@ -278,6 +302,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   edgeServiceProvider(edgeServ?: EdgeServiceProvider): EdgeServiceProvider {
+    if (this._isClosed) throw new ConfigurationClosedError("edgeServiceProvider");
     if (edgeServ != null) {
       this._edgeService = edgeServ;
     } else if (this._edgeService == null) {
@@ -288,6 +313,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig {
+    if (this._isClosed) return this;
     if (!this._initialized || !this._repository) {
       this.repository();
     }
@@ -298,6 +324,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   repository(repository?: InternalFeatureRepository): InternalFeatureRepository {
+    if (this._isClosed) throw new ConfigurationClosedError("repository");
     if (repository != null) {
       this._repository = repository;
     } else if (this._repository == null) {
@@ -315,14 +342,17 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
+    if (this._isClosed) throw new ConfigurationClosedError("addReadinessListener");
     return this.repository().addReadinessListener(listener, ignoreNotReadyOnRegister);
   }
 
   removeReadinessListener(listener: ReadynessListener | number) {
+    if (this._isClosed) return;
     this.repository().removeReadinessListener(listener);
   }
 
   restActive(intervalInMilliseconds?: number): FeatureHubConfig {
+    if (this._isClosed) return this;
     if (intervalInMilliseconds) {
       this._timeout = intervalInMilliseconds;
     }
@@ -332,6 +362,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig {
+    if (this._isClosed) return this;
     if (cacheTimeoutInMilliseconds) {
       this._timeout = cacheTimeoutInMilliseconds;
     }
@@ -342,6 +373,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   streaming(): FeatureHubConfig {
+    if (this._isClosed) return this;
     this._edgeType = EdgeType.STREAMING;
     return this;
   }

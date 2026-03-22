@@ -789,7 +789,7 @@ Once registered, the interceptor writes evaluated feature values to `localStorag
 
 ### Provided interceptor: `LocalYamlValueInterceptor` (`featurehub-yaml-interceptor`)
 
-The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file at startup, making it useful for local development without connecting to a live FeatureHub server.
+The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file, making it useful for local development without connecting to a live FeatureHub server.
 
 Install the package:
 
@@ -799,7 +799,7 @@ npm install featurehub-yaml-interceptor
 pnpm add featurehub-yaml-interceptor
 ```
 
-Create a `featurehub-features.yaml` file (or point to one via `FEATUREHUB_LOCAL_YAML`):
+Create a `featurehub-features.yaml` file (or point to one via the `FEATUREHUB_LOCAL_YAML` environment variable):
 
 ```yaml
 flagValues:
@@ -817,6 +817,27 @@ fhConfig.addValueInterceptor(new LocalYamlValueInterceptor());
 ```
 
 Value types are inferred automatically: YAML booleans become `boolean`, numbers become `number`, strings become `string`, and complex objects are JSON-serialised to a string. If a key is present but set to `null`, the feature is overridden to have no value.
+
+#### Hot-reloading
+
+Pass `true` to enable file watching. The interceptor polls the YAML file every 500 ms and reloads overrides whenever it changes — no server restart required:
+
+```typescript
+const interceptor = new LocalYamlValueInterceptor(true);
+fhConfig.addValueInterceptor(interceptor);
+```
+
+Stop the watcher when the application shuts down by calling `close()` on the interceptor directly, or by calling `fhConfig.close()` which propagates to all registered interceptors and plugins automatically:
+
+```typescript
+// explicit close:
+interceptor.close();
+
+// or let the config handle it:
+fhConfig.close();
+```
+
+The watcher runs with `persistent: false` so it will not prevent the Node.js process from exiting on its own.
 
 ## FeatureHub Test API
 

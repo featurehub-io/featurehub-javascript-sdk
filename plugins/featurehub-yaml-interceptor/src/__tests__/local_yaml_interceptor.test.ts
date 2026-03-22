@@ -9,6 +9,13 @@ import type { FeatureHubRepository } from "featurehub-javascript-core-sdk";
 
 import { LocalYamlValueInterceptor } from "../index";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Must exceed POLL_INTERVAL_MS (500 ms) so the watchFile poll fires at least once
+const WATCH_SETTLE_MS = 700;
+
 describe("LocalYamlValueInterceptor", () => {
   let yamlFile: string;
   let repo: FeatureHubRepository;
@@ -26,6 +33,8 @@ describe("LocalYamlValueInterceptor", () => {
     }
     delete process.env["FEATUREHUB_LOCAL_YAML"];
   });
+
+  // ─── Static load (no watching) ───────────────────────────────────────────
 
   it("returns [false, undefined] for a key not in flagValues", () => {
     writeFileSync(yamlFile, "flagValues:\n  banana: true\n");
@@ -119,5 +128,113 @@ describe("LocalYamlValueInterceptor", () => {
     process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
     const interceptor = new LocalYamlValueInterceptor();
     expect(interceptor.matched("anything", repo)).toEqual([false, undefined]);
+  });
+
+  // ─── close() without watching ─────────────────────────────────────────────
+
+  it("close() is a no-op when watch is disabled", () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor();
+    expect(() => interceptor.close()).not.toThrow();
+  });
+
+  it("close() is safe to call multiple times without watching", () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor();
+    expect(() => {
+      interceptor.close();
+      interceptor.close();
+    }).not.toThrow();
+  });
+
+  it("does not reload file when watch is disabled (default)", async () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor();
+
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: false\n");
+    await sleep(WATCH_SETTLE_MS);
+
+    // without watching, values stay as initially loaded
+    expect(interceptor.matched("myFlag", repo)).toEqual([true, true]);
+  });
+
+  // ─── File watching ────────────────────────────────────────────────────────
+
+  it("reloads flagValues when the file changes and watch is enabled", async () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor(true);
+
+    expect(interceptor.matched("myFlag", repo)).toEqual([true, true]);
+
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: false\n");
+    await sleep(WATCH_SETTLE_MS);
+
+    expect(interceptor.matched("myFlag", repo)).toEqual([true, false]);
+    interceptor.close();
+  });
+
+  it("picks up newly added keys after a file change", async () => {
+    writeFileSync(yamlFile, "flagValues:\n  existing: 1\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor(true);
+
+    expect(interceptor.matched("newKey", repo)).toEqual([false, undefined]);
+
+    writeFileSync(yamlFile, "flagValues:\n  existing: 1\n  newKey: 42\n");
+    await sleep(WATCH_SETTLE_MS);
+
+    expect(interceptor.matched("newKey", repo)).toEqual([true, 42]);
+    interceptor.close();
+  });
+
+  it("reflects removed keys after a file change", async () => {
+    writeFileSync(yamlFile, "flagValues:\n  gone: true\n  kept: 99\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor(true);
+
+    expect(interceptor.matched("gone", repo)).toEqual([true, true]);
+
+    writeFileSync(yamlFile, "flagValues:\n  kept: 99\n");
+    await sleep(WATCH_SETTLE_MS);
+
+    expect(interceptor.matched("gone", repo)).toEqual([false, undefined]);
+    expect(interceptor.matched("kept", repo)).toEqual([true, 99]);
+    interceptor.close();
+  });
+
+  it("does not update values after close()", async () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor(true);
+
+    interceptor.close();
+
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: false\n");
+    await sleep(WATCH_SETTLE_MS);
+
+    // watcher was stopped before the change, so values must not have updated
+    expect(interceptor.matched("myFlag", repo)).toEqual([true, true]);
+  });
+
+  it("close() is safe to call multiple times with watching enabled", () => {
+    writeFileSync(yamlFile, "flagValues:\n  myFlag: true\n");
+    process.env["FEATUREHUB_LOCAL_YAML"] = yamlFile;
+    const interceptor = new LocalYamlValueInterceptor(true);
+    expect(() => {
+      interceptor.close();
+      interceptor.close();
+    }).not.toThrow();
+  });
+
+  it("does not throw when watching a nonexistent file", () => {
+    process.env["FEATUREHUB_LOCAL_YAML"] = "/nonexistent/path/featurehub.yaml";
+    expect(() => {
+      const interceptor = new LocalYamlValueInterceptor(true);
+      interceptor.close();
+    }).not.toThrow();
   });
 });

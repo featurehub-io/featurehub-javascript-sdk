@@ -47,12 +47,24 @@ export enum EdgeType {
   REST_ACTIVE,
 }
 
+export class ConfigurationClosedError extends Error {
+  constructor(method: string) {
+    super(`FeatureHub config is closed — cannot call '${method}'`);
+    this.name = "ConfigurationClosedError";
+  }
+}
+
 export interface FeatureHubConfig {
   /**
    * indicates the system is ready
    * @deprecated used readiness
    */
   readyness: Readyness;
+
+  /**
+   * Whether this config has been permanently closed.
+   */
+  get isClosed(): boolean;
 
   readiness: Readyness;
 

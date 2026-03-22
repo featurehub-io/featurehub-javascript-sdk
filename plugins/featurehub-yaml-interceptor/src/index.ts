@@ -1,21 +1,54 @@
-import { readFileSync } from "fs";
+import { readFileSync, unwatchFile, watchFile } from "fs";
 
 import { load } from "js-yaml";
 
 import type {
+  FeatureHubRepository,
   FeatureState,
   FeatureValueInterceptor,
-  FeatureHubRepository,
 } from "featurehub-javascript-core-sdk";
 
 const DEFAULT_YAML_FILE = "featurehub-features.yaml";
 
-export class LocalYamlValueInterceptor implements FeatureValueInterceptor {
-  private readonly _flagValues: Record<string, unknown>;
+/**
+ * How often to poll the YAML file for changes when `watchForChanges` is enabled.
+ * This is a development-time tool so a 500 ms interval is well within acceptable overhead.
+ */
+const POLL_INTERVAL_MS = 500;
 
-  constructor() {
-    const yamlFile = process.env["FEATUREHUB_LOCAL_YAML"] ?? DEFAULT_YAML_FILE;
-    this._flagValues = LocalYamlValueInterceptor._loadYamlFile(yamlFile);
+export class LocalYamlValueInterceptor implements FeatureValueInterceptor {
+  private _flagValues: Record<string, unknown>;
+  private readonly _filePath: string;
+  private _watching = false;
+  private readonly _watchListener: () => void;
+
+  constructor(watchForChanges: boolean = false) {
+    this._filePath = process.env["FEATUREHUB_LOCAL_YAML"] ?? DEFAULT_YAML_FILE;
+    this._flagValues = LocalYamlValueInterceptor._loadYamlFile(this._filePath);
+
+    this._watchListener = () => {
+      this._flagValues = LocalYamlValueInterceptor._loadYamlFile(this._filePath);
+    };
+
+    if (watchForChanges) {
+      this._startWatching();
+    }
+  }
+
+  private _startWatching(): void {
+    watchFile(
+      this._filePath,
+      { interval: POLL_INTERVAL_MS, persistent: false },
+      this._watchListener,
+    );
+    this._watching = true;
+  }
+
+  public close(): void {
+    if (this._watching) {
+      unwatchFile(this._filePath, this._watchListener);
+      this._watching = false;
+    }
   }
 
   private static _loadYamlFile(filePath: string): Record<string, unknown> {
@@ -43,17 +76,9 @@ export class LocalYamlValueInterceptor implements FeatureValueInterceptor {
       return [true, undefined];
     }
 
-    if (typeof value === "boolean") {
-      return [true, value];
-    }
-
-    if (typeof value === "number") {
-      return [true, value];
-    }
-
-    if (typeof value === "string") {
-      return [true, value];
-    }
+    if (typeof value === "boolean") return [true, value];
+    if (typeof value === "number") return [true, value];
+    if (typeof value === "string") return [true, value];
 
     // complex object or array -> JSON string
     return [true, JSON.stringify(value)];

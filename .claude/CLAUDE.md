@@ -172,6 +172,6 @@ ESLint flat config at `eslint.config.ts`. Rules:
 - `@typescript-eslint/no-non-null-assertion` is **off**
 - Unused vars prefixed with `_` are allowed
 - `plugins/**` is excluded from linting (TODO marker in config)
-         
+
 in each of the projects, to run formatting use `prettier . --write` and for linting
 use `eslint --fix .`. Use this after each code change in each project that has changed.
