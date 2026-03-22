@@ -64,7 +64,7 @@ describe("Interceptor functionality works as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     repo.addValueInterceptor(new KeyValueInterceptor("banana", "true"));
     repo.addValueInterceptor(new KeyValueInterceptor("apricot", "17.3"));
@@ -98,7 +98,7 @@ describe("Interceptor functionality works as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     fhConfig.addValueInterceptor(new KeyValueInterceptor("banana", "true"));
     fhConfig.addValueInterceptor(new KeyValueInterceptor("apricot", "17.3"));

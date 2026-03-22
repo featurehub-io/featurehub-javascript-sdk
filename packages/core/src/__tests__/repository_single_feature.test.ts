@@ -18,7 +18,7 @@ describe("repository reacts to single feature changes as expected", () => {
   it("should be able to recognize newly created values that are not set", () => {
     const features = [{ id: "1", key: "pear", version: 0, type: FeatureValueType.String }];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(repo.feature("pear").getVersion()).toBe(0);
 
@@ -79,7 +79,7 @@ describe("repository reacts to single feature changes as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     repo.notify(SSEResultState.Feature, {
       id: "1",
@@ -104,7 +104,7 @@ describe("repository reacts to single feature changes as expected", () => {
     expect(triggerPear).toBe(1);
     expect(triggerPeach).toBe(1);
 
-    repo.notify(SSEResultState.DeleteFeature, { id: "1", key: "banana" });
+    repo.notify(SSEResultState.DeleteFeature, { id: "1", key: "banana" }, "test");
 
     expect(repo.hasFeature("banana")).toBeDefined();
     expect(repo.hasFeature("banana")?.getRawJson()).toBeUndefined();
@@ -131,7 +131,7 @@ describe("repository reacts to single feature changes as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     repo.notify(SSEResultState.Feature, {
       id: "1",
@@ -163,7 +163,7 @@ describe("repository reacts to single feature changes as expected", () => {
     const features = [
       { id: "1", key: "apricot", version: 1, type: FeatureValueType.Number, value: 12.8 },
     ];
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     repo.notify(SSEResultState.Feature, {
       id: "1",
       key: "apricot",
@@ -181,13 +181,13 @@ describe("repository reacts to single feature changes as expected", () => {
     const features = [
       { id: "1", key: "rhubarb", version: 1, type: FeatureValueType.Number, value: 12.8 },
     ];
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(triggerRhubarb).toBe(1);
     repo.feature("rhubarb").removeListener(handle);
     const features1 = [
       { id: "1", key: "rhubarb", version: 2, type: FeatureValueType.Number, value: 17.8 },
     ];
-    repo.notify(SSEResultState.Features, features1);
+    repo.notify(SSEResultState.Features, features1, "test");
     expect(triggerRhubarb).toBe(1);
     expect(repo.feature("rhubarb").num).toBe(17.8);
   });

@@ -102,6 +102,9 @@ export interface FeatureHubConfig {
   // what is the host?
   getHost(): string;
 
+  // this is the fully constructed URL depending on if you are using polling or streaming
+  featureUrl(): string;
+
   // initialize the connection outside of the creation of a context
   init(): FeatureHubConfig;
 

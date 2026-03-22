@@ -23,7 +23,7 @@ describe("When any feature changes, post new feature update should trigger", () 
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(postNewTrigger).toBe(0);
 
     repo.notify(SSEResultState.Feature, {
@@ -32,7 +32,7 @@ describe("When any feature changes, post new feature update should trigger", () 
       version: 2,
       type: FeatureValueType.Boolean,
       value: true,
-    } as FeatureState);
+    } as FeatureState, "test");
 
     expect(postNewTrigger).toBe(0);
     repo.notify(SSEResultState.Feature, {
@@ -41,7 +41,7 @@ describe("When any feature changes, post new feature update should trigger", () 
       version: 3,
       type: FeatureValueType.Boolean,
       value: false,
-    } as FeatureState);
+    } as FeatureState, "test");
 
     expect(postNewTrigger).toBe(1);
   });

@@ -443,7 +443,7 @@ export class FeatureHubPollingClient implements EdgeService {
             fhLog.error("The API Key provided does not exist, stopping polling.");
           }
 
-          this._repository.notify(SSEResultState.Failure, null);
+          this._repository.notify(SSEResultState.Failure, null, "polling-service");
           this._startable = false;
 
           this.stop();
@@ -495,7 +495,7 @@ export class FeatureHubPollingClient implements EdgeService {
       fhLog.trace(`There are no environments for this apikey, stopping polling.`);
       this._startable = false;
       this.stop();
-      this._repository.notify(SSEResultState.Failure, null);
+      this._repository.notify(SSEResultState.Failure, null, "polling-service");
     } else {
       const features = new Array<FeatureState>();
 
@@ -509,7 +509,7 @@ export class FeatureHubPollingClient implements EdgeService {
         }
       });
 
-      this._repository.notify(SSEResultState.Features, features);
+      this._repository.notify(SSEResultState.Features, features, "polling-service");
     }
   }
 }

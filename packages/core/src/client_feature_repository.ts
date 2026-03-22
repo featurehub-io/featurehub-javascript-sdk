@@ -9,6 +9,7 @@ import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
   type PostLoadNewFeatureStateAvailableListener,
   Readyness,
+  type RawUpdateFeatureListener,
   type ReadynessListener,
 } from "./featurehub_repository";
 import type { FeatureValueInterceptor } from "./interceptors";
@@ -41,6 +42,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   >();
   private _listenerCounter = 1;
   private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
+  private _rawUpdateListeners: Map<number, RawUpdateFeatureListener> = new Map<number, RawUpdateFeatureListener>();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
@@ -76,6 +78,16 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     this._usageStreams.delete(handler);
   }
 
+  registerRawUpdateFeatureListener(listener: RawUpdateFeatureListener): number {
+    const counter = this._listenerCounter++;
+    this._rawUpdateListeners.set(counter, listener);
+    return counter;
+  }
+
+  removeRawUpdateFeatureListener(handler: number): void {
+    this._rawUpdateListeners.delete(handler);
+  }
+
   get serverProvidedFeatureKeys(): Array<string> {
     return this.features
       .values()
@@ -105,7 +117,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.readynessState;
   }
 
-  public notify(state: SSEResultState, data: unknown) {
+  public notify(state: SSEResultState, data: unknown, source: string) {
     if (state !== null && state !== undefined) {
       switch (state) {
         case SSEResultState.Ack: // do nothing, expect state shortly
@@ -113,6 +125,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           break;
         case SSEResultState.DeleteFeature:
           this.deleteFeature(data as FeatureState);
+          this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.delete(data as FeatureState, source)));
           break;
         case SSEResultState.Failure:
           this.readynessState = Readyness.Failed;
@@ -131,6 +144,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
                 this.triggerNewStateAvailable();
               }
             }
+
+            this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdate(fs, source)));
           }
           break;
         case SSEResultState.Features:
@@ -138,10 +153,12 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
             const features = (data as FeatureState[]).filter((f) => f?.key !== undefined);
             if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
               this._catchUpdatedFeatures(features, true);
+              this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdates(features, source)));
             } else {
               let updated = false;
               features.forEach((f) => (updated = this.featureUpdate(f) || updated));
               this._checkForDeletedFeatures(features);
+              this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdates(features, source)));
               this.readynessState = Readyness.Ready;
               if (!this.hasReceivedInitialState) {
                 this.hasReceivedInitialState = true;
@@ -185,6 +202,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   public close(): void {
     this._matchers.forEach((m) => m.close?.());
     this._matchers.length = 0;
+    this._rawUpdateListeners.forEach((l) => void Promise.resolve().then(() => l.close()));
+    this._rawUpdateListeners.clear();
   }
 
   public valueInterceptorMatched(

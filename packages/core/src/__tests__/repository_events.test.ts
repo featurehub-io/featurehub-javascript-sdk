@@ -22,7 +22,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
   });
 
   it("Can handle null or undefined feature states", () => {
-    repo.notify(SSEResultState.Features, [undefined]);
+    repo.notify(SSEResultState.Features, [undefined], "test");
   });
 
   it("Can handle post new state available handlers failing and letting subsequent ones continue", () => {
@@ -37,14 +37,14 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       { id: "1", key: "banana", version: 1, type: FeatureValueType.Boolean, value: true },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     repo.notify(SSEResultState.Feature, {
       id: "1",
       key: "banana",
       version: 2,
       type: FeatureValueType.Boolean,
       value: false,
-    } as FeatureState);
+    } as FeatureState, "test");
 
     expect(postTrigger).toBe(1);
     expect(failTrigger).toBe(1);
@@ -74,7 +74,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       { id: "3", key: "peach", version: 1, type: FeatureValueType.Boolean, value: true },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(triggerBanana).toBe(1);
     expect(triggerPear).toBe(1);
@@ -90,7 +90,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     // only banana should trigger as it has changed its value and its version
-    repo.notify(SSEResultState.Features, features2);
+    repo.notify(SSEResultState.Features, features2, "test");
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -115,7 +115,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       { id: "3", key: "peach", version: 1, type: FeatureValueType.Number, value: 56534.23 },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(triggerBanana).toBe(1);
     expect(triggerPear).toBe(1);
@@ -131,7 +131,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     // only banana should trigger as it has changed its value and its version
-    repo.notify(SSEResultState.Features, features2);
+    repo.notify(SSEResultState.Features, features2, "test");
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -191,7 +191,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     // only banana should trigger as it has changed its value and its version
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(triggerContext).toBe(1);
     expect(triggerRepo).toBe(1);
@@ -224,7 +224,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features2);
+    repo.notify(SSEResultState.Features, features2, "test");
 
     expect(triggerContext).toBe(2);
     expect(triggerRepo).toBe(2);
@@ -247,7 +247,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       { id: "3", key: "peach", version: 1, type: FeatureValueType.String, value: "56534.23" },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(triggerBanana).toBe(1);
     expect(triggerPear).toBe(1);
@@ -265,7 +265,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     // only banana should trigger as it has changed its value and its version
-    repo.notify(SSEResultState.Features, features2);
+    repo.notify(SSEResultState.Features, features2, "test");
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -297,7 +297,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(triggerBanana).toBe(1);
     expect(triggerPear).toBe(1);
@@ -319,7 +319,7 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     // only banana should trigger as it has changed its value and its version
-    repo.notify(SSEResultState.Features, features2);
+    repo.notify(SSEResultState.Features, features2, "test");
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);

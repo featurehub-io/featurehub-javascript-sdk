@@ -9,6 +9,7 @@ import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import type { UsageEvent, UsageEventListener, UsageProvider } from "./usage/usage";
+import type {FeatureState} from "./models";
 
 export enum Readyness {
   NotReady = "NotReady",
@@ -29,6 +30,26 @@ export interface ReadynessListener {
 
 export interface PostLoadNewFeatureStateAvailableListener {
   (repo: InternalFeatureRepository): void;
+}
+
+// RawUpdateFeatureListener - The purpose of the RawUpdateFeatureListener is that when feature changes come into the repository
+// from our upstream connection - we can update the downstream backup storage so if that goes down and
+// we have to refresh our state.
+//
+// The source parameter is always where the change came from so we can ignore changes from ourself.
+export interface RawUpdateFeatureListener {
+  // this deletes an individual feature, always use the feature.id if you can
+  delete(feature: FeatureState, source: string) : void;
+  // this replaces all of the features
+  processUpdates(features: Array<FeatureState>, source: string) : void;
+  // this updates an individual feature, always use the feature.id if you can. A feature can change its key.
+  processUpdate(features: FeatureState, source: string) : void;
+
+  // this asks this listener to close and release any open resources
+  close() : void;
+
+  // some config may have changed, check for updates
+  configChanged(): void;
 }
 
 export interface FeatureHubRepository {
@@ -132,4 +153,8 @@ export interface FeatureHubRepository {
   removeUsageStream(handler: number): void;
 
   recordUsageEvent(event: UsageEvent): void;
+
+  registerRawUpdateFeatureListener(listener: RawUpdateFeatureListener): number;
+
+  removeRawUpdateFeatureListener(handler: number): void;
 }

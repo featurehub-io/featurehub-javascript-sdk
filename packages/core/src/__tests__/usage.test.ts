@@ -82,7 +82,7 @@ describe("usage plugin system works as expected", function () {
   beforeEach(() => {
     repo = new ClientFeatureRepository();
 
-    repo.notify(SSEResultState.Features, [fruitFeature, boolFeature, numberFeature, jsonFeature]);
+    repo.notify(SSEResultState.Features, [fruitFeature, boolFeature, numberFeature, jsonFeature], "test");
 
     usageStreamHandler = -1;
 
@@ -131,7 +131,7 @@ describe("usage plugin system works as expected", function () {
     newFruit.value = "orange";
     newFruit.version = newFruit.version++;
 
-    repo.notify(SSEResultState.Features, [newFruit, boolFeature, numberFeature, jsonFeature]);
+    repo.notify(SSEResultState.Features, [newFruit, boolFeature, numberFeature, jsonFeature], "test");
 
     expect(eventCount).to.eq(1);
     const evt = event! as UsageFeaturesCollectionContext;
@@ -171,7 +171,7 @@ describe("usage plugin system works as expected", function () {
       ],
     };
 
-    repo.notify(SSEResultState.Feature, newBool);
+    repo.notify(SSEResultState.Feature, newBool, "test");
     expect(ctx.feature("smile").value).to.eq(true);
     expect(eventCount).to.eq(1);
     const evt = event! as UsageEventWithFeature;

@@ -23,14 +23,14 @@ describe("if a feature is deleted it becomes undefined", () => {
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
   });
 
   it("should allow us to delete a feature", () => {
     expect(repo.feature("banana").flag).toBe(true);
     expect(repo.getFlag("banana")).toBe(true);
     expect(repo.feature("banana").exists).toBe(true);
-    repo.notify(SSEResultState.DeleteFeature, features[0]);
+    repo.notify(SSEResultState.DeleteFeature, features[0], "test");
     expect(repo.feature("banana").exists).toBe(false);
     expect(repo.feature("banana").flag).toBeUndefined();
     expect(repo.getFlag("banana")).toBeUndefined();
@@ -45,7 +45,7 @@ describe("if a feature is deleted it becomes undefined", () => {
       version: 1,
       type: FeatureValueType.Boolean,
       value: true,
-    } as FeatureState);
+    } as FeatureState, "test");
     expect(repo.feature("banana").value).toBe(true);
   });
 
@@ -56,7 +56,7 @@ describe("if a feature is deleted it becomes undefined", () => {
       version: 0,
       type: FeatureValueType.Boolean,
       value: true,
-    } as FeatureState);
+    } as FeatureState, "test");
     expect(repo.feature("banana").isSet()).toBe(false);
   });
 
@@ -67,14 +67,14 @@ describe("if a feature is deleted it becomes undefined", () => {
       version: undefined,
       type: FeatureValueType.Boolean,
       value: true,
-    } as FeatureState);
+    } as FeatureState, "test");
     expect(repo.feature("banana").isSet()).toBe(false);
   });
 
   it("if features are deleted from FH, on the next poll they won't turn up, so we should indicate they don't exist", () => {
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(repo.feature("banana").exists).toBe(true);
-    repo.notify(SSEResultState.Features, []);
+    repo.notify(SSEResultState.Features, [], "test");
     expect(repo.feature("banana").exists).toBe(false);
   });
 
@@ -85,7 +85,7 @@ describe("if a feature is deleted it becomes undefined", () => {
       version: 1,
       type: FeatureValueType.Boolean,
       value: true,
-    } as FeatureState);
+    } as FeatureState, "test");
 
     expect(repo.getFeatureState("apple").isSet()).toBe(false);
     expect(repo.getFeatureState("banana").isSet()).toBe(true);

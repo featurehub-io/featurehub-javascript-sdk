@@ -120,7 +120,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
               (data as FeatureState).environmentId = envId;
             }
 
-            this._repository.notify(name, data);
+            this._repository.notify(name, data, "streaming-service");
           }
         } catch (e) {
           fhLog.error("SSE: Failed to understand result", e);
@@ -140,7 +140,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
             "Connection failed and repository not in ready state indicating persistent failure",
             e,
           );
-          this._repository.notify(SSEResultState.Failure, null);
+          this._repository.notify(SSEResultState.Failure, null, "streaming-service");
           this.close();
         } else {
           fhLog.trace("refreshing connection in case of staleness", e);
