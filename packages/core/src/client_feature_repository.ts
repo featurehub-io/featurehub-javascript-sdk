@@ -8,8 +8,8 @@ import type { FeatureStateHolder } from "./feature_state";
 import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
   type PostLoadNewFeatureStateAvailableListener,
-  Readyness,
   type RawUpdateFeatureListener,
+  Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
 import type { FeatureValueInterceptor } from "./interceptors";
@@ -42,7 +42,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   >();
   private _listenerCounter = 1;
   private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
-  private _rawUpdateListeners: Map<number, RawUpdateFeatureListener> = new Map<number, RawUpdateFeatureListener>();
+  private _rawUpdateListeners: Map<number, RawUpdateFeatureListener> = new Map<
+    number,
+    RawUpdateFeatureListener
+  >();
   private _catchAndReleaseMode = false;
   // indexed by id
   private _catchReleaseStates = new Map<string, FeatureState>();
@@ -125,7 +128,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           break;
         case SSEResultState.DeleteFeature:
           this.deleteFeature(data as FeatureState);
-          this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.delete(data as FeatureState, source)));
+          this._rawUpdateListeners
+            .values()
+            .forEach(
+              (rul) => void Promise.resolve().then(() => rul.delete(data as FeatureState, source)),
+            );
           break;
         case SSEResultState.Failure:
           this.readynessState = Readyness.Failed;
@@ -145,7 +152,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
               }
             }
 
-            this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdate(fs, source)));
+            this._rawUpdateListeners
+              .values()
+              .forEach((rul) => void Promise.resolve().then(() => rul.processUpdate(fs, source)));
           }
           break;
         case SSEResultState.Features:
@@ -153,12 +162,20 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
             const features = (data as FeatureState[]).filter((f) => f?.key !== undefined);
             if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
               this._catchUpdatedFeatures(features, true);
-              this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdates(features, source)));
+              this._rawUpdateListeners
+                .values()
+                .forEach(
+                  (rul) => void Promise.resolve().then(() => rul.processUpdates(features, source)),
+                );
             } else {
               let updated = false;
               features.forEach((f) => (updated = this.featureUpdate(f) || updated));
               this._checkForDeletedFeatures(features);
-              this._rawUpdateListeners.values().forEach(rul => void Promise.resolve().then(() => rul.processUpdates(features, source)));
+              this._rawUpdateListeners
+                .values()
+                .forEach(
+                  (rul) => void Promise.resolve().then(() => rul.processUpdates(features, source)),
+                );
               this.readynessState = Readyness.Ready;
               if (!this.hasReceivedInitialState) {
                 this.hasReceivedInitialState = true;

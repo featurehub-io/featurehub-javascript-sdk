@@ -22,14 +22,18 @@ describe("repository reacts to single feature changes as expected", () => {
 
     expect(repo.feature("pear").getVersion()).toBe(0);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "pear",
-      version: 1,
-      type: FeatureValueType.String,
-      value: "now-set",
-      fp: { category: "shoes", appName: "cajon" },
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "pear",
+        version: 1,
+        type: FeatureValueType.String,
+        value: "now-set",
+        fp: { category: "shoes", appName: "cajon" },
+      },
+      "",
+    );
 
     const str = repo.feature<string>("pear").value;
     expect(str).toBe("now-set");
@@ -81,24 +85,32 @@ describe("repository reacts to single feature changes as expected", () => {
 
     repo.notify(SSEResultState.Features, features, "test");
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 2,
-      type: FeatureValueType.Json,
-      value: "{}",
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 2,
+        type: FeatureValueType.Json,
+        value: "{}",
+      },
+      "",
+    );
 
     // banana doesn't change because version diff + value same
     expect(triggerBanana).toBe(1);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 3,
-      type: FeatureValueType.Json,
-      value: '"yellow"',
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 3,
+        type: FeatureValueType.Json,
+        value: '"yellow"',
+      },
+      "",
+    );
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -133,26 +145,34 @@ describe("repository reacts to single feature changes as expected", () => {
 
     repo.notify(SSEResultState.Features, features, "test");
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      l: false,
-      version: 2,
-      type: FeatureValueType.Json,
-      value: "{}",
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        l: false,
+        version: 2,
+        type: FeatureValueType.Json,
+        value: "{}",
+      },
+      "",
+    );
 
     // banana doesn't change because version diff + value same
     expect(triggerBanana).toBe(1);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      l: true,
-      version: 3,
-      type: FeatureValueType.Json,
-      value: '"yellow"',
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        l: true,
+        version: 3,
+        type: FeatureValueType.Json,
+        value: '"yellow"',
+      },
+      "",
+    );
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -164,13 +184,17 @@ describe("repository reacts to single feature changes as expected", () => {
       { id: "1", key: "apricot", version: 1, type: FeatureValueType.Number, value: 12.8 },
     ];
     repo.notify(SSEResultState.Features, features, "test");
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "apricot",
-      version: 1,
-      type: FeatureValueType.Number,
-      value: 12.9,
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "apricot",
+        version: 1,
+        type: FeatureValueType.Number,
+        value: 12.9,
+      },
+      "",
+    );
     expect(repo.feature("apricot").getNumber()).toBe(12.9);
     expect(repo.feature("apricot").num).toBe(12.9);
   });

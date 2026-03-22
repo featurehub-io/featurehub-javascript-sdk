@@ -9,11 +9,12 @@
     "verbatimModuleSyntax": false,
     "lib": ["ESNext"],
     "types": ["node"],
+    "rootDir": ".",
     "outDir": "./dist",
     "paths": {
-      "featurehub-javascript-core-sdk": ["../../packages/core/src/"]
+      "featurehub-javascript-core-sdk": ["../../../packages/core/src/"]
     }
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }

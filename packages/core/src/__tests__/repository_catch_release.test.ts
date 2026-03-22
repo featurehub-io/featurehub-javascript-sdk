@@ -53,19 +53,27 @@ describe("Catch and release should hold and then release feature changes", () =>
     ];
     internalRepo.notify(SSEResultState.Features, features, "test");
 
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "orange",
-      version: 1,
-      type: FeatureValueType.String,
-    } as FeatureState, "test");
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "orange",
-      version: 2,
-      type: FeatureValueType.String,
-      value: "lemon",
-    } as FeatureState, "test");
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "orange",
+        version: 1,
+        type: FeatureValueType.String,
+      } as FeatureState,
+      "test",
+    );
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "orange",
+        version: 2,
+        type: FeatureValueType.String,
+        value: "lemon",
+      } as FeatureState,
+      "test",
+    );
 
     await repo.release(false);
     expect(repo.getString("orange")).toBe("lemon");
@@ -98,33 +106,45 @@ describe("Catch and release should hold and then release feature changes", () =>
 
     internalRepo.notify(SSEResultState.Features, features, "test");
     // change banana, change change banana
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 2,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState, "test");
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 2,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
     expect(postNewTrigger).toBe(1);
     expect(bananaTrigger).toBe(1); // new list of features always trigger
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 3,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState, "test");
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 3,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
 
     expect(postNewTrigger).toBe(2);
     expect(bananaTrigger).toBe(1);
 
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "3",
-      key: "apricot",
-      version: 1,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState, "test");
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "3",
+        key: "apricot",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
     expect(repo.feature("apricot").getBoolean()).toBeUndefined();
 
     expect(repo.getFeatureState("banana").getBoolean()).toBe(true);
@@ -154,13 +174,17 @@ describe("Catch and release should hold and then release feature changes", () =>
     expect(repo.getFlag("banana")).toBe(true);
     expect(repo.getFeatureState("banana").getVersion()).toBe(4);
     // and now ensure c&r mode is off
-    internalRepo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 5,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState, "test");
+    internalRepo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 5,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
     expect(repo.getFlag("banana")).toBe(false);
     expect(repo.getFeatureState("banana").getVersion()).toBe(5);
   });

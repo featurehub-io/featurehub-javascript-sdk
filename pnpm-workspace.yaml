@@ -2,8 +2,8 @@ packages:
   - "packages/*"
   - "examples/*"
   - "plugins/usage/*"
-  - "plugins/featurehub-browser-interceptor"
-  - "plugins/featurehub-yaml-interceptor"
+  - "plugins/store/*"
+  - "plugins/interceptor/*"
 
 catalogs:
   prettier:

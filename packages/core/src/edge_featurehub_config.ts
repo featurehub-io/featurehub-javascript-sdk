@@ -1,29 +1,29 @@
-import type {ClientContext, ContextRecord} from "./client_context";
-import {ClientFeatureRepository} from "./client_feature_repository";
-import {ClientEvalFeatureContext, ServerEvalFeatureContext} from "./context_impl";
-import type {EdgeService} from "./edge_service";
+import type { ClientContext, ContextRecord } from "./client_context";
+import { ClientFeatureRepository } from "./client_feature_repository";
+import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
+import type { EdgeService } from "./edge_service";
 import {
   ConfigurationClosedError,
   EdgeType,
   type FeatureHubConfig,
   fhLog,
 } from "./feature_hub_config";
-import type {FeatureStateHolder} from "./feature_state";
+import type { FeatureStateHolder } from "./feature_state";
 import {
   type EdgeServiceProvider,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type {FeatureValueInterceptor} from "./interceptors";
-import type {InternalFeatureRepository} from "./internal_feature_repository";
-import {FeatureHubNetwork} from "./network";
+import type { FeatureValueInterceptor } from "./interceptors";
+import type { InternalFeatureRepository } from "./internal_feature_repository";
+import { FeatureHubNetwork } from "./network";
 import {
   DefaultUsagePlugin,
   isUsageEventWithFeature,
   type UsageEvent,
   type UsagePlugin,
 } from "./usage/usage";
-import {UsageAdapter} from "./usage/usage_adapter";
+import { UsageAdapter } from "./usage/usage_adapter";
 
 export const defaultEdgeTypeProviderConfig = {
   defaultTimeoutInMilliseconds: 180000,
@@ -346,7 +346,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       return `${this._url}/features/${this._apiKey}`;
     }
 
-    return `${this._url}/features?${this._apiKeys.map(a => "apiKey=" + a).join("&")}`;
+    return `${this._url}/features?${this._apiKeys.map((a) => "apiKey=" + a).join("&")}`;
   }
 
   addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {

@@ -38,13 +38,17 @@ describe("Feature repository reacts to incoming event lists as expected", () => 
     ];
 
     repo.notify(SSEResultState.Features, features, "test");
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 2,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState, "test");
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 2,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
 
     expect(postTrigger).toBe(1);
     expect(failTrigger).toBe(1);

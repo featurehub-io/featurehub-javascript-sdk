@@ -8,8 +8,8 @@ import {
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type { FeatureState } from "./models";
 import type { UsageEvent, UsageEventListener, UsageProvider } from "./usage/usage";
-import type {FeatureState} from "./models";
 
 export enum Readyness {
   NotReady = "NotReady",
@@ -39,14 +39,14 @@ export interface PostLoadNewFeatureStateAvailableListener {
 // The source parameter is always where the change came from so we can ignore changes from ourself.
 export interface RawUpdateFeatureListener {
   // this deletes an individual feature, always use the feature.id if you can
-  delete(feature: FeatureState, source: string) : void;
+  delete(feature: FeatureState, source: string): void;
   // this replaces all of the features
-  processUpdates(features: Array<FeatureState>, source: string) : void;
+  processUpdates(features: Array<FeatureState>, source: string): void;
   // this updates an individual feature, always use the feature.id if you can. A feature can change its key.
-  processUpdate(features: FeatureState, source: string) : void;
+  processUpdate(features: FeatureState, source: string): void;
 
   // this asks this listener to close and release any open resources
-  close() : void;
+  close(): void;
 
   // some config may have changed, check for updates
   configChanged(): void;

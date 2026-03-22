@@ -85,9 +85,15 @@ export class FakeInternalRepository implements InternalFeatureRepository {
 
   close(): void {}
 
-  notify(_state: SSEResultState, _data: any) {
+  notify(_state: SSEResultState, _data: any, _source: string) {
     throw new Error("Method not implemented.");
   }
+
+  registerRawUpdateFeatureListener(_listener: any): number {
+    return 0;
+  }
+
+  removeRawUpdateFeatureListener(_handler: number): void {}
 
   valueInterceptorMatched(_key: string): [boolean, string | boolean | number | undefined] {
     return [false, undefined];

@@ -39,35 +39,47 @@ describe("if a feature is deleted it becomes undefined", () => {
   });
 
   it("should ignore a delete if the version is lower than the existing version", () => {
-    repo.notify(SSEResultState.DeleteFeature, {
-      id: "1",
-      key: "banana",
-      version: 1,
-      type: FeatureValueType.Boolean,
-      value: true,
-    } as FeatureState, "test");
+    repo.notify(
+      SSEResultState.DeleteFeature,
+      {
+        id: "1",
+        key: "banana",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+      "test",
+    );
     expect(repo.feature("banana").value).toBe(true);
   });
 
   it("should delete if the feature version is 0", () => {
-    repo.notify(SSEResultState.DeleteFeature, {
-      id: "1",
-      key: "banana",
-      version: 0,
-      type: FeatureValueType.Boolean,
-      value: true,
-    } as FeatureState, "test");
+    repo.notify(
+      SSEResultState.DeleteFeature,
+      {
+        id: "1",
+        key: "banana",
+        version: 0,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+      "test",
+    );
     expect(repo.feature("banana").isSet()).toBe(false);
   });
 
   it("should delete if the feature version is undefined", () => {
-    repo.notify(SSEResultState.DeleteFeature, {
-      id: "1",
-      key: "banana",
-      version: undefined,
-      type: FeatureValueType.Boolean,
-      value: true,
-    } as FeatureState, "test");
+    repo.notify(
+      SSEResultState.DeleteFeature,
+      {
+        id: "1",
+        key: "banana",
+        version: undefined,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+      "test",
+    );
     expect(repo.feature("banana").isSet()).toBe(false);
   });
 
@@ -79,13 +91,17 @@ describe("if a feature is deleted it becomes undefined", () => {
   });
 
   it("should ignore deleting a feature that doesnt exist", () => {
-    repo.notify(SSEResultState.DeleteFeature, {
-      id: "1",
-      key: "apple",
-      version: 1,
-      type: FeatureValueType.Boolean,
-      value: true,
-    } as FeatureState, "test");
+    repo.notify(
+      SSEResultState.DeleteFeature,
+      {
+        id: "1",
+        key: "apple",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+      "test",
+    );
 
     expect(repo.getFeatureState("apple").isSet()).toBe(false);
     expect(repo.getFeatureState("banana").isSet()).toBe(true);

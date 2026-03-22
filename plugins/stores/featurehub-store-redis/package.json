@@ -1,20 +1,18 @@
 {
-  "name": "featurehub-baggage-userstate",
-  "version": "3.0.0",
-  "description": "This library allows feature state to be overridden and stored in local storage. It includes an embedded UI written in Flutter that allows the local config of these features.",
+  "name": "featurehub-store-redis",
+  "version": "1.0.0",
+  "description": "FeatureHub Backing Store for Redis",
   "author": "info@featurehub.io",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
   "files": [
     "dist"
   ],
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "homepage": "https://featurehub.io",
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",
@@ -61,12 +59,12 @@
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "@types/jsdom": "^27.0.0",
-    "jsdom": "^27.1.0",
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "featurehub-javascript-core-sdk": "workspace:*"
+    "@opentelemetry/api": "^1.9.0",
+    "featurehub-javascript-core-sdk": "workspace:*",
+    "redis": "^5.11.0"
   },
   "engines": {
     "node": ">=20.0.0"
