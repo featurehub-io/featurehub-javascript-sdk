@@ -2,7 +2,7 @@ packages:
   - "packages/*"
   - "examples/*"
   - "plugins/usage/*"
-  - "plugins/store/*"
+  - "plugins/stores/*"
   - "plugins/interceptor/*"
 
 catalogs:

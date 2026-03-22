@@ -9,11 +9,31 @@ catalogs:
     '@types/node':
       specifier: 22.18.10
       version: 22.18.10
+  prettier:
+    prettier:
+      specifier: 3.6.2
+      version: 3.6.2
+  react19:
+    '@types/react':
+      specifier: 19.2.2
+      version: 19.2.2
+    '@types/react-dom':
+      specifier: 19.2.2
+      version: 19.2.2
+    react:
+      specifier: 19.2.0
+      version: 19.2.0
+    react-dom:
+      specifier: 19.2.0
+      version: 19.2.0
   rimraf:
     rimraf:
       specifier: 6.1.3
       version: 6.1.3
   sinon:
+    '@types/sinon':
+      specifier: ^21.0.0
+      version: 21.0.0
     sinon:
       specifier: ^21.0.0
       version: 21.0.1
@@ -26,6 +46,9 @@ catalogs:
       specifier: 5.9.3
       version: 5.9.3
   vitest:
+    '@vitest/coverage-istanbul':
+      specifier: 3.2.4
+      version: 3.2.4
     vitest:
       specifier: ^3.2.4
       version: 3.2.4
@@ -614,11 +637,45 @@ importers:
         specifier: ^2.0.6
         version: 2.0.6
 
+  plugins/stores/featurehub-store-localstorage:
+    dependencies:
+      featurehub-javascript-core-sdk:
+        specifier: workspace:*
+        version: link:../../../packages/core
+    devDependencies:
+      '@fluffy-spoon/substitute':
+        specifier: ^1.208.0
+        version: 1.208.0
+      '@types/jsdom':
+        specifier: ^27.0.0
+        version: 27.0.0
+      '@types/node':
+        specifier: catalog:node
+        version: 22.18.10
+      featurehub-tsconfig:
+        specifier: workspace:*
+        version: link:../../../packages/tsconfig
+      jsdom:
+        specifier: ^27.1.0
+        version: 27.1.0
+      rimraf:
+        specifier: catalog:rimraf
+        version: 6.1.3
+      sinon:
+        specifier: catalog:sinon
+        version: 21.0.1
+      tsup:
+        specifier: catalog:tsup
+        version: 8.5.0(@swc/core@1.13.5)(jiti@2.6.1)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.2)
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+      vitest:
+        specifier: catalog:vitest
+        version: 3.2.4(@types/node@22.18.10)(jiti@2.6.1)(jsdom@27.1.0)(less@4.4.0)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.2)
+
   plugins/stores/featurehub-store-redis:
     dependencies:
-      '@opentelemetry/api':
-        specifier: ^1.9.0
-        version: 1.9.0
       featurehub-javascript-core-sdk:
         specifier: workspace:*
         version: link:../../../packages/core
@@ -7845,10 +7902,6 @@ snapshots:
       es-errors: 1.3.0
       is-data-view: 1.0.2
 
-  debug@4.4.3:
-    dependencies:
-      ms: 2.1.3
-
   debug@4.4.3(supports-color@8.1.1):
     dependencies:
       ms: 2.1.3
@@ -8578,14 +8631,14 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -10080,7 +10133,7 @@ snapshots:
       cac: 6.7.14
       chokidar: 4.0.3
       consola: 3.4.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@8.1.1)
       esbuild: 0.25.11
       fix-dts-default-cjs-exports: 1.0.1
       joycon: 3.1.1
@@ -10254,7 +10307,7 @@ snapshots:
   vite-node@3.2.4(@types/node@22.18.10)(jiti@2.6.1)(less@4.4.0)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.2):
     dependencies:
       cac: 6.7.14
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@8.1.1)
       es-module-lexer: 1.7.0
       pathe: 2.0.3
       vite: 7.2.0(@types/node@22.18.10)(jiti@2.6.1)(less@4.4.0)(sass@1.90.0)(terser@5.43.1)(yaml@2.8.2)
@@ -10334,7 +10387,7 @@ snapshots:
       '@vitest/spy': 3.2.4
       '@vitest/utils': 3.2.4
       chai: 5.3.3
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@8.1.1)
       expect-type: 1.2.2
       magic-string: 0.30.19
       pathe: 2.0.3

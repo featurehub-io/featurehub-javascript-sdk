@@ -179,7 +179,7 @@ describe("LocalSessionStore", () => {
       const config = makeConfig(repo);
       const store = new LocalSessionStore(config, storage);
       store.processUpdate(makeFeature({ id: "f1" }), "polling-service");
-      store.delete(makeFeature({ id: "f1" }), "polling-service");
+      store.deleteFeature(makeFeature({ id: "f1" }), "polling-service");
 
       const saved = JSON.parse(storage.getItem(FEATURE_URL)!) as Record<string, FeatureState>;
       expect(saved["f1"]).toBeUndefined();
@@ -188,7 +188,9 @@ describe("LocalSessionStore", () => {
     it("is a no-op when deleting a feature that does not exist", () => {
       const config = makeConfig(repo);
       const store = new LocalSessionStore(config, storage);
-      expect(() => store.delete(makeFeature({ id: "unknown" }), "polling-service")).not.toThrow();
+      expect(() =>
+        store.deleteFeature(makeFeature({ id: "unknown" }), "polling-service"),
+      ).not.toThrow();
     });
 
     it("drops deletes from local-session-store source", () => {
@@ -198,7 +200,7 @@ describe("LocalSessionStore", () => {
 
       // capture state before the no-op delete
       const before = storage.getItem(FEATURE_URL);
-      store.delete(makeFeature({ id: "f1" }), "local-session-store");
+      store.deleteFeature(makeFeature({ id: "f1" }), "local-session-store");
       expect(storage.getItem(FEATURE_URL)).toBe(before);
     });
   });

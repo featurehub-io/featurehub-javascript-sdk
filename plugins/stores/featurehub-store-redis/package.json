@@ -62,7 +62,6 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
     "featurehub-javascript-core-sdk": "workspace:*",
     "redis": "^5.11.0"
   },

@@ -39,7 +39,7 @@ export interface PostLoadNewFeatureStateAvailableListener {
 // The source parameter is always where the change came from so we can ignore changes from ourself.
 export interface RawUpdateFeatureListener {
   // this deletes an individual feature, always use the feature.id if you can
-  delete(feature: FeatureState, source: string): void;
+  deleteFeature(feature: FeatureState, source: string): void;
   // this replaces all of the features
   processUpdates(features: Array<FeatureState>, source: string): void;
   // this updates an individual feature, always use the feature.id if you can. A feature can change its key.

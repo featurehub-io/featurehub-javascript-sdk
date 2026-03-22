@@ -131,7 +131,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           this._rawUpdateListeners
             .values()
             .forEach(
-              (rul) => void Promise.resolve().then(() => rul.delete(data as FeatureState, source)),
+              (rul) =>
+                void Promise.resolve().then(() => rul.deleteFeature(data as FeatureState, source)),
             );
           break;
         case SSEResultState.Failure:
