@@ -40,6 +40,9 @@ export interface PostLoadNewFeatureStateAvailableListener {
 export interface RawUpdateFeatureListener {
   // this deletes an individual feature, always use the feature.id if you can
   deleteFeature(feature: FeatureState, source: string): void;
+
+  // returns true if this store is connected and operational
+  get connected(): boolean;
   // this replaces all of the features
   processUpdates(features: Array<FeatureState>, source: string): void;
   // this updates an individual feature, always use the feature.id if you can. A feature can change its key.

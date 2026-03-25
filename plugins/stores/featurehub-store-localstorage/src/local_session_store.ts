@@ -44,6 +44,10 @@ export class LocalSessionStore implements RawUpdateFeatureListener {
     this._storage.setItem(this._storageKey, JSON.stringify(this._store));
   }
 
+  get connected(): boolean {
+    return true;
+  }
+
   deleteFeature(feature: FeatureState, source: string): void {
     if (source === LOCAL_SESSION_SOURCE) return;
     delete this._store[feature.id];

@@ -50,6 +50,28 @@ class PassiveRestUsagePlugin extends DefaultUsagePlugin {
   }
 }
 
+class NoopEdgeService implements EdgeService {
+  contextChange(_header: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  clientEvaluated(): boolean {
+    return false;
+  }
+
+  requiresReplacementOnHeaderChange(): boolean {
+    return false;
+  }
+
+  close(): void {}
+
+  poll(_fromUsage?: boolean): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+const noopEdgeServiceProvider: EdgeServiceProvider = () => new NoopEdgeService();
+
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _host: string;
   private readonly _originalUrl: string;
@@ -65,16 +87,17 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _usageAdapter: UsageAdapter | undefined;
   private _timeout: number | undefined = undefined;
   private _edgeType: EdgeType = EdgeType.STREAMING;
+  private readonly _noopMode: boolean;
 
   private _isClosed = false;
 
   private static _singleton: EdgeFeatureHubConfig | undefined;
 
-  public static config(url: string, apiKey: string): EdgeFeatureHubConfig {
+  public static config(url?: string, apiKey?: string): EdgeFeatureHubConfig {
     if (EdgeFeatureHubConfig._singleton) {
       if (
-        EdgeFeatureHubConfig._singleton._originalUrl == url &&
-        EdgeFeatureHubConfig._singleton._apiKey == apiKey
+        EdgeFeatureHubConfig._singleton._originalUrl == (url ?? "") &&
+        EdgeFeatureHubConfig._singleton._apiKey == (apiKey ?? "")
       ) {
         return EdgeFeatureHubConfig._singleton;
       }
@@ -87,21 +110,31 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return EdgeFeatureHubConfig._singleton;
   }
 
-  constructor(host: string, apiKey: string) {
+  constructor(host?: string, apiKey?: string) {
+    this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;
+    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
+
+    if (!host || !apiKey) {
+      this._noopMode = true;
+      this._apiKey = "";
+      this._originalUrl = "";
+      this._host = "";
+      this._url = "";
+      this._apiKeys = [];
+      this._clientEval = true;
+
+      fhLog.trace(`creating new featurehub config in noop mode (no edge connection).`);
+      return;
+    }
+
+    this._noopMode = false;
     this._apiKey = apiKey;
     this._originalUrl = host;
     this._host = host;
 
-    this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;
-    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
-
     fhLog.trace(
       `creating new featurehub config with edge type ${this._edgeType} and timeout ${this._timeout}.`,
     );
-
-    if (apiKey == null || host == null) {
-      throw new Error("apiKey and host must not be null");
-    }
 
     this._apiKeys = [apiKey];
 
@@ -306,7 +339,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     if (edgeServ != null) {
       this._edgeService = edgeServ;
     } else if (this._edgeService == null) {
-      this._edgeService = FeatureHubNetwork.defaultEdgeServiceSupplier;
+      this._edgeService = this._noopMode
+        ? noopEdgeServiceProvider
+        : FeatureHubNetwork.defaultEdgeServiceSupplier;
     }
 
     return this._edgeService;
