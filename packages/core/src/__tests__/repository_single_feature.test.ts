@@ -20,7 +20,8 @@ describe("repository reacts to single feature changes as expected", () => {
 
     repo.notify(SSEResultState.Features, features, "test");
 
-    expect(repo.feature("pear").getVersion()).toBe(0);
+    let pear = repo.feature("pear");
+    expect(pear.getVersion()).toBe(0);
 
     repo.notify(
       SSEResultState.Feature,
@@ -37,14 +38,17 @@ describe("repository reacts to single feature changes as expected", () => {
 
     const str = repo.feature<string>("pear").value;
     expect(str).toBe("now-set");
-    expect(repo.feature("pear").getVersion()).toBe(1);
-    expect(repo.feature("pear").version).toBe(1);
-    expect(repo.feature("pear").getString()).toBe("now-set");
-    expect(repo.feature("pear").str).toBe("now-set");
-    expect(repo.feature("pear").featureProperties).toEqual({
+    pear = repo.feature("pear");
+    expect(pear.getVersion()).toBe(1);
+    expect(pear.version).toBe(1);
+    expect(pear.getString()).toBe("now-set");
+    expect(pear.str).toBe("now-set");
+    expect(pear.featureProperties).toEqual({
       category: "shoes",
       appName: "cajon",
     });
+    expect(pear.exists).toBe(true);
+    expect(pear.withContext(Substitute.for<ClientContext>()).exists).toBe(true);
   });
 
   it("should specify undefined for unknown feature values", () => {

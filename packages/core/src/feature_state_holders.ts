@@ -58,7 +58,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
 
   // this is a real feature or a placeholder one
   get exists(): boolean {
-    return this.internalFeatureState !== undefined;
+    return this.featureState() !== undefined;
   }
 
   get locked(): boolean {
