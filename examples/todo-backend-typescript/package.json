@@ -16,6 +16,7 @@
     "start": "pnpm run build && pnpm run serve",
     "typecheck": "tsc --noEmit"
   },
+  "private": true,
   "files": [
     "dist"
   ],

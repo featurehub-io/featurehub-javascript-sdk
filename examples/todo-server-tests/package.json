@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "Integration tests for FeatureHub SDKs (server-side)",
   "author": "FeatureHub.io",
+  "private": true,
   "scripts": {
     "setup": "pnpm link ../../packages/js ../../packages/node",
     "test": "cucumber-js --require-module ts-node/register --require 'features/support/**/*.ts'",
