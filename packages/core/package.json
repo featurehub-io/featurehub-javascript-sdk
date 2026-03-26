@@ -35,6 +35,10 @@
       "require": "./dist/index.cjs"
     }
   },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",

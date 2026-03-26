@@ -30,6 +30,10 @@
     "release": "pnpm run build && pnpm publish",
     "typecheck": "tsc --noEmit"
   },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "peerDependencies": {
     "featurehub-javascript-client-sdk": ">=1.5.0",
     "solid-js": ">=1.6.8"

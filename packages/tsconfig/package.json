@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "publishConfig": {
+    "provenance": true,
     "access": "public"
   },
   "exports": {

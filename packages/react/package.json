@@ -15,6 +15,10 @@
     "package.json",
     "README.md"
   ],
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
