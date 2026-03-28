@@ -8,10 +8,16 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "featurehub-node-example", "todo-server-tests",
-    "todo-frontend-react-sdk", "vite-template-solid",
+    "featurehub-node-example",
+    "todo-server-tests",
+    "todo-frontend-react-sdk",
+    "vite-template-solid",
     "featurehub-react-example-catch-and-release",
     "featurehub-react-feature-override-example",
-    "featurehub-react-example"
+    "featurehub-react-example",
+    "featurehub-store-localstorage",
+    "featurehub-usage-opentelemetry",
+    "featurehub-usage-segment",
+    "featurehub-store-redis"
   ]
 }

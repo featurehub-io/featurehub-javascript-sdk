@@ -1,8 +1,7 @@
 import { Substitute } from "@fluffy-spoon/substitute";
-import { describe, expect, it } from "vitest";
-
 import type { FeatureHubRepository, FeatureState } from "featurehub-javascript-core-sdk";
 import { FeatureValueType } from "featurehub-javascript-core-sdk";
+import { describe, expect, it } from "vitest";
 
 import { OpenTelemetryFeatureInterceptor } from "../baggage_interceptor";
 

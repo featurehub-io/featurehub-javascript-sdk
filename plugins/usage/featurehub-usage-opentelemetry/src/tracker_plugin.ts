@@ -1,5 +1,5 @@
-import { UsageEvent, DefaultUsagePlugin } from "featurehub-javascript-core-sdk";
 import { Attributes, Span, trace } from "@opentelemetry/api";
+import { DefaultUsagePlugin, UsageEvent } from "featurehub-javascript-core-sdk";
 
 export class OpenTelemetryTrackerUsagePlugin extends DefaultUsagePlugin {
   private readonly _prefix: string;

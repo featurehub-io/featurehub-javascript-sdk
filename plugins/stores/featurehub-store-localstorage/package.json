@@ -7,18 +7,16 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
   "files": [
     "dist"
   ],
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
   "publishConfig": {
     "provenance": true,
     "access": "public"
   },
-  "homepage": "https://featurehub.io",
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",

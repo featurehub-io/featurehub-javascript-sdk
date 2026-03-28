@@ -1,5 +1,5 @@
-import { UsageEvent, DefaultUsagePlugin, ClientContext } from "featurehub-javascript-core-sdk";
-import { CoreAnalytics, CorePlugin, CoreContext } from "@segment/analytics-core";
+import { CoreAnalytics, CoreContext, CorePlugin } from "@segment/analytics-core";
+import { ClientContext, DefaultUsagePlugin, UsageEvent } from "featurehub-javascript-core-sdk";
 
 // using docs from https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/server/node#track
 

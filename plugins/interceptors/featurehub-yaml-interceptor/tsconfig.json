@@ -9,6 +9,7 @@
     "verbatimModuleSyntax": false,
     "lib": ["ESNext"],
     "types": ["node"],
+    "rootDir": ".",
     "outDir": "./dist",
     "paths": {
       "featurehub-javascript-core-sdk": ["../../../packages/core/src/"]

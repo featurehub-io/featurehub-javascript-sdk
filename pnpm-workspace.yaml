@@ -3,7 +3,7 @@ packages:
   - "examples/*"
   - "plugins/usage/*"
   - "plugins/stores/*"
-  - "plugins/interceptor/*"
+  - "plugins/interceptors/*"
 
 catalogs:
   prettier:

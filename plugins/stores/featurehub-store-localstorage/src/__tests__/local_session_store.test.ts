@@ -1,5 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import {
   ClientFeatureRepository,
   type FeatureHubConfig,
@@ -7,6 +5,7 @@ import {
   FeatureValueType,
   SSEResultState,
 } from "featurehub-javascript-core-sdk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LocalSessionStore } from "../local_session_store";
 
@@ -175,33 +174,22 @@ describe("LocalSessionStore", () => {
   });
 
   describe("delete", () => {
-    it("removes a feature from session storage", () => {
+    it("is a no-op — does not remove the feature from session storage", () => {
       const config = makeConfig(repo);
       const store = new LocalSessionStore(config, storage);
       store.processUpdate(makeFeature({ id: "f1" }), "polling-service");
-      store.deleteFeature(makeFeature({ id: "f1" }), "polling-service");
 
-      const saved = JSON.parse(storage.getItem(FEATURE_URL)!) as Record<string, FeatureState>;
-      expect(saved["f1"]).toBeUndefined();
+      const before = storage.getItem(FEATURE_URL);
+      store.deleteFeature(makeFeature({ id: "f1" }), "polling-service");
+      expect(storage.getItem(FEATURE_URL)).toBe(before);
     });
 
-    it("is a no-op when deleting a feature that does not exist", () => {
+    it("is a no-op for a feature that does not exist", () => {
       const config = makeConfig(repo);
       const store = new LocalSessionStore(config, storage);
       expect(() =>
         store.deleteFeature(makeFeature({ id: "unknown" }), "polling-service"),
       ).not.toThrow();
-    });
-
-    it("drops deletes from local-session-store source", () => {
-      const config = makeConfig(repo);
-      const store = new LocalSessionStore(config, storage);
-      store.processUpdate(makeFeature({ id: "f1" }), "polling-service");
-
-      // capture state before the no-op delete
-      const before = storage.getItem(FEATURE_URL);
-      store.deleteFeature(makeFeature({ id: "f1" }), "local-session-store");
-      expect(storage.getItem(FEATURE_URL)).toBe(before);
     });
   });
 

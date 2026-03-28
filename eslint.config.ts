@@ -20,7 +20,7 @@ export default defineConfig([
       "**/node_modules/**",
       // TODO: Revisit these sections later so that we can have linting across everything
       "examples/todo-server-tests/features/**",
-      "plugins/**",
+      "plugins/client-browser-userstate/**",
     ],
   },
   //
@@ -49,6 +49,7 @@ export default defineConfig([
     rules: {
       "no-unused-expressions": "off",
       "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-dynamic-delete": "off",
     },
   },
   //

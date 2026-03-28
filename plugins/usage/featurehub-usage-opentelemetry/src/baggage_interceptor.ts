@@ -1,10 +1,10 @@
+import { context, propagation } from "@opentelemetry/api";
 import {
   type FeatureHubRepository,
   type FeatureState,
-  type FeatureValueInterceptor,
   featureValueFromString,
+  type FeatureValueInterceptor,
 } from "featurehub-javascript-core-sdk";
-import { context, propagation } from "@opentelemetry/api";
 
 /**
  * Reads feature overrides from the OpenTelemetry baggage field `fhub`.

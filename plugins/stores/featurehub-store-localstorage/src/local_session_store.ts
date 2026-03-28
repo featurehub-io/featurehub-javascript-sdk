@@ -48,10 +48,8 @@ export class LocalSessionStore implements RawUpdateFeatureListener {
     return true;
   }
 
-  deleteFeature(feature: FeatureState, source: string): void {
-    if (source === LOCAL_SESSION_SOURCE) return;
-    delete this._store[feature.id];
-    this._persist();
+  deleteFeature(_feature: FeatureState, _source: string): void {
+    // no-op: the store is corrected on the next processUpdates call
   }
 
   processUpdates(features: Array<FeatureState>, source: string): void {
