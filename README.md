@@ -832,13 +832,73 @@ const interceptor = new LocalYamlValueInterceptor(null, { watchForChanges: true 
 fhConfig.addValueInterceptor(interceptor);
 ```
 
-Stop the watcher when the application shuts down:
+The watcher is stopped automatically when you call `fhConfig.close()` on shutdown, which closes the repository and all registered interceptors. The watcher runs with `persistent: false` so it will not prevent the Node.js process from exiting on its own.
+
+### Provided store: `LocalYamlFeatureStore` (`featurehub-yaml-interceptor`)
+
+The same `featurehub-yaml-interceptor` package also provides `LocalYamlFeatureStore`. Where `LocalYamlValueInterceptor` intercepts individual lookups, `LocalYamlFeatureStore` reads the YAML file **once at construction time** and pushes the entire set of features into the repository — exactly as if a real FeatureHub server had delivered them. This makes the SDK immediately ready without any network connection.
 
 ```typescript
-interceptor.close();
+import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
+import { LocalYamlFeatureStore } from "featurehub-yaml-interceptor";
+
+const fhConfig = new EdgeFeatureHubConfig("http://localhost:8085", "your-api-key");
+
+// Populate the repository from the YAML file before any feature is evaluated.
+new LocalYamlFeatureStore(fhConfig);
+
+// The repository is now ready — readiness listeners have fired and all features have values.
+const ctx = await fhConfig.newContext().build();
+console.log(ctx.getFlag("MY_FLAG")); // true
 ```
 
-The watcher runs with `persistent: false` so it will not prevent the Node.js process from exiting on its own.
+The file path is resolved in the same order as `LocalYamlValueInterceptor`: explicit argument → `FEATUREHUB_LOCAL_YAML` env var → `featurehub-features.yaml`.
+
+#### Type inference
+
+`LocalYamlFeatureStore` infers the `FeatureValueType` automatically from the YAML value, since there is no prior type information from the server:
+
+| YAML value | Inferred type |
+| --- | --- |
+| `true` / `false` (boolean literal) | `BOOLEAN` |
+| `"true"` / `"false"` (string, any case) | `BOOLEAN` |
+| `null` | `STRING` (value is unset) |
+| any other string | `STRING` |
+| integer or float | `NUMBER` |
+| object or array | `JSON` (serialised to a JSON string) |
+
+Each feature's `id` is set to the first 8 hex characters of the SHA-256 hash of its key, giving consistent identifiers across runs.
+
+### Using `LocalYamlFeatureStore` and `LocalYamlValueInterceptor` together
+
+Pairing the two classes gives you full offline feature flag support with live hot-reload during development:
+
+- **`LocalYamlFeatureStore`** pre-populates the repository at startup so the SDK is ready immediately and readiness listeners fire without waiting for a server.
+- **`LocalYamlValueInterceptor`** (with `watchForChanges: true`) watches the same file for changes and overrides individual feature values on the fly as you edit it — within ~500 ms, without restarting your application.
+
+```typescript
+import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
+import { LocalYamlFeatureStore, LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
+
+const fhConfig = new EdgeFeatureHubConfig("http://localhost:8085", "your-api-key");
+
+// 1. Pre-populate the repository so the SDK is ready immediately.
+new LocalYamlFeatureStore(fhConfig, "./featurehub-features.yaml");
+
+// 2. Watch the same file so edits take effect without a restart.
+const interceptor = new LocalYamlValueInterceptor("./featurehub-features.yaml", {
+  watchForChanges: true,
+});
+fhConfig.addValueInterceptor(interceptor);
+
+// Close the config on shutdown — this closes the repository and all registered interceptors.
+process.on("SIGTERM", () => fhConfig.close());
+```
+
+With this setup:
+
+1. On startup, `LocalYamlFeatureStore` sends all flags to the repository — readiness listeners fire immediately and the SDK is usable without a server connection.
+2. While the application is running, `LocalYamlValueInterceptor` watches the file and returns updated values within ~500 ms of any edit, letting you toggle flags in real time.
 
 ## Backing Stores
 

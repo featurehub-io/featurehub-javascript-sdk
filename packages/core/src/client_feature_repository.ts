@@ -220,7 +220,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   public close(): void {
     this._matchers.forEach((m) => m.close?.());
     this._matchers.length = 0;
-    this._rawUpdateListeners.forEach((l) => void Promise.resolve().then(() => l.close()));
+    // these might try and unregister themselves as we close them.
+    [...this._rawUpdateListeners.values()].forEach(
+      (l) => void Promise.resolve().then(() => l.close()),
+    );
     this._rawUpdateListeners.clear();
   }
 

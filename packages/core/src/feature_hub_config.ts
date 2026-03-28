@@ -93,6 +93,9 @@ export interface FeatureHubConfig {
   // is the repository client-side evaluated?
   clientEvaluated(): boolean;
 
+  // this only works when the config is in no-op mode and will through an error otherwise
+  set isClientEvaluated(clientEvaluated: boolean);
+
   // add another API key
   apiKey(apiKey: string): FeatureHubConfig;
 
@@ -158,4 +161,7 @@ export interface FeatureHubConfig {
   get edgeType(): EdgeType;
   get edgeSupplierTimeout(): number;
   get environmentId(): string;
+
+  // this only works in no-op mode because an ID is required generally
+  set environmentId(envId: string);
 }

@@ -78,6 +78,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _apiKey: string;
   private readonly _apiKeys: Array<string>;
   private _clientEval: boolean;
+  private _environmentId: string | undefined;
   private readonly _url: string;
   private _repository: InternalFeatureRepository | undefined;
   private _edgeService: EdgeServiceProvider | undefined;
@@ -121,7 +122,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       this._host = "";
       this._url = "";
       this._apiKeys = [];
-      this._clientEval = true;
+      this._clientEval = false;
 
       fhLog.trace(`creating new featurehub config in noop mode (no edge connection).`);
       return;
@@ -429,17 +430,29 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._edgeType;
   }
 
+  set isClientEvaluated(clientEvaluated: boolean) {
+    if (this._noopMode) {
+      this._clientEval = clientEvaluated;
+    }
+  }
+
   get environmentId(): string {
+    if (this._environmentId) return this._environmentId;
+
     const parts = this._apiKey.split("/");
 
     if (parts.length >= 3) {
-      return parts[1]!;
+      this._environmentId = parts[1]!;
+    } else if (parts.length == 2) {
+      this._environmentId = parts[0]!;
+    } else if (this._noopMode) {
+      // this is just a random one
+      this._environmentId = "569b0129-d53d-4516-a818-9154af601047";
+    } else {
+      // a valid unknown one usually for testing
+      this._environmentId = "3ea0f571-c153-48bf-9543-df76c6f9ca50";
     }
 
-    if (parts.length == 2) {
-      return parts[0]!;
-    }
-
-    return "<unknown>";
+    return this._environmentId;
   }
 }

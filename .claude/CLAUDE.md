@@ -13,21 +13,21 @@ pnpm install
 ### Build
 
 ```bash
-pnpm run build:packages        # Build all SDK packages
-pnpm run build:core            # Build only core package
-pnpm run build:js              # Build only browser client package
-pnpm run build:node            # Build only Node.js package
-pnpm run build:react           # Build only React package
-pnpm run build:solid           # Build only SolidJS package
+pnpm -w run build:packages        # Build all SDK packages
+pnpm -w run build:core            # Build only core package
+pnpm -w run build:js              # Build only browser client package
+pnpm -w run build:node            # Build only Node.js package
+pnpm -w run build:react           # Build only React package
+pnpm -w run build:solid           # Build only SolidJS package
 ```
 
 ### Test
 
 ```bash
-pnpm run test:packages         # Run all package unit tests
-pnpm --filter './packages/core' run test   # Test core package only
-pnpm --filter './packages/js' run test     # Test browser package only
-pnpm --filter './packages/node' run test   # Test node package only
+pnpm -w run test:packages         # Run all package unit tests
+pnpm -w --filter './packages/core' run test   # Test core package only
+pnpm -w --filter './packages/js' run test     # Test browser package only
+pnpm -w --filter './packages/node' run test   # Test node package only
 
 # Run a single test file (from within a package directory):
 pnpm vitest run src/__tests__/polling_sdk.test.ts
@@ -173,5 +173,5 @@ ESLint flat config at `eslint.config.ts`. Rules:
 - Unused vars prefixed with `_` are allowed
 - `plugins/**` is excluded from linting (TODO marker in config)
 
-in each of the projects, to run formatting use `prettier . --write` and for linting
-use `eslint --fix .`. Use this after each code change in each project that has changed.
+in each of the projects, to run formatting use `pnpm exec prettier . --write` and for linting
+use `pnpm lint:fix`. Use this after each code change in each project that has changed.
