@@ -765,7 +765,7 @@ Multiple interceptors can be registered; they are evaluated in registration orde
 
 ### Provided interceptor: `LocalYamlValueInterceptor` (`featurehub-yaml-interceptor`)
 
-The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file, making it useful for local development without connecting to a live FeatureHub server. 
+The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file, making it useful for local development without connecting to a live FeatureHub server.
 
 Install the package:
 
@@ -806,20 +806,20 @@ fhConfig.addValueInterceptor(new LocalYamlValueInterceptor(null));
 
 When the SDK knows the declared type of a feature (`FeatureValueType`), the interceptor converts the YAML value accordingly:
 
-| Feature type | YAML value | Result |
-|---|---|---|
-| `BOOLEAN` | `null` | `false` |
-| `BOOLEAN` | `true` / `false` | the boolean |
-| `BOOLEAN` | any other value | `true` if `String(value).toLowerCase() === "true"`, else `false` |
-| `NUMBER` | a number | the number |
-| `NUMBER` | a parseable string | converted to `number` |
-| `NUMBER` | anything else | no value |
-| `STRING` | string, number, or boolean | `String(value)` |
-| `STRING` | anything else | no value |
-| `JSON` | a string | returned as-is (assumed pre-serialised) |
-| `JSON` | an object or array | `JSON.stringify(value)` |
-| unknown type | boolean / number / string | returned as-is |
-| unknown type | object or array | `JSON.stringify(value)` |
+| Feature type | YAML value                 | Result                                                           |
+| ------------ | -------------------------- | ---------------------------------------------------------------- |
+| `BOOLEAN`    | `null`                     | `false`                                                          |
+| `BOOLEAN`    | `true` / `false`           | the boolean                                                      |
+| `BOOLEAN`    | any other value            | `true` if `String(value).toLowerCase() === "true"`, else `false` |
+| `NUMBER`     | a number                   | the number                                                       |
+| `NUMBER`     | a parseable string         | converted to `number`                                            |
+| `NUMBER`     | anything else              | no value                                                         |
+| `STRING`     | string, number, or boolean | `String(value)`                                                  |
+| `STRING`     | anything else              | no value                                                         |
+| `JSON`       | a string                   | returned as-is (assumed pre-serialised)                          |
+| `JSON`       | an object or array         | `JSON.stringify(value)`                                          |
+| unknown type | boolean / number / string  | returned as-is                                                   |
+| unknown type | object or array            | `JSON.stringify(value)`                                          |
 
 For all non-boolean types, a `null` YAML value is passed through as "matched but no value", leaving the feature unset.
 
@@ -909,10 +909,10 @@ All constructors accept an optional third argument for configuration:
 
 ```typescript
 const store = new RedisSessionStoreUrl("redis://localhost:6379", fhConfig, {
-  prefix: "myapp",          // key prefix (default: "featurehub")
-  refresh_timeout: 60,      // seconds between Redis polls for external changes (default: 300)
-  backoff_timeout: 200,     // ms to wait between write retries on conflict (default: 500)
-  retry_update_count: 5,    // max write attempts before giving up (default: 10)
+  prefix: "myapp", // key prefix (default: "featurehub")
+  refresh_timeout: 60, // seconds between Redis polls for external changes (default: 300)
+  backoff_timeout: 200, // ms to wait between write retries on conflict (default: 500)
+  retry_update_count: 5, // max write attempts before giving up (default: 10)
 });
 ```
 
@@ -932,9 +932,9 @@ store.close();
 
 Two Redis keys are written per environment:
 
-| Key | Contents |
-|---|---|
-| `${prefix}_${environmentId}` | JSON-serialised `FeatureState[]` |
+| Key                              | Contents                                                                                           |
+| -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `${prefix}_${environmentId}`     | JSON-serialised `FeatureState[]`                                                                   |
 | `${prefix}_${environmentId}_sha` | SHA-256 of `"id:version"` pairs — used to detect external changes without reading the full payload |
 
 #### Concurrency and conflict resolution
