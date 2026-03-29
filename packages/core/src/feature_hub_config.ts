@@ -24,6 +24,10 @@ export class FHLog {
     console.log("FeatureHub/Log: ", ...args);
   };
 
+  public warn: FHLogMethod = (...args: unknown[]) => {
+    console.warn("FeatureHub/Warn: ", ...args);
+  };
+
   public error: FHLogMethod = (...args: unknown[]) => {
     console.error("FeatureHub/Error: ", ...args);
   };
@@ -34,6 +38,7 @@ export class FHLog {
 
   public quiet(): void {
     FHLog.fhLog.log = () => {};
+    FHLog.fhLog.warn = () => {};
     FHLog.fhLog.error = () => {};
     FHLog.fhLog.trace = () => {};
   }

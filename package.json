@@ -25,7 +25,9 @@
     "test": "pnpm run test:packages && pnpm run test:examples",
     "test:examples": "pnpm --filter './examples/*' run test",
     "test:packages": "pnpm --filter './packages/*' run test",
-    "test:plugins": "pnpm --filter './plugins/*' run test",
+    "test:usage": "pnpm --filter './plugins/usage/*' run test",
+    "test:interceptors": "pnpm --filter './plugins/interceptors/*' run test",
+    "test:stores": "pnpm --filter './plugins/stores/*' run test",
     "test:js": "pnpm --filter './packages/js' run test",
     "test:server": "pnpm --filter './examples/todo-server-tests' run test",
     "typecheck": "pnpm -r run typecheck"

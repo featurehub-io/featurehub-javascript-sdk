@@ -6,6 +6,8 @@ import {
   type FeatureValueInterceptor,
 } from "featurehub-javascript-core-sdk";
 
+import { FHUB_BAGGAGE_KEY } from "./baggage_utils";
+
 /**
  * Reads feature overrides from the OpenTelemetry baggage field `fhub`.
  *
@@ -29,7 +31,7 @@ export class OpenTelemetryFeatureInterceptor implements FeatureValueInterceptor 
 
   // overridable in tests
   protected getBaggageEntry(): string | undefined {
-    return propagation.getBaggage(context.active())?.getEntry("fhub")?.value;
+    return propagation.getBaggage(context.active())?.getEntry(FHUB_BAGGAGE_KEY)?.value;
   }
 
   matched(

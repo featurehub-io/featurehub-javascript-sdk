@@ -59,3 +59,6 @@ ci:
 	pnpm run format:fix
 	pnpm run lint:fix
 	pnpm run test:packages
+	pnpm run test:interceptors
+	pnpm run test:usage
+	pnpm run test:stores

@@ -692,29 +692,32 @@ fhConfig.addUsagePlugin(new MyPlugin());
 
 Two reference plugins are available as separate packages:
 
-#### Twilio Segment (`featurehub-usage-segment`)
+#### [`featurehub-usage-segment`](https://www.npmjs.com/package/featurehub-usage-segment) — Twilio Segment
+
+Forwards each feature evaluation to Segment as a `track` call. A companion
+`FeatureHubSegmentEnrichmentPlugin` enriches all outgoing Segment events with the current
+FeatureHub context. See the [package README](https://www.npmjs.com/package/featurehub-usage-segment)
+for full setup instructions.
 
 ```typescript
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
-
 fhConfig.addUsagePlugin(new SegmentUsagePlugin(() => analytics));
 ```
 
-Each feature evaluation is sent as a Segment `track` call with the feature key, value, and any context attributes as event properties. A companion `FeatureHubSegmentEnrichmentPlugin` is also provided to enrich all outgoing Segment events with the current FeatureHub context.
+#### [`featurehub-usage-opentelemetry`](https://www.npmjs.com/package/featurehub-usage-opentelemetry) — OpenTelemetry
 
-#### OpenTelemetry (`featurehub-usage-opentelemetry`)
+Attaches feature evaluations as attributes or events on the active OpenTelemetry span
+(`OpenTelemetryTrackerUsagePlugin`). Also provides **Full-trace Feature Value consistency
+support** via `OpenTelemetryBaggagePlugin` and `OpenTelemetryFeatureInterceptor` — a pair that
+freezes evaluated feature values into the W3C `baggage` header so every service in a distributed
+trace uses the same flag values, even if they change partway through. Node.js only. See the
+[package README](https://www.npmjs.com/package/featurehub-usage-opentelemetry) for full setup
+instructions.
 
 ```typescript
 import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
-
-// Attaches feature evaluations as span attributes (prefixed with "featurehub.")
 fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
-
-// Or attach as span events instead of attributes:
-fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin("featurehub.", true));
 ```
-
-The plugin writes to the active OpenTelemetry span. If there is no active span, the event is silently dropped. `OpenTelemetryTrackerUsagePlugin` sets `canSendAsync = false` so that span attribute writes happen synchronously within the calling context.
 
 ## Feature Value Interceptors
 
@@ -763,245 +766,79 @@ fhConfig.repository().addValueInterceptor(new MyInterceptor());
 
 Multiple interceptors can be registered; they are evaluated in registration order and the first match wins.
 
-### Provided interceptor: `LocalYamlValueInterceptor` (`featurehub-yaml-interceptor`)
+### Provided interceptor and store: [`featurehub-yaml-interceptor`](https://www.npmjs.com/package/featurehub-yaml-interceptor)
 
-The `featurehub-yaml-interceptor` package provides `LocalYamlValueInterceptor` for Node.js server-side use. It reads feature value overrides from a YAML file, making it useful for local development without connecting to a live FeatureHub server.
+The [`featurehub-yaml-interceptor`](https://www.npmjs.com/package/featurehub-yaml-interceptor)
+package (Node.js only) provides two classes for working with feature flags from a local YAML file
+during development and testing, without needing a live FeatureHub connection.
 
-Install the package:
-
-```bash
-npm install featurehub-yaml-interceptor
-# or
-pnpm add featurehub-yaml-interceptor
-```
-
-Create a `featurehub-features.yaml` file (or point to one via the `FEATUREHUB_LOCAL_YAML` environment variable):
-
-```yaml
-flagValues:
-  MY_FLAG: true
-  PRICE_MULTIPLIER: 1.5
-  BANNER_TEXT: "Hello from local YAML"
-  CONFIG_JSON:
-    timeout: 30
-    retries: 3
-```
-
-Register the interceptor:
+**`LocalYamlValueInterceptor`** — intercepts individual feature lookups and substitutes values
+from the YAML file, leaving all other features unaffected. Supports optional hot-reload via
+`{ watchForChanges: true }` which polls the file every 500 ms.
 
 ```typescript
 import { LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
-
-// Resolves the file path in order: explicit argument → FEATUREHUB_LOCAL_YAML env var → featurehub-features.yaml
+// File resolved from: explicit arg → FEATUREHUB_LOCAL_YAML env var → featurehub-features.yaml
 fhConfig.addValueInterceptor(new LocalYamlValueInterceptor());
-
-// Explicit path:
-fhConfig.addValueInterceptor(new LocalYamlValueInterceptor("/etc/myapp/features.yaml"));
-
-// Null falls back to the env var / default:
-fhConfig.addValueInterceptor(new LocalYamlValueInterceptor(null));
 ```
 
-#### Type-aware value decoding
-
-When the SDK knows the declared type of a feature (`FeatureValueType`), the interceptor converts the YAML value accordingly:
-
-| Feature type | YAML value                 | Result                                                           |
-| ------------ | -------------------------- | ---------------------------------------------------------------- |
-| `BOOLEAN`    | `null`                     | `false`                                                          |
-| `BOOLEAN`    | `true` / `false`           | the boolean                                                      |
-| `BOOLEAN`    | any other value            | `true` if `String(value).toLowerCase() === "true"`, else `false` |
-| `NUMBER`     | a number                   | the number                                                       |
-| `NUMBER`     | a parseable string         | converted to `number`                                            |
-| `NUMBER`     | anything else              | no value                                                         |
-| `STRING`     | string, number, or boolean | `String(value)`                                                  |
-| `STRING`     | anything else              | no value                                                         |
-| `JSON`       | a string                   | returned as-is (assumed pre-serialised)                          |
-| `JSON`       | an object or array         | `JSON.stringify(value)`                                          |
-| unknown type | boolean / number / string  | returned as-is                                                   |
-| unknown type | object or array            | `JSON.stringify(value)`                                          |
-
-For all non-boolean types, a `null` YAML value is passed through as "matched but no value", leaving the feature unset.
-
-#### Hot-reloading
-
-Pass `{ watchForChanges: true }` as the second argument to enable file watching. The interceptor polls the YAML file every 500 ms and reloads overrides whenever it changes — no server restart required:
+**`LocalYamlFeatureStore`** — reads the YAML file once at construction and pushes the full
+feature set into the repository, making the SDK ready immediately with no network connection.
+Types are inferred automatically from the YAML values.
 
 ```typescript
-const interceptor = new LocalYamlValueInterceptor(null, { watchForChanges: true });
-fhConfig.addValueInterceptor(interceptor);
-```
-
-The watcher is stopped automatically when you call `fhConfig.close()` on shutdown, which closes the repository and all registered interceptors. The watcher runs with `persistent: false` so it will not prevent the Node.js process from exiting on its own.
-
-### Provided store: `LocalYamlFeatureStore` (`featurehub-yaml-interceptor`)
-
-The same `featurehub-yaml-interceptor` package also provides `LocalYamlFeatureStore`. Where `LocalYamlValueInterceptor` intercepts individual lookups, `LocalYamlFeatureStore` reads the YAML file **once at construction time** and pushes the entire set of features into the repository — exactly as if a real FeatureHub server had delivered them. This makes the SDK immediately ready without any network connection.
-
-```typescript
-import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
 import { LocalYamlFeatureStore } from "featurehub-yaml-interceptor";
-
-const fhConfig = new EdgeFeatureHubConfig("http://localhost:8085", "your-api-key");
-
-// Populate the repository from the YAML file before any feature is evaluated.
 new LocalYamlFeatureStore(fhConfig);
-
-// The repository is now ready — readiness listeners have fired and all features have values.
-const ctx = await fhConfig.newContext().build();
-console.log(ctx.getFlag("MY_FLAG")); // true
 ```
 
-The file path is resolved in the same order as `LocalYamlValueInterceptor`: explicit argument → `FEATUREHUB_LOCAL_YAML` env var → `featurehub-features.yaml`.
-
-#### Type inference
-
-`LocalYamlFeatureStore` infers the `FeatureValueType` automatically from the YAML value, since there is no prior type information from the server:
-
-| YAML value | Inferred type |
-| --- | --- |
-| `true` / `false` (boolean literal) | `BOOLEAN` |
-| `"true"` / `"false"` (string, any case) | `BOOLEAN` |
-| `null` | `STRING` (value is unset) |
-| any other string | `STRING` |
-| integer or float | `NUMBER` |
-| object or array | `JSON` (serialised to a JSON string) |
-
-Each feature's `id` is set to the first 8 hex characters of the SHA-256 hash of its key, giving consistent identifiers across runs.
-
-### Using `LocalYamlFeatureStore` and `LocalYamlValueInterceptor` together
-
-Pairing the two classes gives you full offline feature flag support with live hot-reload during development:
-
-- **`LocalYamlFeatureStore`** pre-populates the repository at startup so the SDK is ready immediately and readiness listeners fire without waiting for a server.
-- **`LocalYamlValueInterceptor`** (with `watchForChanges: true`) watches the same file for changes and overrides individual feature values on the fly as you edit it — within ~500 ms, without restarting your application.
-
-```typescript
-import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
-import { LocalYamlFeatureStore, LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
-
-const fhConfig = new EdgeFeatureHubConfig("http://localhost:8085", "your-api-key");
-
-// 1. Pre-populate the repository so the SDK is ready immediately.
-new LocalYamlFeatureStore(fhConfig, "./featurehub-features.yaml");
-
-// 2. Watch the same file so edits take effect without a restart.
-const interceptor = new LocalYamlValueInterceptor("./featurehub-features.yaml", {
-  watchForChanges: true,
-});
-fhConfig.addValueInterceptor(interceptor);
-
-// Close the config on shutdown — this closes the repository and all registered interceptors.
-process.on("SIGTERM", () => fhConfig.close());
-```
-
-With this setup:
-
-1. On startup, `LocalYamlFeatureStore` sends all flags to the repository — readiness listeners fire immediately and the SDK is usable without a server connection.
-2. While the application is running, `LocalYamlValueInterceptor` watches the file and returns updated values within ~500 ms of any edit, letting you toggle flags in real time.
+The two classes can be used together: `LocalYamlFeatureStore` for instant startup and
+`LocalYamlValueInterceptor` with `watchForChanges: true` for live hot-reload as you edit the
+file. See the [package README](https://www.npmjs.com/package/featurehub-yaml-interceptor) for
+the full YAML format, type-conversion rules, and combined usage examples.
 
 ## Backing Stores
 
-Backing stores sit behind the FeatureHub repository and automatically persist feature state to a durable location. On startup they replay the stored state into the repository immediately — before the first edge connection is established — so your application has a usable set of feature values from the moment it starts.
+Backing stores sit behind the FeatureHub repository and automatically persist feature state to a
+durable location. On startup they replay the stored state into the repository immediately — before
+the first edge connection is established — so your application has a usable set of feature values
+from the moment it starts.
 
-Each store implements `RawUpdateFeatureListener`, which means it receives every feature update, single-feature change, and deletion from the repository and writes them through to the store. Updates from the store itself (source `"redis-store"` / `"local-session-store"`) are ignored to prevent feedback loops.
+### [`featurehub-store-localstorage`](https://www.npmjs.com/package/featurehub-store-localstorage) — Browser storage
 
-### `LocalSessionStore` (`featurehub-store-localstorage`)
-
-A browser-only backing store that persists the full feature state to `sessionStorage` (or a custom `Storage` implementation). It is useful for single-page applications where the FeatureHub Edge connection may not resolve before the first render.
-
-```bash
-npm install featurehub-store-localstorage
-# or
-pnpm add featurehub-store-localstorage
-```
+Persists the full feature state to `sessionStorage` (default) or `localStorage` in the browser.
+Useful for single-page applications where you want features available before the FeatureHub
+connection resolves. Pass `localStorage` as the second argument to persist across page loads.
 
 ```typescript
 import { LocalSessionStore } from "featurehub-store-localstorage";
-
-// Uses sessionStorage by default; pass a custom Storage as the second argument if needed.
-const store = new LocalSessionStore(fhConfig);
+const store = new LocalSessionStore(fhConfig);          // sessionStorage
+const store = new LocalSessionStore(fhConfig, localStorage); // across page loads
 ```
 
-The store registers itself as a `RawUpdateFeatureListener` on construction and replays any stored state into the repository immediately. Call `close()` to deregister:
+Call `store.close()` to deregister the listener on teardown. See the
+[package README](https://www.npmjs.com/package/featurehub-store-localstorage) for full details.
+
+### [`featurehub-store-redis`](https://www.npmjs.com/package/featurehub-store-redis) — Redis (Node.js only)
+
+Persists feature state to Redis for multi-instance Node.js deployments. All instances share a
+single cached copy, so a cold-starting process serves features immediately without waiting for
+FeatureHub. **Client-evaluated keys only** — server-evaluated keys must not be shared across
+evaluation contexts and the store will refuse to initialise if one is detected.
+
+Three connection styles are supported: URL string, `RedisClientOptions` object (TLS, auth, etc.),
+or Redis Cluster. Single-node writes use `WATCH`/`MULTI`/`EXEC` optimistic locking with
+configurable retry and backoff; cluster writes fall back to sequential SETs. A periodic refresh
+timer (default 5 min) detects changes made by other instances via a SHA-256 fingerprint key.
 
 ```typescript
-store.close();
-```
-
-> Individual feature deletions are intentionally not persisted. The store is brought back into sync on the next full `processUpdates` call from the server, which does not include deleted features.
-
-### `RedisSessionStore` (`featurehub-store-redis`)
-
-A Node.js backing store that persists feature state to Redis. It is designed for server-side applications running multiple instances that share a single Redis cluster, so that a cold-starting instance can serve features immediately without waiting for the first edge poll or SSE event.
-
-> **Client-evaluated keys only.** `RedisSessionStore` should only be used with client-evaluated API keys (keys containing `*`). With server-evaluated keys, the repository holds context-specific values that must not be shared across evaluation contexts. The stores log an error and refuse to initialise if a server-evaluated key is detected.
-
-```bash
-npm install featurehub-store-redis
-# or
-pnpm add featurehub-store-redis
-```
-
-Three constructors are available depending on how you connect to Redis:
-
-```typescript
-import {
-  RedisSessionStoreUrl,
-  RedisSessionStoreClient,
-  RedisSessionStoreCluster,
-} from "featurehub-store-redis";
-
-// Single-node — connection string
+import { RedisSessionStoreUrl } from "featurehub-store-redis";
 const store = new RedisSessionStoreUrl("redis://localhost:6379", fhConfig);
-
-// Single-node — RedisClientOptions object (supports TLS, auth, socket options, etc.)
-const store = new RedisSessionStoreClient({ socket: { host: "redis", port: 6379 } }, fhConfig);
-
-// Redis Cluster
-const store = new RedisSessionStoreCluster(
-  { rootNodes: [{ host: "redis-node-1", port: 6379 }] },
-  fhConfig,
-);
-```
-
-All constructors accept an optional third argument for configuration:
-
-```typescript
-const store = new RedisSessionStoreUrl("redis://localhost:6379", fhConfig, {
-  prefix: "myapp", // key prefix (default: "featurehub")
-  refresh_timeout: 60, // seconds between Redis polls for external changes (default: 300)
-  backoff_timeout: 200, // ms to wait between write retries on conflict (default: 500)
-  retry_update_count: 5, // max write attempts before giving up (default: 10)
-});
-```
-
-**Initialise asynchronously** before the application starts serving traffic:
-
-```typescript
 await store.init();
 ```
 
-`init()` connects to Redis, replays any stored feature state into the repository, and starts the background refresh timer. Call `close()` to stop the timer and deregister the listener:
-
-```typescript
-store.close();
-```
-
-#### Storage layout
-
-Two Redis keys are written per environment:
-
-| Key                              | Contents                                                                                           |
-| -------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `${prefix}_${environmentId}`     | JSON-serialised `FeatureState[]`                                                                   |
-| `${prefix}_${environmentId}_sha` | SHA-256 of `"id:version"` pairs — used to detect external changes without reading the full payload |
-
-#### Concurrency and conflict resolution
-
-For single-node Redis the store uses `WATCH`/`MULTI`/`EXEC` optimistic locking. If another instance writes between the `WATCH` and `EXEC`, the transaction is retried after `backoff_timeout` ms. On each retry the stored features are read and merged — keeping the higher version of each feature — so no update is ever silently lost. The store gives up after `retry_update_count` attempts and logs an error.
-
-For Redis Cluster, `WATCH` is not available; writes are two sequential `SET` commands (non-atomic). The refresh timer compensates by periodically re-reading the SHA and reloading features if they have changed externally.
+Call `store.close()` on shutdown. See the
+[package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor
+variants and configuration options.
 
 ## FeatureHub Test API
 
