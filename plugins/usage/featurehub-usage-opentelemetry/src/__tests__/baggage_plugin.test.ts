@@ -111,7 +111,7 @@ describe("OpenTelemetryBaggagePlugin", () => {
       try {
         const plugin = new TestableBaggagePlugin("MY_FLAG=false");
         plugin.send(makeFeatureEvent("MY_FLAG", true, FeatureValueType.Boolean));
-        expect(plugin.lastSetValue).toBe("MY_FLAG=false");
+        expect(plugin.lastSetValue).toBeUndefined();
         expect(errorSpy).toHaveBeenCalledOnce();
         expect(errorSpy.mock.calls[0]?.[0]).toMatch(/MY_FLAG/);
       } finally {
@@ -255,9 +255,10 @@ describe("OpenTelemetryBaggagePlugin", () => {
         // Second send tries to write a different value for FLAG
         plugin.send(makeFeatureEvent("FLAG", false, FeatureValueType.Boolean));
 
-        expect(plugin.updates).toHaveLength(2);
+        expect(plugin.updates).toHaveLength(1);
+        console.log(plugin.updates);
         // First send wrote true; second send is rejected — output stays true
-        expect(plugin.updates[1]).toBe("FLAG=true");
+        expect(plugin.updates[0]).toBe("FLAG=true");
         expect(warnSpy).toHaveBeenCalledOnce();
       } finally {
         warnSpy.mockRestore();

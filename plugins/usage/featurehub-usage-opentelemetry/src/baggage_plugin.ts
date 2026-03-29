@@ -17,6 +17,7 @@ import {
   parseFhubBaggage,
 } from "./baggage_utils";
 
+
 // Per-async-chain accumulator. A single module-level instance is correct: ALS
 // automatically segments by async execution context (i.e. per request), so
 // values written in one request are invisible to another.
@@ -61,7 +62,13 @@ const _featureStore = new AsyncLocalStorage<Map<string, string | undefined>>();
 export class OpenTelemetryBaggagePlugin extends DefaultUsagePlugin {
   public override canSendAsync = false;
 
-  // overridable in tests
+  constructor() {
+    super();
+
+    _featureStore.enterWith(new Map());
+  }
+
+// overridable in tests
   protected getBaggageEntry(): string | undefined {
     // Own store is checked first so that features written earlier in the same
     // async chain are visible — the OTel active context is immutable and would
@@ -120,13 +127,13 @@ export class OpenTelemetryBaggagePlugin extends DefaultUsagePlugin {
     let changed = false;
 
     if (isUsageEventWithFeature(event)) {
-      this.applyFeature(entries, event.feature);
-      changed = true;
+      changed = this.applyFeature(entries, event.feature);
     } else if (isUsageFeaturesCollection(event)) {
       for (const fv of event.featureValues) {
-        this.applyFeature(entries, fv);
+        if (this.applyFeature(entries, fv)) {
+          changed = true;
+        }
       }
-      changed = event.featureValues.length > 0;
     }
 
     if (changed) {
@@ -134,14 +141,18 @@ export class OpenTelemetryBaggagePlugin extends DefaultUsagePlugin {
     }
   }
 
-  private applyFeature(entries: Map<string, string | undefined>, fv: FeatureHubUsageValue): void {
+  private applyFeature(
+    entries: Map<string, string | undefined>,
+    fv: FeatureHubUsageValue,
+  ): boolean {
     const encoded = encodeRawValue(fv.rawValue);
     if (entries.has(fv.key) && entries.get(fv.key) !== encoded) {
       FHLog.fhLog.warn(
         `OpenTelemetryBaggagePlugin: attempted to overwrite baggage key "${fv.key}" with a different value — the OpenTelemetryFeatureInterceptor may not be registered correctly.`,
       );
-      return;
+      return false;
     }
     entries.set(fv.key, encoded);
+    return true;
   }
 }
