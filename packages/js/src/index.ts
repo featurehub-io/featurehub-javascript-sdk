@@ -30,7 +30,7 @@ const expectedValueForUnload = "featurehub-initialized";
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class FeatureHub {
-  public static feature<T = any>(key: string): FeatureStateHolder<T> {
+  public static feature(key: string): FeatureStateHolder {
     return this.context.feature(key);
   }
 

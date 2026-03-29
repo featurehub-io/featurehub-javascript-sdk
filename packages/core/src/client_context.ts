@@ -1,7 +1,7 @@
+import { EvaluatedFeature } from "./evaluated_feature";
 import type { FeatureStateHolder } from "./feature_state";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import {
-  FeatureValueType,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
@@ -56,18 +56,12 @@ export interface ClientContext {
 
   defaultPercentageKey(): string | undefined;
 
-  feature<T = any>(name: string): FeatureStateHolder<T>;
+  feature(name: string): FeatureStateHolder;
   isEnabled(name: string): boolean;
   isSet(name: string): boolean;
   repository(): FeatureHubRepository;
 
-  used(
-    key: string,
-    id: string,
-    value: string | number | boolean | undefined,
-    valueType: FeatureValueType,
-    environmentId: string,
-  ): void;
+  used(value: EvaluatedFeature): void;
 
   /**
    * If you give it an event, it will pass it through the usage plugins and attempt to fill it in with details

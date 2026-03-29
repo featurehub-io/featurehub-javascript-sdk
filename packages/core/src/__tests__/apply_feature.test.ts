@@ -34,21 +34,21 @@ describe("apply feature works as expected", () => {
     const found = app.apply([{} as FeatureRolloutStrategy], "key", "fid", ctx);
 
     expect(found.matched).toBe(false);
-    expect(found.value).toBeNull();
+    expect(found.value).toBeUndefined();
   });
 
   it("should be false when the rollout strategies are empty", () => {
     const found = app.apply([], "key", "fid", ctx);
 
     expect(found.matched).toBe(false);
-    expect(found.value).toBeNull();
+    expect(found.value).toBeUndefined();
   });
 
   it("should be false when the rollout strategies are null", () => {
     const found = app.apply(undefined, "key", "fid", ctx);
 
     expect(found.matched).toBe(false);
-    expect(found.value).toBeNull();
+    expect(found.value).toBeUndefined();
   });
 
   it("should be false if none of the rollout strategies match the context", () => {
@@ -57,6 +57,7 @@ describe("apply feature works as expected", () => {
     const found = app.apply(
       [
         {
+          id: "linglingk",
           attributes: [
             {
               fieldName: "warehouseId",
@@ -72,7 +73,7 @@ describe("apply feature works as expected", () => {
       ctx,
     );
     expect(found.matched).toBe(false);
-    expect(found.value).toBeNull();
+    expect(found.value).toBeUndefined();
   });
 
   it("should not match the percentage but should match the field comparison", () => {
@@ -81,6 +82,7 @@ describe("apply feature works as expected", () => {
     const found = app.apply(
       [
         {
+          id: "linglingk",
           value: "sausage",
           attributes: [
             {
@@ -99,6 +101,7 @@ describe("apply feature works as expected", () => {
 
     expect(found.matched).toBe(true);
     expect(found.value).toBe("sausage");
+    expect(found.strategyId).toBe("linglingk");
   });
 
   it("should not match the field comparison if the value is different", () => {
@@ -131,7 +134,7 @@ describe("apply feature works as expected", () => {
     );
 
     expect(found.matched).toBe(false);
-    expect(found.value).toBeNull();
+    expect(found.value).toBeUndefined();
   });
 
   it("should extract the values out of the context when determining the value for percentage", () => {

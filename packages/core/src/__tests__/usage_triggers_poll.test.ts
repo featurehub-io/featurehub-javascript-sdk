@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { ClientContext } from "../client_context";
 import { BaseClientContext } from "../context_impl";
 import type { EdgeService } from "../edge_service";
+import { EvaluatedFeature } from "../evaluated_feature";
 import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { FeatureStateHolder } from "../feature_state";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
-import { FeatureValueType } from "../models";
+import { type FeatureState, FeatureValueType } from "../models";
 import { FeatureHubPollingClient, type PollingService, type RestOptions } from "../network";
 import { DefaultUsageProvider } from "../usage/usage";
 
@@ -56,7 +57,17 @@ describe("usage will trigger polling appropriately", async () => {
 
   it("usage should trigger a poll request indicating it is from usage", async () => {
     const ctx = new TestingContext(repo, edge);
-    ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
+    ctx.used(
+      EvaluatedFeature.create(
+        {
+          key: "key",
+          id: "1",
+          environmentId: "env1",
+          type: FeatureValueType.Number,
+        } as FeatureState,
+        "feature",
+      ),
+    );
 
     repo.received(1).recordUsageEvent(Arg.any());
   });
@@ -79,7 +90,17 @@ describe("usage will trigger polling appropriately", async () => {
     expect(nextCacheExpiry).to.not.be.undefined;
     // when: we issue a usage
     for (let count = 0; count < 10; count++) {
-      ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
+      ctx.used(
+        EvaluatedFeature.create(
+          {
+            key: "key",
+            id: "2",
+            environmentId: "env1",
+            type: FeatureValueType.Number,
+          } as FeatureState,
+          "feature",
+        ),
+      );
     }
 
     // even a normal poll won't trigger it
@@ -95,7 +116,18 @@ describe("usage will trigger polling appropriately", async () => {
       // when: we sleep for the cache length
       await sleep(201);
       // and: trigger used again
-      ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
+      ctx.used(
+        EvaluatedFeature.create(
+          {
+            key: "key",
+            id: "2",
+            environmentId: "env1",
+            type: FeatureValueType.Number,
+          } as FeatureState,
+          "feature",
+        ),
+      );
+
       // and: even a normal poll won't trigger it
       await ctx.build();
       // then: the poll will fire as expected
@@ -122,7 +154,17 @@ describe("usage will trigger polling appropriately", async () => {
     // given: we have a context
     const ctx = new TestingContext(repo, edge);
     // when: we issue a usage
-    await ctx.used("feature", "id", 2, FeatureValueType.Number, "env1");
+    ctx.used(
+      EvaluatedFeature.create(
+        {
+          key: "key",
+          id: "1",
+          environmentId: "env1",
+          type: FeatureValueType.Number,
+        } as FeatureState,
+        "feature",
+      ),
+    );
 
     // then: it should have not triggered another poll
     pollingService.received(1).poll();

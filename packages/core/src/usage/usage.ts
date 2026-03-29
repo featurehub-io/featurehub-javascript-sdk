@@ -1,5 +1,6 @@
 import type { ContextRecord } from "../client_context";
-import type { FeatureStateHolder } from "../feature_state";
+import type { EvaluatedFeature } from "../evaluated_feature";
+import type { FeatureValue } from "../feature_state";
 import { FeatureValueType } from "../models";
 
 export interface UsageEvent {
@@ -68,29 +69,22 @@ export function setUsageConvertFunction(ucf: UsageConvertFunction | undefined) {
   }
 }
 
-export interface FeatureHubUsageValue {
+export class FeatureHubUsageValue {
   id: string;
   key: string;
   value: string | undefined;
-  rawValue: string | number | boolean | undefined;
+  rawValue: FeatureValue;
   valueType: FeatureValueType;
   environmentId: string;
-}
-
-export class UsageValue implements FeatureHubUsageValue {
-  id: string;
-  key: string;
-  value: string | undefined;
-  rawValue: string | number | boolean | undefined;
-  valueType: FeatureValueType;
-  environmentId: string;
+  strategyId: string | undefined;
 
   constructor(
     id: string,
     key: string,
-    value: string | number | boolean | undefined,
+    value: FeatureValue,
     type: FeatureValueType,
     environmentId: string,
+    strategyId: string | undefined,
   ) {
     this.id = id;
     this.key = key;
@@ -98,15 +92,21 @@ export class UsageValue implements FeatureHubUsageValue {
     this.valueType = type;
     this.environmentId = environmentId;
     this.value = useageConvertFunction(value, type);
+    this.strategyId = strategyId;
   }
 
-  static fromFeature(feature: FeatureStateHolder): FeatureHubUsageValue {
-    return new UsageValue(
-      feature.id!,
-      feature.key!,
-      feature.untrackedValue,
-      feature.type!,
-      feature.environmentId!,
+  static fromFeature(feature: EvaluatedFeature | undefined): FeatureHubUsageValue | undefined {
+    if (feature === undefined) return undefined;
+
+    const fs = feature.featureState!;
+
+    return new FeatureHubUsageValue(
+      fs.id,
+      fs.key,
+      feature.value,
+      fs.type!,
+      fs.environmentId!,
+      feature.strategyId,
     );
   }
 }
@@ -168,10 +168,7 @@ export class BaseUsageFeaturesCollection extends BaseUsageEvent implements Usage
 
     this.featureValues.forEach((fv) => {
       features[fv.key] = fv.value;
-      features[fv.key + "_raw"] = fv.rawValue;
     });
-
-    features["fhub_keys"] = this.featureValues.map((fv) => fv.key);
 
     return Object.assign(super.collectUsageRecord(), features);
   }
@@ -250,16 +247,6 @@ export interface UsageEventListener {
 }
 
 export interface UsageProvider {
-  createFeatureHubUsageValue(feature: FeatureStateHolder): FeatureHubUsageValue;
-
-  createFeatureHubUsageValueFromFields(
-    id: string,
-    key: string,
-    value: string | number | boolean | undefined,
-    type: FeatureValueType,
-    environmentId: string,
-  ): FeatureHubUsageValue;
-
   createUsageFeature(
     feature: FeatureHubUsageValue,
     contextAttributes?: ContextRecord | undefined,
@@ -277,20 +264,6 @@ export interface UsageProvider {
 }
 
 export class DefaultUsageProvider implements UsageProvider {
-  public createFeatureHubUsageValue(feature: FeatureStateHolder): FeatureHubUsageValue {
-    return UsageValue.fromFeature(feature);
-  }
-
-  public createFeatureHubUsageValueFromFields(
-    id: string,
-    key: string,
-    value: string | number | boolean | undefined,
-    type: FeatureValueType,
-    environmentId: string,
-  ): FeatureHubUsageValue {
-    return new UsageValue(id, key, value, type, environmentId);
-  }
-
   public createUsageFeature(
     feature: FeatureHubUsageValue,
     contextAttributes?: ContextRecord | undefined,

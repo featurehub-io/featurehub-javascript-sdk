@@ -1,6 +1,12 @@
 import type { ClientContext } from "./client_context";
+import { EvaluatedFeature } from "./evaluated_feature";
 import { fhLog } from "./feature_hub_config";
-import type { FeatureListener, FeatureListenerHandle, FeatureStateHolder } from "./feature_state";
+import type {
+  FeatureListener,
+  FeatureListenerHandle,
+  FeatureStateHolder,
+  FeatureValue,
+} from "./feature_state";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { ListenerUtils } from "./listener_utils";
 import { type FeatureState, FeatureValueType } from "./models";
@@ -14,7 +20,7 @@ interface ListenerOriginal {
   value: unknown;
 }
 
-export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
+export class FeatureStateBaseHolder implements FeatureStateHolder {
   protected internalFeatureState: FeatureState | undefined;
   protected _key: string;
   protected listeners: Map<number, ListenerTracker> = new Map<number, ListenerTracker>();
@@ -87,7 +93,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.getBoolean() === true;
   }
 
-  public addListener(listener: FeatureListener<T>): FeatureListenerHandle {
+  public addListener(listener: FeatureListener): FeatureListenerHandle {
     const pos = ListenerUtils.newListenerKey(this.listeners);
 
     if (this._ctx !== undefined) {
@@ -105,12 +111,12 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return pos;
   }
 
-  public removeListener(handle: FeatureListener<T> | FeatureListenerHandle) {
+  public removeListener(handle: FeatureListener | FeatureListenerHandle) {
     ListenerUtils.removeListener(this.listeners, handle);
   }
 
   public getBoolean(): boolean | undefined {
-    return this._getValue(FeatureValueType.Boolean) as boolean | undefined;
+    return this._castType(FeatureValueType.Boolean, this.internalGetValue()) as boolean | undefined;
   }
 
   public getFlag(): boolean | undefined {
@@ -122,19 +128,19 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   }
 
   getNumber(): number | undefined {
-    return this._getValue(FeatureValueType.Number) as number | undefined;
+    return this._castType(FeatureValueType.Number, this.internalGetValue()) as number | undefined;
   }
 
   getRawJson(): string | undefined {
-    return this._getValue(FeatureValueType.Json) as string | undefined;
+    return this._castType(FeatureValueType.Json, this.internalGetValue()) as string | undefined;
   }
 
   getString(): string | undefined {
-    return this._getValue(FeatureValueType.String) as string | undefined;
+    return this._castType(FeatureValueType.String, this.internalGetValue()) as string | undefined;
   }
 
   isSet(): boolean {
-    const val = this._getValue();
+    const val = this.internalGetValue();
     return val !== undefined && val != null;
   }
 
@@ -145,7 +151,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
   /// returns true if the value changed, _only_ the repository should call this
   /// as it is dereferenced via the parentHolder
   setFeatureState(fs: FeatureState | undefined): boolean {
-    const existingValue = this._getValue(fs?.type, false, false);
+    const existingValue = this.internalGetValue(false);
     const existingLocked = this.locked;
 
     // capture all the original values of the listeners
@@ -161,7 +167,7 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     // the lock changing is not part of the contextual evaluation of values changing, and is constant across all listeners.
     const changedLocked = existingLocked !== this.featureState()?.l;
     // did at least the default value change, even if there are no listeners for the state?
-    let changed = changedLocked || existingValue !== this._getValue(fs?.type, false, false);
+    let changed = changedLocked || existingValue?.value !== this.internalGetValue(false)?.value;
 
     this.listeners.forEach((value, key) => {
       const original = listenerValues.get(key);
@@ -234,115 +240,90 @@ export class FeatureStateBaseHolder<T = any> implements FeatureStateHolder<T> {
     return this.internalFeatureState;
   }
 
-  private _getValue(
-    type?: FeatureValueType,
-    parseJson = false,
-    triggerUsage = true,
-  ): any | undefined {
-    if (!type) {
-      type = this.getType();
-    }
-    if (!type) {
-      return undefined;
-    }
-
-    const featureState = this.featureState();
-    const [intercepted, interceptValue] = this._repo.valueInterceptorMatched(
-      this._key,
-      featureState,
-    );
+  public internalGetValue(triggerUsage = true): EvaluatedFeature | undefined {
+    const fs = this.featureState();
+    const [intercepted, interceptValue] = this._repo.valueInterceptorMatched(this._key, fs);
 
     if (intercepted) {
-      const val = this._castType(type, interceptValue, parseJson);
-
-      // we only trigger usage for featureState's that exist.
-      return triggerUsage && featureState?.id ? this.used(featureState, val) : val;
+      const result = EvaluatedFeature.create(fs, interceptValue);
+      return triggerUsage && fs ? this.used(result) : result;
     }
 
-    if (!featureState || featureState.type !== type) {
+    // we don't have a feature or the types are different, e.g. asking for a boolean and the type is JSON
+    if (!fs) {
       return undefined;
     }
 
-    if (this._ctx != null && featureState.strategies?.length) {
-      const matched = this._repo.apply(
-        featureState!.strategies || [],
-        this._key,
-        featureState.id,
-        this._ctx,
-      );
+    if (this._ctx != null && fs.strategies?.length) {
+      const matched = this._repo.apply(fs!.strategies || [], this._key, fs.id, this._ctx);
 
       if (matched.matched) {
-        const sVal = this._castType(type, matched.value, parseJson);
-        return triggerUsage ? this.used(featureState, sVal) : sVal;
+        const result = EvaluatedFeature.create(fs, matched.value, matched.strategyId!);
+        return triggerUsage ? this.used(result) : result;
       }
     }
 
-    return triggerUsage ? this.used(featureState, featureState.value) : featureState.value;
+    const result = EvaluatedFeature.create(fs);
+    return triggerUsage ? this.used(result) : result;
   }
 
-  private used(fs: FeatureState, value: any | undefined): any | undefined {
+  private used(value: EvaluatedFeature): EvaluatedFeature {
     if (this._ctx) {
-      this._ctx.used(fs.key, fs.id, value, fs.type!, fs.environmentId!);
+      this._ctx.used(value);
     } else {
-      const usageProvider = this._repo.usageProvider;
-      if (usageProvider) {
-        // in testing with substitutions this can be undefined
-        this._repo.recordUsageEvent(
-          usageProvider.createUsageFeature(
-            usageProvider.createFeatureHubUsageValueFromFields(
-              fs.id,
-              fs.key,
-              value,
-              fs.type!,
-              fs.environmentId!,
-            ),
-          ),
-        );
-      }
+      this._repo.used(value, undefined, undefined);
     }
 
     return value;
   }
 
-  private _castType(type: FeatureValueType, value?: any, parseJson = false): any | undefined {
-    if (value == null) {
+  private _castType(
+    type: FeatureValueType,
+    v?: EvaluatedFeature,
+    parseJson = false,
+  ): FeatureValue | unknown {
+    const value = v?.value;
+
+    if (value === undefined || value === null) {
       return undefined;
     }
 
+    const sValue = value.toString();
     if (type === FeatureValueType.Boolean) {
-      return typeof value === "boolean" ? value : "true" === value.toString();
+      return typeof value === "boolean" ? value : "true" === sValue;
     } else if (type === FeatureValueType.String) {
-      return value.toString();
+      return sValue;
     } else if (type === FeatureValueType.Number) {
       if (typeof value === "number") {
         return value;
       }
-      if (value.includes(".")) {
-        return parseFloat(value);
+
+      if (sValue.includes(".")) {
+        return parseFloat(sValue);
       }
 
-      return parseInt(value);
+      return parseInt(sValue);
     } else if (type === FeatureValueType.Json) {
       if (parseJson) {
         try {
-          return JSON.parse(value.toString());
+          return JSON.parse(sValue) as unknown;
         } catch {
-          return {}; // default return empty obj
+          return {} as unknown; // default return empty obj
         }
       }
 
-      return value.toString();
+      return sValue;
     } else {
-      return value.toString();
+      return undefined;
     }
   }
 
-  get value(): T {
-    return this._getValue(this.getType(), true);
+  get value(): FeatureValue {
+    return this.internalGetValue(true)?.value;
   }
 
-  get untrackedValue(): T {
-    return this._getValue(this.getType(), true, false);
+  get untrackedValue(): FeatureValue {
+    return this.internalGetValue(true)?.value;
   }
 
   get featureProperties(): Record<string, string> | undefined {

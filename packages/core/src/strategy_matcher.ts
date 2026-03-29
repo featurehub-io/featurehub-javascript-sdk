@@ -1,8 +1,9 @@
-import * as murmurhash from "murmurhash";
+import murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
 import { caToString, type ClientContext } from "./client_context";
+import type { FeatureValue } from "./feature_state";
 import {
   type FeatureRolloutStrategy,
   type FeatureRolloutStrategyAttribute,
@@ -25,11 +26,13 @@ export class Murmur3PercentageCalculator implements PercentageCalculator {
 
 export class Applied {
   public readonly matched: boolean;
-  public readonly value: unknown;
+  public readonly value: FeatureValue;
+  public readonly strategyId: string | undefined;
 
-  constructor(matched: boolean, value: unknown) {
+  constructor(matched: boolean, value: FeatureValue, strategyId: string | undefined) {
     this.matched = matched;
     this.value = value;
+    this.strategyId = strategyId;
   }
 }
 
@@ -353,10 +356,10 @@ export class ApplyFeature {
           if (percentage <= useBasePercentage + rsi.percentage!) {
             if (rsi.attributes != null && rsi.attributes.length) {
               if (this.matchAttribute(context, rsi)) {
-                return new Applied(true, rsi.value);
+                return new Applied(true, rsi.value, rsi.id);
               }
             } else {
-              return new Applied(true, rsi.value);
+              return new Applied(true, rsi.value, rsi.id);
             }
           }
 
@@ -373,12 +376,12 @@ export class ApplyFeature {
           this.matchAttribute(context, rsi)
         ) {
           // nothing to do with a percentage
-          return new Applied(true, rsi.value);
+          return new Applied(true, rsi.value, rsi.id);
         }
       }
     }
 
-    return new Applied(false, null);
+    return new Applied(false, undefined, undefined);
   }
 
   public static determinePercentageKey(

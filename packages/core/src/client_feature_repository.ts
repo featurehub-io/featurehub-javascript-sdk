@@ -1,4 +1,5 @@
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import {
   type CatchReleaseListenerHandler,
   fhLog,
@@ -25,10 +26,10 @@ import {
 import { Applied, ApplyFeature } from "./strategy_matcher";
 import {
   defaultUsageProvider,
+  FeatureHubUsageValue,
   type UsageEvent,
   type UsageEventListener,
   type UsageProvider,
-  UsageValue,
 } from "./usage/usage";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
@@ -195,8 +196,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   /**
    * We have a whole list of all the features come in, we need to make sure that none of the
-   * features we have been deleted. If they have, we need to remove them like we received
-   * a delete.
+   * features we have been deleted. If they have, we need to remove them like we received a delete request.
    *
    * @param features
    * @private
@@ -302,7 +302,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
       ready.eventName = "readyness";
       ready.featureValues = this.features
         .values()
-        .map((fs) => UsageValue.fromFeature(fs))
+        .map((fs) => FeatureHubUsageValue.fromFeature(fs.internalGetValue(false)))
+        .filter((s) => s !== undefined)
         .toArray();
 
       this._usageStreams.values().forEach((v) => v(ready));
@@ -347,11 +348,11 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.features.get(key);
   }
 
-  public feature<T = any>(key: string): FeatureStateHolder<T> {
+  public feature(key: string): FeatureStateHolder {
     let holder = this.features.get(key);
 
     if (holder === undefined) {
-      holder = new FeatureStateBaseHolder<T>(this, key);
+      holder = new FeatureStateBaseHolder(this, key);
       this.features.set(key, holder);
     }
 
@@ -359,7 +360,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   // deprecated
-  public getFeatureState<T = any>(key: string): FeatureStateHolder<T> {
+  public getFeatureState(key: string): FeatureStateHolder {
     return this.feature(key);
   }
 
@@ -502,6 +503,20 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
         featureState.version >= holder.version)
     ) {
       holder.setFeatureState(undefined);
+    }
+  }
+
+  public used(
+    value: EvaluatedFeature,
+    attrs: ContextRecord | undefined,
+    userKey: string | undefined,
+  ): void {
+    const usageProvider = this.usageProvider;
+    if (usageProvider) {
+      // in testing with substitutions this can be undefined
+      this.recordUsageEvent(
+        usageProvider.createUsageFeature(FeatureHubUsageValue.fromFeature(value)!, attrs, userKey),
+      );
     }
   }
 

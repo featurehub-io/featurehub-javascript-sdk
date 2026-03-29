@@ -16,7 +16,7 @@ export * from "featurehub-javascript-core-sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class FeatureHub {
-  public static feature<T = any>(key: string): FeatureStateHolder<T> | undefined {
+  public static feature(key: string): FeatureStateHolder | undefined {
     return this.context?.feature(key);
   }
 

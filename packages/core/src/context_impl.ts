@@ -5,17 +5,19 @@ import {
   type ContextRecord,
 } from "./client_context";
 import type { EdgeService } from "./edge_service";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import { type EdgeServiceSupplier, type FeatureHubConfig, fhLog } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
+import type { FeatureStateBaseHolder } from "./feature_state_holders";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import {
-  FeatureValueType,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "./models";
 import {
+  FeatureHubUsageValue,
   isUsageFeaturesCollection,
   isUsageFeaturesCollectionContext,
   type UsageEvent,
@@ -183,29 +185,13 @@ export abstract class BaseClientContext implements ClientContext {
    * This is the public interface API, it is synchronous and isn't required to be async for the internal
    * poll, but tests want to be able to rely on knowing when its finished its async'ness so that is exposed.
    *
-   * @param key - feature's current user-facing key
-   * @param id - feature's immutable key
    * @param value - feature's evaluated value in this context
-   * @param valueType - feature's type
-   * @param environmentId - the environment this feature comes form (stored in featurestate)
    */
-  used(
-    key: string,
-    id: string,
-    value: string | number | boolean | undefined,
-    valueType: FeatureValueType,
-    environmentId: string,
-  ): void {
+  used(value: EvaluatedFeature): void {
     const usageProvider = this._repository.usageProvider;
     this.recordUsageEvent(
       usageProvider.createUsageFeature(
-        usageProvider.createFeatureHubUsageValueFromFields(
-          id,
-          key,
-          value,
-          valueType,
-          environmentId,
-        ),
+        FeatureHubUsageValue.fromFeature(value)!,
         this.usageAttributes,
         this.usageUserKey(),
       ),
@@ -214,23 +200,30 @@ export abstract class BaseClientContext implements ClientContext {
 
   protected recordFeatureChangedForUser(feature: FeatureStateHolder) {
     const usageProvider = this._repository.usageProvider;
-    this._repository.recordUsageEvent(
-      usageProvider.createUsageFeature(
-        usageProvider.createFeatureHubUsageValue(feature.withContext(this)),
-        this.usageAttributes,
-        this.usageUserKey(),
-      ),
+    const usage = FeatureHubUsageValue.fromFeature(
+      (feature.withContext(this) as FeatureStateBaseHolder).internalGetValue(false),
     );
+    if (usage) {
+      this._repository.recordUsageEvent(
+        usageProvider.createUsageFeature(usage, this.usageAttributes, this.usageUserKey()),
+      );
+    }
   }
 
   protected recordRelativeValuesForUser(): void {
     this.recordUsageEvent(this._repository.usageProvider.createUsageContextCollectionEvent());
   }
 
-  protected mapRepositoryFeaturesToUsageValues() {
-    return this._repository.serverProvidedFeatureKeys.map((k) =>
-      this._repository.usageProvider.createFeatureHubUsageValue(this._repository.feature(k)),
-    );
+  protected mapRepositoryFeaturesToUsageValues(): Array<FeatureHubUsageValue> {
+    return this._repository.serverProvidedFeatureKeys
+      .map((k) =>
+        FeatureHubUsageValue.fromFeature(
+          (
+            this._repository.feature(k).withContext(this) as FeatureStateBaseHolder
+          ).internalGetValue(false),
+        ),
+      )
+      .filter((s) => s !== undefined);
   }
 
   public fillEvent(event: UsageEvent): UsageEvent {

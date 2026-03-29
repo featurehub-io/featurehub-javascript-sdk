@@ -62,7 +62,7 @@ describe("Client context should be able to encode as expected", () => {
     await serverContext.userKey("DJElif").sessionKey("VirtualBurningMan").build();
     await serverContext.userKey("DJElif").sessionKey("VirtualBurningMan1").build();
     edge.received(1).close();
-    const fhSubst = Substitute.for<FeatureStateHolder<any>>();
+    const fhSubst = Substitute.for<FeatureStateHolder>();
     repo.feature("joy").returns(fhSubst);
     fhSubst.isSet().returns(false);
     expect(serverContext.getFlag("joy", true)).toBe(true);

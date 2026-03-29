@@ -72,7 +72,7 @@ export interface FeatureHubRepository {
   feature(key: string): FeatureStateHolder;
 
   // deprecated
-  getFeatureState<T = any>(key: string): FeatureStateHolder<T>;
+  getFeatureState(key: string): FeatureStateHolder;
 
   // release changes
   release(disableCatchAndRelease?: boolean): Promise<void>;

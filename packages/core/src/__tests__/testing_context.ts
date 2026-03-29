@@ -1,5 +1,6 @@
 import type { ClientContext, ContextRecord } from "../client_context";
 import { BaseClientContext } from "../context_impl";
+import type { EvaluatedFeature } from "../evaluated_feature";
 import type { FeatureStateHolder } from "../feature_state";
 import {
   type PostLoadNewFeatureStateAvailableListener,
@@ -8,12 +9,7 @@ import {
 } from "../featurehub_repository";
 import type { FeatureValueInterceptor } from "../interceptors";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
-import {
-  type FeatureRolloutStrategy,
-  type FeatureState,
-  FeatureValueType,
-  SSEResultState,
-} from "../models";
+import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "../models";
 import { Applied, ApplyFeature } from "../strategy_matcher";
 import {
   defaultUsageProvider,
@@ -27,7 +23,7 @@ export class TestingContext extends BaseClientContext {
     return this;
   }
 
-  feature(_name: string): FeatureStateHolder<any> {
+  feature(_name: string): FeatureStateHolder {
     return this._repository.feature(_name).withContext(this);
   }
 
@@ -59,13 +55,11 @@ export class FakeInternalRepository implements InternalFeatureRepository {
   }
 
   recordUsageEvent(_event: UsageEvent): void {}
+
   used(
-    _key: string,
-    _id: string,
-    _valueType: FeatureValueType,
-    _value: any,
-    _contextAttributes?: ContextRecord,
-    _usageUserKey?: string,
+    _value: EvaluatedFeature,
+    _attrs: ContextRecord | undefined,
+    _userKey: string | undefined,
   ): void {}
 
   set usageProvider(_provider: UsageProvider) {}
@@ -111,15 +105,15 @@ export class FakeInternalRepository implements InternalFeatureRepository {
   readyness = Readyness.Ready;
   catchAndReleaseMode = false;
 
-  hasFeature(_key: string): FeatureStateHolder<any> {
+  hasFeature(_key: string): FeatureStateHolder {
     throw new Error("Method not implemented.");
   }
 
-  feature(_key: string): FeatureStateHolder<any> {
+  feature(_key: string): FeatureStateHolder {
     throw new Error("Method not implemented.");
   }
 
-  getFeatureState<T = any>(_key: string): FeatureStateHolder<T> {
+  getFeatureState(_key: string): FeatureStateHolder {
     throw new Error("Method not implemented.");
   }
 

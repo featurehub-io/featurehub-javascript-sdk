@@ -8,14 +8,14 @@ import useFeatureHub from "./useFeatureHub";
  * NOTE: The key must be defined in your FeatureHub Admin Console.
  *
  * @param {string} key - the feature key
- * @returns {T | undefined} value - generic type of feature value (default boolean)
+ * @returns {FeatureValue} value - generic type of feature value (default boolean)
  */
 function useFeature<T = boolean>(key: string): T | undefined {
   const featurehub = useFeatureHub();
-  const [value, setValue] = useState(featurehub.client.feature<T | undefined>(key).value);
+  const [value, setValue] = useState(featurehub.client.feature(key).value);
 
   useEffect(() => {
-    const listener = (fsh: FeatureStateHolder<T | undefined>) => setValue(fsh.value);
+    const listener = (fsh: FeatureStateHolder) => setValue(fsh.value);
     const feature = featurehub.client.feature(key);
     const listenerHandler = feature.addListener(listener);
 
@@ -30,7 +30,7 @@ function useFeature<T = boolean>(key: string): T | undefined {
     };
   }, [featurehub, key]);
 
-  return value;
+  return value as unknown as T | undefined;
 }
 
 export default useFeature;

@@ -175,7 +175,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this.repository().readyness;
   }
 
-  public feature<T = any>(name: string): FeatureStateHolder<T> {
+  public feature(name: string): FeatureStateHolder {
     if (this._isClosed) throw new ConfigurationClosedError("feature");
     if (this.clientEvaluated()) {
       throw new Error(

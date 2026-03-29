@@ -1,4 +1,5 @@
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "./models";
 import { Applied } from "./strategy_matcher";
@@ -14,6 +15,12 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
   close(): void;
 
   notify(state: SSEResultState, data: unknown, source: string): void;
+
+  used(
+    value: EvaluatedFeature,
+    attrs: ContextRecord | undefined,
+    userKey: string | undefined,
+  ): void;
 
   /**
    * Is there an interception value for this feature

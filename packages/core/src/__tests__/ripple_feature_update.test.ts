@@ -66,8 +66,8 @@ describe("When checking for listeners triggering on strategy changes", () => {
 
     expect(listener1Result).toBeDefined();
     expect(listener2Result).toBeDefined();
-    const l1Result = listener1Result as FeatureStateHolder<boolean>;
-    const l2Result = listener2Result as FeatureStateHolder<boolean>;
+    const l1Result = listener1Result as FeatureStateHolder;
+    const l2Result = listener2Result as FeatureStateHolder;
     expect(l1Result?.flag).toBe(false);
     expect(l2Result?.flag).toBe(true);
     expect(listener2TriggerCounter).toBe(1);

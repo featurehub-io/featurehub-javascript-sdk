@@ -74,7 +74,7 @@ export interface FeatureHubConfig {
    * @param name
    */
 
-  feature<T = any>(name: string): FeatureStateHolder<T>;
+  feature(name: string): FeatureStateHolder;
 
   url(): string;
 

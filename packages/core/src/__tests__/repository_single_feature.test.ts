@@ -36,7 +36,7 @@ describe("repository reacts to single feature changes as expected", () => {
       "",
     );
 
-    const str = repo.feature<string>("pear").value;
+    const str = repo.feature("pear").value;
     expect(str).toBe("now-set");
     pear = repo.feature("pear");
     expect(pear.getVersion()).toBe(1);
