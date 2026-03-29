@@ -10,11 +10,12 @@
     "declaration": true,
     "noEmitOnError": true,
     "verbatimModuleSyntax": false,
-    // TODO: Remove DOM here!! The Node SDK should not need DOM types.
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ESNext"],
     "types": ["node"],
     "paths": {
-      "featurehub-javascript-node-sdk": ["../../packages/node/src"]
+      "featurehub-javascript-node-sdk": ["../../packages/node/src"],
+      "featurehub-usage-opentelemetry": ["../../plugins/usage/featurehub-usage-opentelemetry/src"],
+      "featurehub-usage-segment": ["../../plugins/usage/featurehub-usage-segment/src"]
     }
   },
   "ts-node": {

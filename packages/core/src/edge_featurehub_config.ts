@@ -1,37 +1,104 @@
-import type { AnalyticsCollector } from "./analytics";
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
 import { ClientFeatureRepository } from "./client_feature_repository";
 import { ClientEvalFeatureContext, ServerEvalFeatureContext } from "./context_impl";
 import type { EdgeService } from "./edge_service";
-import { type EdgeServiceProvider, type FeatureHubConfig, fhLog } from "./feature_hub_config";
+import {
+  ConfigurationClosedError,
+  EdgeType,
+  type FeatureHubConfig,
+  fhLog,
+} from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
-import { Readyness, type ReadynessListener } from "./featurehub_repository";
-import type { FeatureStateValueInterceptor } from "./interceptors";
+import {
+  type EdgeServiceProvider,
+  Readyness,
+  type ReadynessListener,
+} from "./featurehub_repository";
+import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
-import { FeatureHubPollingClient } from "./polling_sdk";
+import { FeatureHubNetwork } from "./network";
+import {
+  DefaultUsagePlugin,
+  isUsageEventWithFeature,
+  type UsageEvent,
+  type UsagePlugin,
+} from "./usage/usage";
+import { UsageAdapter } from "./usage/usage_adapter";
+
+export const defaultEdgeTypeProviderConfig = {
+  defaultTimeoutInMilliseconds: 180000,
+  defaultEdgeProvider: EdgeType.REST_ACTIVE,
+};
+
+// this is an async plugin so the process of polling will become async
+class PassiveRestUsagePlugin extends DefaultUsagePlugin {
+  private readonly _config: EdgeFeatureHubConfig;
+
+  constructor(config: EdgeFeatureHubConfig) {
+    super();
+    this._config = config;
+  }
+
+  send(event: UsageEvent): void {
+    if (
+      isUsageEventWithFeature(event) &&
+      this._config.edgeType === EdgeType.REST_PASSIVE &&
+      this._config.edgeConnected
+    ) {
+      this._config.edgePollFromUsage();
+    }
+  }
+}
+
+class NoopEdgeService implements EdgeService {
+  contextChange(_header: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  clientEvaluated(): boolean {
+    return false;
+  }
+
+  requiresReplacementOnHeaderChange(): boolean {
+    return false;
+  }
+
+  close(): void {}
+
+  poll(_fromUsage?: boolean): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+const noopEdgeServiceProvider: EdgeServiceProvider = () => new NoopEdgeService();
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
-  private _host: string;
-  private _apiKey: string;
-  private _apiKeys: Array<string>;
+  private readonly _host: string;
+  private readonly _originalUrl: string;
+  private readonly _apiKey: string;
+  private readonly _apiKeys: Array<string>;
   private _clientEval: boolean;
-  private _url: string;
+  private _environmentId: string | undefined;
+  private readonly _url: string;
   private _repository: InternalFeatureRepository | undefined;
   private _edgeService: EdgeServiceProvider | undefined;
   private _edgeServices: Array<EdgeService> = [];
   private _clientContext: ServerEvalFeatureContext | undefined;
   private _initialized = false;
+  private _usageAdapter: UsageAdapter | undefined;
+  private _timeout: number | undefined = undefined;
+  private _edgeType: EdgeType = EdgeType.STREAMING;
+  private readonly _noopMode: boolean;
 
-  static defaultEdgeServiceSupplier: EdgeServiceProvider = (repository, config) =>
-    new FeatureHubPollingClient(repository, config, 30000);
+  private _isClosed = false;
 
-  private static _singleton: any | undefined;
+  private static _singleton: EdgeFeatureHubConfig | undefined;
 
-  public static config(url: string, apiKey: string): EdgeFeatureHubConfig {
+  public static config(url?: string, apiKey?: string): EdgeFeatureHubConfig {
     if (EdgeFeatureHubConfig._singleton) {
       if (
-        EdgeFeatureHubConfig._singleton._originalUrl == url &&
-        EdgeFeatureHubConfig._singleton._apiKey == apiKey
+        EdgeFeatureHubConfig._singleton._originalUrl == (url ?? "") &&
+        EdgeFeatureHubConfig._singleton._apiKey == (apiKey ?? "")
       ) {
         return EdgeFeatureHubConfig._singleton;
       }
@@ -44,15 +111,31 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return EdgeFeatureHubConfig._singleton;
   }
 
-  constructor(host: string, apiKey: string) {
+  constructor(host?: string, apiKey?: string) {
+    this._edgeType = defaultEdgeTypeProviderConfig.defaultEdgeProvider;
+    this._timeout = defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
+
+    if (!host || !apiKey) {
+      this._noopMode = true;
+      this._apiKey = "";
+      this._originalUrl = "";
+      this._host = "";
+      this._url = "";
+      this._apiKeys = [];
+      this._clientEval = false;
+
+      fhLog.trace(`creating new featurehub config in noop mode (no edge connection).`);
+      return;
+    }
+
+    this._noopMode = false;
     this._apiKey = apiKey;
+    this._originalUrl = host;
     this._host = host;
 
-    fhLog.trace("creating new featurehub config.");
-
-    if (apiKey == null || host == null) {
-      throw new Error("apiKey and host must not be null");
-    }
+    fhLog.trace(
+      `creating new featurehub config with edge type ${this._edgeType} and timeout ${this._timeout}.`,
+    );
 
     this._apiKeys = [apiKey];
 
@@ -77,23 +160,23 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this.addReadinessListener(listener);
   }
 
-  public addAnalyticCollector(collector: AnalyticsCollector): void {
-    this.repository().addAnalyticCollector(collector);
-  }
-
-  public addValueInterceptor(interceptor: FeatureStateValueInterceptor): void {
+  public addValueInterceptor(interceptor: FeatureValueInterceptor): void {
+    if (this._isClosed) return;
     this.repository().addValueInterceptor(interceptor);
   }
 
   public get readyness(): Readyness {
+    if (this._isClosed) return Readyness.NotReady;
     return this.repository().readyness;
   }
 
   public get readiness(): Readyness {
+    if (this._isClosed) return Readyness.NotReady;
     return this.repository().readyness;
   }
 
-  public feature<T = any>(name: string): FeatureStateHolder<T> {
+  public feature(name: string): FeatureStateHolder {
+    if (this._isClosed) throw new ConfigurationClosedError("feature");
     if (this.clientEvaluated()) {
       throw new Error(
         "You cannot use this method for client evaluated keys, please get a context with .newContext()",
@@ -120,10 +203,22 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._host;
   }
 
+  context(context?: ContextRecord): ClientContext {
+    if (this._isClosed) throw new ConfigurationClosedError("context");
+    const ctx = this.newContext();
+
+    if (context) {
+      ctx.attributes = context;
+    }
+
+    return ctx;
+  }
+
   newContext(
     repository?: InternalFeatureRepository,
     edgeService?: EdgeServiceProvider,
   ): ClientContext {
+    if (this._isClosed) throw new ConfigurationClosedError("newContext");
     repository = repository || this.repository();
     edgeService = edgeService || this.edgeServiceProvider();
 
@@ -148,6 +243,15 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._clientContext;
   }
 
+  public get edgeConnected(): boolean {
+    return this._edgeServices.length > 0;
+  }
+
+  public edgePollFromUsage() {
+    if (this._isClosed) return;
+    this._edgeServices.forEach((e) => e.poll(true));
+  }
+
   private getOrCreateEdgeService(
     edgeServSupplier: EdgeServiceProvider,
     repository?: InternalFeatureRepository,
@@ -163,7 +267,12 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     edgeServSupplier: EdgeServiceProvider,
     repository?: InternalFeatureRepository,
   ): EdgeService {
-    const es = edgeServSupplier(repository || this.repository(), this);
+    const es = edgeServSupplier(
+      repository || this.repository(),
+      this,
+      this._edgeType,
+      this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds,
+    );
 
     this._initialized = true;
 
@@ -172,11 +281,11 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   close(): void {
+    if (this._isClosed) return;
     // we can have multiple consumers of the ServerEval context, and they may issue closes on this, which we don't want
     if (this._clientContext) {
       if (this._clientContext.removeClient()) {
         this.forceClose();
-        this._clientContext = undefined;
       }
     } else {
       this.forceClose();
@@ -190,16 +299,29 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     });
     this._edgeServices.length = 0;
     this._initialized = false;
+    this._isClosed = true;
+    this._usageAdapter?.close();
+    this._usageAdapter = undefined;
+    this._repository?.close();
+    this._repository = undefined;
+    this._edgeService = undefined;
+    this._clientContext = undefined;
+  }
+
+  get isClosed(): boolean {
+    return this._isClosed;
   }
 
   get closed(): boolean {
     return !this._initialized;
   }
+
   get initialized(): boolean {
     return this._initialized;
   }
 
   init(): FeatureHubConfig {
+    if (this._isClosed) return this;
     if (!this._initialized) {
       // ensure the repository exists
       this.repository();
@@ -214,21 +336,39 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   edgeServiceProvider(edgeServ?: EdgeServiceProvider): EdgeServiceProvider {
+    if (this._isClosed) throw new ConfigurationClosedError("edgeServiceProvider");
     if (edgeServ != null) {
       this._edgeService = edgeServ;
     } else if (this._edgeService == null) {
-      this._edgeService = EdgeFeatureHubConfig.defaultEdgeServiceSupplier;
+      this._edgeService = this._noopMode
+        ? noopEdgeServiceProvider
+        : FeatureHubNetwork.defaultEdgeServiceSupplier;
     }
 
     return this._edgeService;
   }
 
+  addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig {
+    if (this._isClosed) return this;
+    if (!this._initialized || !this._repository) {
+      this.repository();
+    }
+
+    this._usageAdapter!.registerPlugin(plugin);
+
+    return this;
+  }
+
   repository(repository?: InternalFeatureRepository): InternalFeatureRepository {
+    if (this._isClosed) throw new ConfigurationClosedError("repository");
     if (repository != null) {
       this._repository = repository;
     } else if (this._repository == null) {
       this._repository = new ClientFeatureRepository();
     }
+
+    this._usageAdapter = new UsageAdapter(this._repository);
+    this._usageAdapter.registerPlugin(new PassiveRestUsagePlugin(this));
 
     return this._repository;
   }
@@ -237,11 +377,82 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._url;
   }
 
+  featureUrl(): string {
+    if (this.edgeType === EdgeType.STREAMING) {
+      return `${this._url}/features/${this._apiKey}`;
+    }
+
+    return `${this._url}/features?${this._apiKeys.map((a) => "apiKey=" + a).join("&")}`;
+  }
+
   addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
+    if (this._isClosed) throw new ConfigurationClosedError("addReadinessListener");
     return this.repository().addReadinessListener(listener, ignoreNotReadyOnRegister);
   }
 
   removeReadinessListener(listener: ReadynessListener | number) {
+    if (this._isClosed) return;
     this.repository().removeReadinessListener(listener);
+  }
+
+  restActive(intervalInMilliseconds?: number): FeatureHubConfig {
+    if (this._isClosed) return this;
+    if (intervalInMilliseconds) {
+      this._timeout = intervalInMilliseconds;
+    }
+
+    this._edgeType = EdgeType.REST_ACTIVE;
+    return this;
+  }
+
+  restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig {
+    if (this._isClosed) return this;
+    if (cacheTimeoutInMilliseconds) {
+      this._timeout = cacheTimeoutInMilliseconds;
+    }
+
+    this._edgeType = EdgeType.REST_PASSIVE;
+
+    return this;
+  }
+
+  streaming(): FeatureHubConfig {
+    if (this._isClosed) return this;
+    this._edgeType = EdgeType.STREAMING;
+    return this;
+  }
+
+  get edgeSupplierTimeout(): number {
+    return this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
+  }
+
+  get edgeType(): EdgeType {
+    return this._edgeType;
+  }
+
+  set isClientEvaluated(clientEvaluated: boolean) {
+    if (this._noopMode) {
+      this._clientEval = clientEvaluated;
+    }
+  }
+
+  get environmentId(): string {
+    if (this._environmentId) return this._environmentId;
+
+    const parts = this._apiKey.split("/");
+
+    if (parts.length >= 3) {
+      this._environmentId = parts[1]!;
+    } else if (parts.length == 2) {
+      this._environmentId = parts[0]!;
+    } else if (this._noopMode) {
+      // this is just a random one
+      this._environmentId = "569b0129-d53d-4516-a818-9154af601047";
+    } else {
+      // a valid unknown one usually for testing
+      this._environmentId = "3ea0f571-c153-48bf-9543-df76c6f9ca50";
+    }
+
+    return this._environmentId;
   }
 }

@@ -10,19 +10,32 @@
     "clean": "rimraf node_modules dist",
     "setup": "pnpm link ../../packages/js ../../packages/node",
     "compile": "pnpm run setup && pnpm run build",
-    "serve": "node --trace-deprecation --trace-warnings dist/app.cjs",
+    "serve": "node --trace-deprecation --trace-warnings dist/app.cjs ",
+    "otel": "OTEL_USAGE_ENABLED=true node --trace-deprecation --trace-warnings --import ./otel/instrumentation.mjs dist/app.cjs ",
+    "segment": "SEGMENT_ENABLED=true node --trace-deprecation --trace-warnings dist/app.cjs ",
     "start": "pnpm run build && pnpm run serve",
     "typecheck": "tsc --noEmit"
   },
+  "private": true,
+  "files": [
+    "dist"
+  ],
   "dependencies": {
-    "featurehub-javascript-node-sdk": "workspace:*",
+    "@opentelemetry/auto-instrumentations-node": "^0.70.0",
+    "@opentelemetry/sdk-node": "^0.212.0",
+    "@opentelemetry/sdk-trace-node": "^2.5.1",
+    "@segment/analytics-node": "^2.3.0",
+    "dotenv": "^17.3.1",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "cors": "^2.8.5"
+    "featurehub-javascript-node-sdk": "workspace:*",
+    "featurehub-usage-opentelemetry": "workspace:*",
+    "featurehub-usage-segment": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "catalog:node",
-    "@types/express": "^5.0.3",
     "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:node",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "ts-node": "10.9.2",

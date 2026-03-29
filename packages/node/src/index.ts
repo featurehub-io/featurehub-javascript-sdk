@@ -1,25 +1,22 @@
 import { EventSource } from "eventsource";
 import {
   ClientContext,
-  EdgeFeatureHubConfig,
+  defaultEdgeTypeProviderConfig,
+  EdgeType,
   FeatureHubConfig,
   FeatureHubEventSourceClient,
   FeatureHubPollingClient,
   FeatureStateHolder,
-  FeatureUpdater,
 } from "featurehub-javascript-core-sdk";
 
-import { NodejsFeaturePostUpdater, NodejsPollingService } from "./polling_sdk";
+import { NodejsPollingService } from "./polling_sdk";
 
 export * from "./polling_sdk";
 export * from "featurehub-javascript-core-sdk";
 
-FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
-  return new EventSource(url, dict);
-};
-
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class FeatureHub {
-  public static feature<T = any>(key: string): FeatureStateHolder<T> | undefined {
+  public static feature(key: string): FeatureStateHolder | undefined {
     return this.context?.feature(key);
   }
 
@@ -47,10 +44,22 @@ export class FeatureHub {
   }
 }
 
-FeatureUpdater.featureUpdaterProvider = () => new NodejsFeaturePostUpdater();
+// tell it what kind of client to create by default
+defaultEdgeTypeProviderConfig.defaultEdgeProvider = process.env["FEATUREHUB_POLLING_INTERVAL"]
+  ? process.env["FEATUREHUB_POLLING_PASSIVE"]
+    ? EdgeType.REST_PASSIVE
+    : EdgeType.REST_ACTIVE
+  : EdgeType.STREAMING;
+defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
+  process.env["FEATUREHUB_POLLING_INTERVAL"] || "0",
+);
+// streaming doesn't use a timeout
 
+// we need to know how to construct a NodeJS EventSource
+FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
+  return new EventSource(url, dict);
+};
+
+// when a Polling Service is actually created, we need to pass the hash generator for node
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
   new NodejsPollingService(opt, url, freq, callback);
-
-EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) =>
-  new FeatureHubEventSourceClient(config, repository);

@@ -56,12 +56,12 @@
   },
   "devDependencies": {
     "@fluffy-spoon/substitute": "^1.208.0",
-    "@types/jsdom": "^27.0.0",
     "@types/netmask": "^2.0.5",
     "@types/node": "catalog:node",
     "@types/semver-compare": "^1.0.3",
     "@vitest/coverage-istanbul": "catalog:vitest",
     "featurehub-tsconfig": "workspace:*",
+    "@types/jsdom": "^27.0.0",
     "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
     "sinon": "catalog:sinon",

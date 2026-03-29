@@ -30,10 +30,10 @@ describe("basic polling sdk works as expected", () => {
     it("should produce consistent hash results for context headers", async () => {
       class TestPoller extends PollingBase {
         constructor() {
-          super("", 0, createBase64UrlSafeHash, () => {});
+          super("http://localhost", 0, createBase64UrlSafeHash, {}, () => {});
         }
 
-        poll(): Promise<void> {
+        override poll(): Promise<void> {
           return Promise.resolve();
         }
 

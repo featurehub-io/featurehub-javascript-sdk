@@ -33,7 +33,7 @@ describe("Readiness listeners should fire on appropriate events", () => {
       { id: "1", key: "banana", version: 1, type: FeatureValueType.Boolean, value: true },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(fhConfig.readyness).toBe(Readyness.Ready);
     expect(lastReadiness).toBe(Readyness.Ready);
@@ -69,13 +69,13 @@ describe("Readiness listeners should fire on appropriate events", () => {
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(repo.readyness).toBe(Readyness.Ready);
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(2);
 
-    repo.notify(SSEResultState.Failure, null);
+    repo.notify(SSEResultState.Failure, null, "test");
     expect(repo.readyness).toBe(Readyness.Failed);
     expect(lastReadiness).toBe(Readyness.Failed);
     expect(readinessTrigger).toBe(3);
@@ -98,8 +98,8 @@ describe("Readiness listeners should fire on appropriate events", () => {
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
-    repo.notify(SSEResultState.Bye, undefined);
+    repo.notify(SSEResultState.Features, features, "test");
+    repo.notify(SSEResultState.Bye, undefined, "test");
     expect(repo.readyness).toBe(Readyness.Ready);
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(2);
@@ -129,14 +129,14 @@ describe("Readiness listeners should fire on appropriate events", () => {
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(1);
     repo.notReady();
     expect(lastReadiness).toBe(Readyness.NotReady);
     repo.removeReadinessListener(listener);
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(lastReadiness).toBe(Readyness.NotReady);
   });
 });

@@ -1,5 +1,6 @@
 import {
   type ClientContext,
+  type ContextRecord,
   EdgeFeatureHubConfig,
   type FeatureHubConfig,
   FeatureHubPollingClient,
@@ -27,8 +28,9 @@ const fhContextKey = "fhContext";
 const fhUnloadListenerLoaded = "fhUnloadListenerExists";
 const expectedValueForUnload = "featurehub-initialized";
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export class FeatureHub {
-  public static feature<T = any>(key: string): FeatureStateHolder<T> {
+  public static feature(key: string): FeatureStateHolder {
     return this.context.feature(key);
   }
 
@@ -80,61 +82,69 @@ export class FeatureHub {
     const apiKeys: Array<string> = [];
     let pollInterval: string | undefined;
     let url: string | undefined;
-    const params: Array<Array<string>> = [];
+    let client: string | undefined;
+    const params: ContextRecord = {};
 
     for (let count = 0; count < metaTags.length; count++) {
       const name = metaTags[count]?.getAttribute("name");
       const content = metaTags[count]?.content;
 
-      if (name === "featurehub-url") {
-        url = content;
-      } else if (content && name === "featurehub-apiKey") {
-        apiKeys.push(content);
-      } else if (name === "featurehub-interval") {
-        pollInterval = content;
-      } else if (name === "featurehub-loglevel") {
-        switch (content) {
-          // @ts-expect-error we want fallthrough
+      if (content) {
+        if (name === "featurehub-url") {
+          url = content;
+        } else if (content && name === "featurehub-apiKey") {
+          apiKeys.push(content);
+        } else if (name === "featurehub-client") {
+          client = content.toLowerCase();
+        } else if (name === "featurehub-interval") {
+          pollInterval = content;
+        } else if (name === "featurehub-loglevel") {
+          switch (content) {
+            // @ts-expect-error we want fallthrough
 
-          case "trace":
-            fhLog.trace = (..._args: unknown[]) => {
-              console.log("FeatureHub/Trace: ", ..._args);
-            };
-          // @ts-expect-error  we want fallthrough
-          // eslint-disable-next-line
-          case "log":
-            fhLog.log = (..._args: unknown[]) => {
-              console.log("FeatureHub/Debug: ", ..._args);
-            };
-          // eslint-disable-next-line
-          case "error":
-            fhLog.error = (..._args: unknown[]) => {
-              console.error("FeatureHub/Debug: ", ..._args);
-            };
-            break;
-          default:
-            fhLog.trace = () => {};
-            fhLog.log = () => {};
-            fhLog.error = () => {};
-            break;
+            case "trace":
+              fhLog.trace = (..._args: unknown[]) => {
+                console.log("FeatureHub/Trace: ", ..._args);
+              };
+            // @ts-expect-error  we want fallthrough
+            // eslint-disable-next-line
+            case "log":
+              fhLog.log = (..._args: unknown[]) => {
+                console.log("FeatureHub/Debug: ", ..._args);
+              };
+            // eslint-disable-next-line
+            case "error":
+              fhLog.error = (..._args: unknown[]) => {
+                console.error("FeatureHub/Debug: ", ..._args);
+              };
+              break;
+            default:
+              fhLog.trace = () => {};
+              fhLog.log = () => {};
+              fhLog.error = () => {};
+              break;
+          }
+        } else if (name?.startsWith("featurehub-")) {
+          params[name.substring(11)] = content;
         }
-      } else if (content && name?.startsWith("featurehub-")) {
-        params.push([name.substring(11), content]);
       }
     }
 
     if (apiKeys.length > 0) {
-      if (pollInterval) {
-        const _interval = pollInterval;
-        fhLog.trace("setting polling interval to", pollInterval);
-        EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repo, config) =>
-          new FeatureHubPollingClient(repo, config, parseInt(_interval));
-      }
-
       const config = EdgeFeatureHubConfig.config(
         url || "https://app.featurehub.io/vanilla",
         apiKeys[0]!,
       );
+
+      if (client === "streaming") {
+        config.streaming();
+      } else if (pollInterval) {
+        if (client === "passive" || client === "passive-rest" || client === "passive-poll") {
+          config.restPassive(parseInt(pollInterval));
+        } else {
+          config.restActive(parseInt(pollInterval));
+        }
+      }
 
       if (apiKeys.length > 1) {
         for (let count = 1; count < apiKeys.length; count++) {
@@ -142,11 +152,7 @@ export class FeatureHub {
         }
       }
 
-      const context = config.newContext();
-      for (let count = 0; count < params.length; count++) {
-        const value = params[count]! as [string, string];
-        context.attributeValue(value[0], value[1]);
-      }
+      const context = config.context(params);
 
       context.build();
 

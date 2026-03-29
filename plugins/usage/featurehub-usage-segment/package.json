@@ -1,0 +1,77 @@
+{
+  "name": "featurehub-usage-segment",
+  "version": "1.0.0",
+  "description": "FeatureHub Segment Usage Adapter",
+  "author": "info@featurehub.io",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "keywords": [
+    "feature-flag-api",
+    "feature-flag-sdk",
+    "feature-experimentation",
+    "feature-flag",
+    "flag",
+    "toggle",
+    "feature-toggle",
+    "feature-toggle-api",
+    "remote-configuration",
+    "gradual-rollout",
+    "ab-testing",
+    "feature-flag-react",
+    "featurehub"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "clean": "rimraf node_modules dist",
+    "setup": "pnpm link ../js",
+    "link": "pnpm link --global",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "compile": "pnpm run build && pnpm run link",
+    "release": "cp ../../README.md . && pnpm run build && pnpm publish --no-git-checks --access public",
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@fluffy-spoon/substitute": "^1.208.0",
+    "@types/node": "catalog:node",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "sinon": "catalog:sinon",
+    "tsup": "catalog:tsup",
+    "typescript": "catalog:typescript",
+    "vite": "7.2.0",
+    "vitest": "catalog:vitest"
+  },
+  "dependencies": {
+    "@segment/analytics-core": "^1.8.2",
+    "featurehub-javascript-core-sdk": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.18.3"
+}

@@ -18,29 +18,37 @@ describe("repository reacts to single feature changes as expected", () => {
   it("should be able to recognize newly created values that are not set", () => {
     const features = [{ id: "1", key: "pear", version: 0, type: FeatureValueType.String }];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
-    expect(repo.feature("pear").getVersion()).toBe(0);
+    let pear = repo.feature("pear");
+    expect(pear.getVersion()).toBe(0);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "pear",
-      version: 1,
-      type: FeatureValueType.String,
-      value: "now-set",
-      fp: { category: "shoes", appName: "cajon" },
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "pear",
+        version: 1,
+        type: FeatureValueType.String,
+        value: "now-set",
+        fp: { category: "shoes", appName: "cajon" },
+      },
+      "",
+    );
 
-    const str = repo.feature<string>("pear").value;
+    const str = repo.feature("pear").value;
     expect(str).toBe("now-set");
-    expect(repo.feature("pear").getVersion()).toBe(1);
-    expect(repo.feature("pear").version).toBe(1);
-    expect(repo.feature("pear").getString()).toBe("now-set");
-    expect(repo.feature("pear").str).toBe("now-set");
-    expect(repo.feature("pear").featureProperties).toEqual({
+    pear = repo.feature("pear");
+    expect(pear.getVersion()).toBe(1);
+    expect(pear.version).toBe(1);
+    expect(pear.getString()).toBe("now-set");
+    expect(pear.str).toBe("now-set");
+    expect(pear.featureProperties).toEqual({
       category: "shoes",
       appName: "cajon",
     });
+    expect(pear.exists).toBe(true);
+    expect(pear.withContext(Substitute.for<ClientContext>()).exists).toBe(true);
   });
 
   it("should specify undefined for unknown feature values", () => {
@@ -79,32 +87,40 @@ describe("repository reacts to single feature changes as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 2,
-      type: FeatureValueType.Json,
-      value: "{}",
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 2,
+        type: FeatureValueType.Json,
+        value: "{}",
+      },
+      "",
+    );
 
     // banana doesn't change because version diff + value same
     expect(triggerBanana).toBe(1);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 3,
-      type: FeatureValueType.Json,
-      value: '"yellow"',
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 3,
+        type: FeatureValueType.Json,
+        value: '"yellow"',
+      },
+      "",
+    );
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
     expect(triggerPeach).toBe(1);
 
-    repo.notify(SSEResultState.DeleteFeature, { id: "1", key: "banana" });
+    repo.notify(SSEResultState.DeleteFeature, { id: "1", key: "banana" }, "test");
 
     expect(repo.hasFeature("banana")).toBeDefined();
     expect(repo.hasFeature("banana")?.getRawJson()).toBeUndefined();
@@ -131,28 +147,36 @@ describe("repository reacts to single feature changes as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      l: false,
-      version: 2,
-      type: FeatureValueType.Json,
-      value: "{}",
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        l: false,
+        version: 2,
+        type: FeatureValueType.Json,
+        value: "{}",
+      },
+      "",
+    );
 
     // banana doesn't change because version diff + value same
     expect(triggerBanana).toBe(1);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      l: true,
-      version: 3,
-      type: FeatureValueType.Json,
-      value: '"yellow"',
-    });
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        l: true,
+        version: 3,
+        type: FeatureValueType.Json,
+        value: '"yellow"',
+      },
+      "",
+    );
 
     expect(triggerBanana).toBe(2);
     expect(triggerPear).toBe(1);
@@ -163,14 +187,18 @@ describe("repository reacts to single feature changes as expected", () => {
     const features = [
       { id: "1", key: "apricot", version: 1, type: FeatureValueType.Number, value: 12.8 },
     ];
-    repo.notify(SSEResultState.Features, features);
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "apricot",
-      version: 1,
-      type: FeatureValueType.Number,
-      value: 12.9,
-    });
+    repo.notify(SSEResultState.Features, features, "test");
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "apricot",
+        version: 1,
+        type: FeatureValueType.Number,
+        value: 12.9,
+      },
+      "",
+    );
     expect(repo.feature("apricot").getNumber()).toBe(12.9);
     expect(repo.feature("apricot").num).toBe(12.9);
   });
@@ -181,13 +209,13 @@ describe("repository reacts to single feature changes as expected", () => {
     const features = [
       { id: "1", key: "rhubarb", version: 1, type: FeatureValueType.Number, value: 12.8 },
     ];
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(triggerRhubarb).toBe(1);
     repo.feature("rhubarb").removeListener(handle);
     const features1 = [
       { id: "1", key: "rhubarb", version: 2, type: FeatureValueType.Number, value: 17.8 },
     ];
-    repo.notify(SSEResultState.Features, features1);
+    repo.notify(SSEResultState.Features, features1, "test");
     expect(triggerRhubarb).toBe(1);
     expect(repo.feature("rhubarb").num).toBe(17.8);
   });

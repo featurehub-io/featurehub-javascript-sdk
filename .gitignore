@@ -22,3 +22,7 @@ target/
 .yalc
 yalc.lock
 .pnpm-debug.log*
+/packages/core/coverage/
+/examples/local.env
+/.claude/settings.local.json
+/.claude/memory

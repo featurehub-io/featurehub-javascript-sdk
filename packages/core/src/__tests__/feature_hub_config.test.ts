@@ -1,7 +1,12 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { EdgeFeatureHubConfig, type EdgeService, type InternalFeatureRepository } from "../index";
+import {
+  EdgeFeatureHubConfig,
+  type EdgeService,
+  FeatureHubNetwork,
+  type InternalFeatureRepository,
+} from "../index";
 
 describe("We can initialize the config", () => {
   it("should construct urls properly", () => {
@@ -18,7 +23,7 @@ describe("We can initialize the config", () => {
 
   it("should allow me to specify a config and initialise the config", () => {
     const edge = Substitute.for<EdgeService>();
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () => edge;
+    FeatureHubNetwork.defaultEdgeServiceSupplier = () => edge;
 
     const fc = new EdgeFeatureHubConfig("http://localhost:8080", "123*345");
     expect(fc.clientEvaluated()).toBe(true);
@@ -30,7 +35,7 @@ describe("We can initialize the config", () => {
   it("asking a new client side config for edge and repository should repeatedly give the same one", () => {
     const edge = Substitute.for<EdgeService>();
     const edgeProvider = () => edge;
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = edgeProvider;
+    FeatureHubNetwork.defaultEdgeServiceSupplier = edgeProvider;
 
     const fc = new EdgeFeatureHubConfig("http://localhost:8080", "123*345");
     expect(fc.edgeServiceProvider()).toBe(edgeProvider);
@@ -43,7 +48,7 @@ describe("We can initialize the config", () => {
   it("should only create a default edge service implementation once no matter how many contexts are made", () => {
     const edge = Substitute.for<EdgeService>();
     let counter = 0;
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () => {
+    FeatureHubNetwork.defaultEdgeServiceSupplier = () => {
       counter++;
       return edge;
     };
@@ -61,7 +66,7 @@ describe("We can initialize the config", () => {
     const edge = Substitute.for<EdgeService>();
     const repo = Substitute.for<InternalFeatureRepository>();
     const repos: Array<InternalFeatureRepository> = [];
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repo1) => {
+    FeatureHubNetwork.defaultEdgeServiceSupplier = (repo1) => {
       repos.push(repo1);
       return edge;
     };
@@ -80,7 +85,7 @@ describe("We can initialize the config", () => {
 
     beforeEach(() => {
       edge = Substitute.for<EdgeService>();
-      EdgeFeatureHubConfig.defaultEdgeServiceSupplier = () => edge;
+      FeatureHubNetwork.defaultEdgeServiceSupplier = () => edge;
       fc = new EdgeFeatureHubConfig("http://localhost:8080", "123345");
     });
 

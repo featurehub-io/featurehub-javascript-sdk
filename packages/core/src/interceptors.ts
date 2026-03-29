@@ -1,14 +1,12 @@
-import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type { FeatureHubRepository } from "./featurehub_repository";
+import type { FeatureState } from "./models";
 
-export class InterceptorValueMatch {
-  public value: string | undefined;
+export interface FeatureValueInterceptor {
+  matched(
+    key: string,
+    repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined];
 
-  constructor(value: string | undefined) {
-    this.value = value;
-  }
-}
-
-export interface FeatureStateValueInterceptor {
-  matched(key: string): InterceptorValueMatch;
-  repository(repo: InternalFeatureRepository): void;
+  close?(): void;
 }
