@@ -58,7 +58,7 @@ describe("usage will trigger polling appropriately", async () => {
   it("usage should trigger a poll request indicating it is from usage", async () => {
     const ctx = new TestingContext(repo, edge);
     ctx.used(
-      EvaluatedFeature.create(
+      EvaluatedFeature.withFeatureStateAndValue(
         {
           key: "key",
           id: "1",
@@ -91,7 +91,7 @@ describe("usage will trigger polling appropriately", async () => {
     // when: we issue a usage
     for (let count = 0; count < 10; count++) {
       ctx.used(
-        EvaluatedFeature.create(
+        EvaluatedFeature.withFeatureStateAndValue(
           {
             key: "key",
             id: "2",
@@ -117,7 +117,7 @@ describe("usage will trigger polling appropriately", async () => {
       await sleep(201);
       // and: trigger used again
       ctx.used(
-        EvaluatedFeature.create(
+        EvaluatedFeature.withFeatureStateAndValue(
           {
             key: "key",
             id: "2",
@@ -155,7 +155,7 @@ describe("usage will trigger polling appropriately", async () => {
     const ctx = new TestingContext(repo, edge);
     // when: we issue a usage
     ctx.used(
-      EvaluatedFeature.create(
+      EvaluatedFeature.withFeatureStateAndValue(
         {
           key: "key",
           id: "1",

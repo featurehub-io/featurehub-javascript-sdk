@@ -245,7 +245,7 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     const [intercepted, interceptValue] = this._repo.valueInterceptorMatched(this._key, fs);
 
     if (intercepted) {
-      const result = EvaluatedFeature.create(fs, interceptValue);
+      const result = EvaluatedFeature.withFeatureStateAndValue(fs, interceptValue);
       return triggerUsage && fs ? this.used(result) : result;
     }
 
@@ -258,12 +258,16 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
       const matched = this._repo.apply(fs!.strategies || [], this._key, fs.id, this._ctx);
 
       if (matched.matched) {
-        const result = EvaluatedFeature.create(fs, matched.value, matched.strategyId!);
+        const result = EvaluatedFeature.withFeatureStateValueAndStrategy(
+          fs,
+          matched.value,
+          matched.strategyId!,
+        );
         return triggerUsage ? this.used(result) : result;
       }
     }
 
-    const result = EvaluatedFeature.create(fs);
+    const result = EvaluatedFeature.withFeatureState(fs);
     return triggerUsage ? this.used(result) : result;
   }
 

@@ -22,40 +22,27 @@ export class EvaluatedFeature {
     this._strategyId = strategyId;
   }
 
-  static create(
+  static withValue(value: FeatureValue): EvaluatedFeature {
+    return new EvaluatedFeature(value, undefined, undefined);
+  }
+
+  static withFeatureState(featureState: FeatureState): EvaluatedFeature {
+    return new EvaluatedFeature(featureState.value as FeatureValue, featureState, undefined);
+  }
+
+  static withFeatureStateAndValue(
+    featureState: FeatureState | undefined,
+    value: FeatureValue,
+  ): EvaluatedFeature {
+    return new EvaluatedFeature(value, featureState, undefined);
+  }
+
+  static withFeatureStateValueAndStrategy(
     featureState: FeatureState,
     value: FeatureValue,
     strategyId: string,
-  ): EvaluatedFeature;
-  static create(featureState: FeatureState | undefined, value: FeatureValue): EvaluatedFeature;
-  static create(featureStateOrValue: FeatureValue | FeatureState): EvaluatedFeature;
-  static create(
-    featureStateOrValue: FeatureState | FeatureValue,
-    value?: FeatureValue,
-    strategyId?: string,
   ): EvaluatedFeature {
-    // (featureState, value, strategyId) or (featureState, value)
-    if (value !== undefined || arguments.length === 2) {
-      return new EvaluatedFeature(
-        value as FeatureValue,
-        featureStateOrValue as FeatureState | undefined,
-        strategyId,
-      );
-    }
-
-    // Single-argument: FeatureState object (has a `key` property) vs plain FeatureValue
-    if (
-      featureStateOrValue !== null &&
-      typeof featureStateOrValue === "object" &&
-      !Array.isArray(featureStateOrValue) &&
-      "key" in featureStateOrValue
-    ) {
-      const fs = featureStateOrValue as FeatureState;
-      return new EvaluatedFeature(fs.value as FeatureValue, fs, undefined);
-    }
-
-    // Single-argument: bare FeatureValue value
-    return new EvaluatedFeature(featureStateOrValue as FeatureValue, undefined, undefined);
+    return new EvaluatedFeature(value, featureState, strategyId);
   }
 
   get value(): FeatureValue {
