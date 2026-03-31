@@ -1,5 +1,5 @@
 {
-  "mode": "pre",
+  "mode": "exit",
   "tag": "rc1",
   "initialVersions": {
     "featurehub-node-example": "2.1.0",

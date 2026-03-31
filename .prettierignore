@@ -11,3 +11,7 @@ package-lock.json
 yarn.lock
 README.md
 TODO.md
+/.github
+/.changeset
+/.claude
+
