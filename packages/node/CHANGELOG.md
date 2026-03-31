@@ -1,14 +1,3 @@
-## 2.0.0-beta.0
-
-### Major Changes
-
-- 5c4cee5: Major SDK release for the 2.0 release
-
-### Patch Changes
-
-- Updated dependencies [5c4cee5]
-  - featurehub-javascript-core-sdk@2.0.0-beta.0
-
 #### 1.5.0
 
 - extract all shared code into `core` module, leaving only browser specific logic

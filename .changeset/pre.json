@@ -21,8 +21,5 @@
     "featurehub-usage-opentelemetry": "1.0.0",
     "featurehub-usage-segment": "1.0.0"
   },
-  "changesets": [
-    "eleven-moons-float",
-    "modern-feet-post"
-  ]
+  "changesets": []
 }
