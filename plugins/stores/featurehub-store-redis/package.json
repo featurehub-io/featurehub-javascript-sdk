@@ -63,7 +63,7 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "featurehub-javascript-core-sdk": "workspace:*",
+    "featurehub-javascript-core-sdk": "workspace:^",
     "redis": "^5.11.0"
   },
   "engines": {

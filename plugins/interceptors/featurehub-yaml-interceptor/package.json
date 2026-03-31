@@ -61,7 +61,7 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "featurehub-javascript-core-sdk": "workspace:*",
+    "featurehub-javascript-core-sdk": "workspace:^",
     "js-yaml": "^4.1.1"
   },
   "engines": {

@@ -10,6 +10,8 @@ This repository uses _changesets_ and the changeset action to handle releasing. 
 
 The `pnpm publish -r` process checks for any packages that have not been released to npm and will release those in the appropriate order. Because of this, you don't need to worry about packages being released that were changed (or not changed).
 
+## New projects
+
 For packages that have not yet been published to NPM, you need to do it manually from your
 own machine, and then go to the repository on npmjs and set up the OIDC config to point back to this repository using the `release.yml` workflow. Subsequent releases are then
 handled by the changeset mechanism.
@@ -22,3 +24,7 @@ You must indicate these are not to be handled by publish using `"private": true`
     "access": "public"
   },
 ```
+
+## Cross dependencies
+
+If a package depends on another, make sure to use `workspace:^` instead of `workspace:*` so that when the package is published it uses semver versions.

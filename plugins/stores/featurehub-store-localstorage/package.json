@@ -65,7 +65,7 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "featurehub-javascript-core-sdk": "workspace:*"
+    "featurehub-javascript-core-sdk": "workspace:^"
   },
   "engines": {
     "node": ">=20.0.0"
