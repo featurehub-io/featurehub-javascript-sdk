@@ -116,6 +116,14 @@ export interface FeatureHubConfig {
   // initialize the connection outside of the creation of a context
   init(): FeatureHubConfig;
 
+  /**
+   * Waits until the repository reaches Ready state, polling every 200ms. Ensures the edge service
+   * has had its poll method called. Returns the final Readyness state.
+   *
+   * @param timeoutMs - maximum time to wait in milliseconds (default: 10000)
+   */
+  waitForReady(timeoutMs?: number): Promise<Readyness>;
+
   // close any server connections
   close(): void;
 

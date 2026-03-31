@@ -1,3 +1,17 @@
+#### 2.0.0
+
+- additions:
+  - usage model for analytics and event based triggering of feature usage and plugin framework
+  - OpenTelemetry based Full-trace Feature Value consistency support and OpenTelemetry tracker capability
+  - Twilio Segment usage tracking
+  - Session stores for caching features for reliability and performance - Local Storage in Browser & Redis. Stores are pluggable.
+  - Config no longer requires edge and api keys, and local yaml development capability is provided with file watching
+  - standardisation on `fetch` api with configuration hooks
+
+- removals:
+  - removal of baggage repository, replaced with opentelemetry-plugin
+  - old Google Analytics framework as it no longer works, has been replaced by comprehensive usage framework
+
 #### 1.5.0
 
 - extract all shared code into `core` module, leaving only browser specific logic

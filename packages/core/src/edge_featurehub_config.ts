@@ -335,6 +335,19 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this;
   }
 
+  async waitForReady(timeoutMs = 10000): Promise<Readyness> {
+    this.init();
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (this.readiness !== Readyness.Ready) {
+      if (Date.now() >= deadline) break;
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+    }
+
+    return this.readiness;
+  }
+
   edgeServiceProvider(edgeServ?: EdgeServiceProvider): EdgeServiceProvider {
     if (this._isClosed) throw new ConfigurationClosedError("edgeServiceProvider");
     if (edgeServ != null) {

@@ -20,7 +20,29 @@ describe("if a feature is deleted it becomes undefined", () => {
         version: 2,
         type: FeatureValueType.Boolean,
         value: true,
+        environmentId: "1",
       } as FeatureState,
+      {
+        id: "2",
+        key: "orm",
+        version: 2,
+        type: FeatureValueType.String,
+        environmentId: "1",
+      },
+      {
+        id: "3",
+        key: "lingling",
+        version: 2,
+        type: FeatureValueType.Number,
+        environmentId: "1",
+      },
+      {
+        id: "4",
+        key: "uni",
+        version: 2,
+        type: FeatureValueType.Json,
+        environmentId: "1",
+      },
     ];
 
     repo.notify(SSEResultState.Features, features, "test");
@@ -36,6 +58,9 @@ describe("if a feature is deleted it becomes undefined", () => {
     expect(repo.getFlag("banana")).toBeUndefined();
     expect(repo.isSet("banana")).toBe(false);
     expect(repo.feature("banana").isSet()).toBe(false);
+    expect(repo.feature("lingling").isSet()).toBe(false);
+    expect(repo.feature("orm").isSet()).toBe(false);
+    expect(repo.feature("uni").isSet()).toBe(false);
   });
 
   it("should ignore a delete if the version is lower than the existing version", () => {

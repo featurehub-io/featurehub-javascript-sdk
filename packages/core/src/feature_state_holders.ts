@@ -141,7 +141,7 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
 
   isSet(): boolean {
     const val = this.internalGetValue();
-    return val !== undefined && val != null;
+    return val !== undefined && val.value != null;
   }
 
   getFeatureState(): FeatureState | undefined {

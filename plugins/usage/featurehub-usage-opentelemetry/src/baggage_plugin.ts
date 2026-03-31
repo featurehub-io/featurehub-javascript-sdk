@@ -17,7 +17,6 @@ import {
   parseFhubBaggage,
 } from "./baggage_utils";
 
-
 // Per-async-chain accumulator. A single module-level instance is correct: ALS
 // automatically segments by async execution context (i.e. per request), so
 // values written in one request are invisible to another.
@@ -68,7 +67,7 @@ export class OpenTelemetryBaggagePlugin extends DefaultUsagePlugin {
     _featureStore.enterWith(new Map());
   }
 
-// overridable in tests
+  // overridable in tests
   protected getBaggageEntry(): string | undefined {
     // Own store is checked first so that features written earlier in the same
     // async chain are visible — the OTel active context is immutable and would
