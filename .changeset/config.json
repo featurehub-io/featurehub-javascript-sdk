@@ -19,6 +19,7 @@
     "featurehub-usage-opentelemetry",
     "featurehub-usage-segment",
     "featurehub-store-redis",
-    "featurehub-yaml-interceptor"
+    "featurehub-yaml-interceptor",
+    "featurehub-javascript-sdk"
   ]
 }

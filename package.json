@@ -6,6 +6,7 @@
   "homepage": "https://featurehub.io",
   "repository": "github:featurehub-io/featurehub-javascript-sdk",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "build": "pnpm run build:packages && pnpm run build:examples",
     "build:packages": "pnpm --filter './packages/*' run build",
