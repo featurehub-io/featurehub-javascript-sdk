@@ -13,10 +13,7 @@
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "provenance": true,
-    "access": "public"
-  },
+  "private": true,
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",

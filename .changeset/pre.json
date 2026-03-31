@@ -1,6 +1,6 @@
 {
   "mode": "pre",
-  "tag": "beta",
+  "tag": "rc1",
   "initialVersions": {
     "featurehub-node-example": "2.1.0",
     "todo-frontend-react-sdk": "0.0.0",
