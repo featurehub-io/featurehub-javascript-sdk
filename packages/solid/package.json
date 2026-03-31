@@ -27,7 +27,8 @@
     "clean": "rimraf node_modules dist",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {
     "provenance": true,

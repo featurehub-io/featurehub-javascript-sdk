@@ -32,7 +32,8 @@
     "clean": "rimraf node_modules dist",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
     "featurehub-javascript-client-sdk": ">=1.5.0",
