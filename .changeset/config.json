@@ -18,6 +18,7 @@
     "featurehub-store-localstorage",
     "featurehub-usage-opentelemetry",
     "featurehub-usage-segment",
-    "featurehub-store-redis"
+    "featurehub-store-redis",
+    "featurehub-yaml-interceptor"
   ]
 }
