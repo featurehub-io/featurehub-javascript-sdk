@@ -5,6 +5,8 @@ packages:
   - "plugins/stores/*"
   - "plugins/interceptors/*"
 
+gitChecks: false
+
 catalogs:
   prettier:
     prettier: "3.6.2"
