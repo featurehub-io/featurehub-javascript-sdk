@@ -6,6 +6,7 @@
   "author": "info@featurehub.io",
   "license": "MIT",
   "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
