@@ -1,0 +1,25 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "featurehub-node-example": "2.1.0",
+    "todo-frontend-react-sdk": "0.0.0",
+    "featurehub-react-example": "2.1.1",
+    "featurehub-react-example-catch-and-release": "2.1.1",
+    "featurehub-react-feature-override-example": "2.0.1",
+    "vite-template-solid": "0.0.0",
+    "todo-server-tests": "2.0.0",
+    "featurehub-javascript-core-sdk": "1.5.0",
+    "featurehub-javascript-client-sdk": "1.5.0",
+    "featurehub-javascript-node-sdk": "1.5.0",
+    "featurehub-react-sdk": "1.3.0",
+    "featurehub-solid-sdk": "1.3.0",
+    "featurehub-tsconfig": "0.0.0",
+    "featurehub-yaml-interceptor": "1.0.0",
+    "featurehub-store-localstorage": "1.0.0",
+    "featurehub-store-redis": "1.0.0",
+    "featurehub-usage-opentelemetry": "1.0.0",
+    "featurehub-usage-segment": "1.0.0"
+  },
+  "changesets": []
+}
