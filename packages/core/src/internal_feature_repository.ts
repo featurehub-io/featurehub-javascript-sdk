@@ -1,7 +1,7 @@
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import type { FeatureHubRepository } from "./featurehub_repository";
-import { InterceptorValueMatch } from "./interceptors";
-import { type FeatureRolloutStrategy, SSEResultState } from "./models";
+import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "./models";
 import { Applied } from "./strategy_matcher";
 
 export interface InternalFeatureRepository extends FeatureHubRepository {
@@ -9,9 +9,29 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
   // change the context
   notReady(): void;
 
-  notify(state: SSEResultState, data: any): void;
+  /**
+   * Close all registered value interceptors.
+   */
+  close(): void;
 
-  valueInterceptorMatched(key: string): InterceptorValueMatch | undefined;
+  notify(state: SSEResultState, data: unknown, source: string): void;
+
+  used(
+    value: EvaluatedFeature,
+    attrs: ContextRecord | undefined,
+    userKey: string | undefined,
+  ): void;
+
+  /**
+   * Is there an interception value for this feature
+   *
+   * @param key - the key of the feature that is being asked for. It might not even exist in the repo.
+   * @param featureState - if the key exists in the repo, this is its featureState
+   */
+  valueInterceptorMatched(
+    key: string,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined];
 
   apply(
     strategies: Array<FeatureRolloutStrategy>,

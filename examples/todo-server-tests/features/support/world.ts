@@ -2,10 +2,9 @@ import { AfterAll, setDefaultTimeout, setWorldConstructor, World } from "@cucumb
 import globalAxios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { expect } from "chai";
 import {
+  FeatureUpdater,
   FeatureStateHolder,
   FeatureStateUpdate,
-  FeatureUpdater,
-  NodejsFeaturePostUpdater,
 } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
@@ -155,10 +154,14 @@ export class CustomWorld extends World<any> {
 
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
-    (updater.manager as NodejsFeaturePostUpdater).modifyRequestFunction = (req) => {
-      req.headers["Baggage"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}-${requestId}`;
-      requestId++;
+
+    updater.defaultOptions = {
+      modifyRequestFunction: (req) => {
+        req.headers["Baggage"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}-${requestId}`;
+        requestId++;
+      },
     };
+
     return updater;
   }
 

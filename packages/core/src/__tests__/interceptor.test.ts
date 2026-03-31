@@ -7,28 +7,40 @@ import {
   type EdgeService,
   type FeatureHubRepository,
   type FeatureState,
-  type FeatureStateValueInterceptor,
+  type FeatureValueInterceptor,
   FeatureValueType,
-  InterceptorValueMatch,
   SSEResultState,
 } from "../index";
+import { featureValueFromString } from "../utils";
 
-class KeyValueInterceptor implements FeatureStateValueInterceptor {
+class KeyValueInterceptor implements FeatureValueInterceptor {
   private readonly key: string;
-  private readonly value: string;
+  private readonly value: string | undefined;
 
-  constructor(key: string, value: string) {
+  constructor(key: string, value: string | undefined) {
     this.key = key;
     this.value = value;
   }
 
-  matched(key: string): InterceptorValueMatch {
-    return key === this.key
-      ? new InterceptorValueMatch(this.value)
-      : new InterceptorValueMatch(undefined);
-  }
+  matched(
+    key: string,
+    _repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
+    if (key !== this.key) {
+      return [false, undefined];
+    }
 
-  repository(_repo: FeatureHubRepository): void {}
+    if (featureState?.l) {
+      return [false, undefined];
+    }
+
+    if (featureState) {
+      return [true, featureValueFromString(featureState.type!, this.value)];
+    }
+
+    return [true, this.value];
+  }
 }
 
 describe("Interceptor functionality works as expected", () => {
@@ -52,7 +64,7 @@ describe("Interceptor functionality works as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     repo.addValueInterceptor(new KeyValueInterceptor("banana", "true"));
     repo.addValueInterceptor(new KeyValueInterceptor("apricot", "17.3"));
@@ -86,7 +98,7 @@ describe("Interceptor functionality works as expected", () => {
       },
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
 
     fhConfig.addValueInterceptor(new KeyValueInterceptor("banana", "true"));
     fhConfig.addValueInterceptor(new KeyValueInterceptor("apricot", "17.3"));

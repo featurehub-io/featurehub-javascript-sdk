@@ -60,7 +60,6 @@ describe("basic polling sdk works as expected", () => {
 
     callback!([]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     repo.received(1).notify;
   });
 
@@ -156,33 +155,35 @@ describe("basic polling sdk works as expected", () => {
       class StubPoller extends PollingBase {
         constructor() {
           super(
-            "",
+            "http://localhost",
             200,
             async () => {
               return "";
             },
+            {},
             () => {},
           );
           this._busy = false;
         }
 
-        poll(): Promise<void> {
+        override poll(): Promise<void> {
           counter++;
           this._busy = true;
 
-          fhLog.trace(`counter is ${counter} ${p.awaitingFirstSuccess} ${p.active}`);
+          fhLog.trace(`counter is ${counter} ${p.active}`);
 
           if (counter <= 2) {
-            expect(p.awaitingFirstSuccess).toBe(true);
             expect(p.active).toBe(true);
           }
 
           this._busy = false;
           if (counter == 1) {
             fhLog.trace("rejecting with 503");
+            this.rejectOutstanding(503);
             return Promise.reject(503);
           }
 
+          this.resolveOutstanding();
           return Promise.resolve();
         }
       }

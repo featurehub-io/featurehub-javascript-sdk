@@ -14,7 +14,7 @@ export function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
   const { client } = useFeatureHub();
 
   let listenerId: number;
-  const [value, setValue] = createSignal(client().feature<T | undefined>(key).value);
+  const [value, setValue] = createSignal(client().feature(key).value);
 
   createEffect(
     on(ready, () => {
@@ -22,26 +22,26 @@ export function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
       if (!ready()) return;
 
       if (listenerId) {
-        client().feature<T | undefined>(key).removeListener(listenerId);
+        client().feature(key).removeListener(listenerId);
       }
 
       listenerId = client()
-        .feature<T | undefined>(key)
+        .feature(key)
         .addListener(() => {
           setValue(client().feature(key).value);
         });
 
       // check if the feature exists already, which means the repository already has a value and
       // solid is asking for the effect AFTER the data has already arrived
-      if (client().feature<T | undefined>(key).isSet()) {
-        setValue(() => client().feature<T | undefined>(key).value);
+      if (client().feature(key).isSet()) {
+        setValue(() => client().feature(key).value);
       }
     }),
   );
 
   onCleanup(() => {
-    client().feature<T | undefined>(key).removeListener(listenerId);
+    client().feature(key).removeListener(listenerId);
   });
 
-  return value;
+  return value as unknown as Accessor<T | undefined>;
 }

@@ -1,20 +1,15 @@
-import type { AnalyticsCollector } from "./analytics";
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
 import type { EdgeService } from "./edge_service";
 import type { FeatureStateHolder } from "./feature_state";
 import {
+  type EdgeServiceProvider,
   type FeatureHubRepository,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import type { FeatureStateValueInterceptor } from "./interceptors";
-import type { InternalFeatureRepository } from "./internal_feature_repository";
+import type { FeatureValueInterceptor } from "./interceptors";
+import type { UsagePlugin } from "./usage/usage";
 
-export type EdgeServiceProvider = (
-  repository: InternalFeatureRepository,
-
-  config: FeatureHubConfig,
-) => EdgeService;
 export type EdgeServiceSupplier = () => EdgeService;
 
 export type FHLogMethod = (...args: unknown[]) => void;
@@ -29,6 +24,10 @@ export class FHLog {
     console.log("FeatureHub/Log: ", ...args);
   };
 
+  public warn: FHLogMethod = (...args: unknown[]) => {
+    console.warn("FeatureHub/Warn: ", ...args);
+  };
+
   public error: FHLogMethod = (...args: unknown[]) => {
     console.error("FeatureHub/Error: ", ...args);
   };
@@ -39,6 +38,7 @@ export class FHLog {
 
   public quiet(): void {
     FHLog.fhLog.log = () => {};
+    FHLog.fhLog.warn = () => {};
     FHLog.fhLog.error = () => {};
     FHLog.fhLog.trace = () => {};
   }
@@ -46,12 +46,30 @@ export class FHLog {
 
 export const fhLog = FHLog.fhLog;
 
+export enum EdgeType {
+  STREAMING,
+  REST_PASSIVE,
+  REST_ACTIVE,
+}
+
+export class ConfigurationClosedError extends Error {
+  constructor(method: string) {
+    super(`FeatureHub config is closed — cannot call '${method}'`);
+    this.name = "ConfigurationClosedError";
+  }
+}
+
 export interface FeatureHubConfig {
   /**
    * indicates the system is ready
    * @deprecated used readiness
    */
   readyness: Readyness;
+
+  /**
+   * Whether this config has been permanently closed.
+   */
+  get isClosed(): boolean;
 
   readiness: Readyness;
 
@@ -61,21 +79,27 @@ export interface FeatureHubConfig {
    * @param name
    */
 
-  feature<T = any>(name: string): FeatureStateHolder<T>;
+  feature(name: string): FeatureStateHolder;
 
   url(): string;
 
   // enable you to override the repository
   repository(repository?: FeatureHubRepository): FeatureHubRepository;
 
-  // allow you to override the edge service provider
+  // allow you to override the edge service provider, not required any longer because
+  // of the control of the edge type via the restActive(), restPassive() and streaming() functions
   edgeServiceProvider(edgeService?: EdgeServiceProvider): EdgeServiceProvider;
+
+  context(context?: ContextRecord): ClientContext;
 
   // create a new context and allow you to pass in a repository and edge service
   newContext(repository?: FeatureHubRepository, edgeService?: EdgeServiceProvider): ClientContext;
 
   // is the repository client-side evaluated?
   clientEvaluated(): boolean;
+
+  // this only works when the config is in no-op mode and will through an error otherwise
+  set isClientEvaluated(clientEvaluated: boolean);
 
   // add another API key
   apiKey(apiKey: string): FeatureHubConfig;
@@ -86,8 +110,19 @@ export interface FeatureHubConfig {
   // what is the host?
   getHost(): string;
 
+  // this is the fully constructed URL depending on if you are using polling or streaming
+  featureUrl(): string;
+
   // initialize the connection outside of the creation of a context
   init(): FeatureHubConfig;
+
+  /**
+   * Waits until the repository reaches Ready state, polling every 200ms. Ensures the edge service
+   * has had its poll method called. Returns the final Readyness state.
+   *
+   * @param timeoutMs - maximum time to wait in milliseconds (default: 10000)
+   */
+  waitForReady(timeoutMs?: number): Promise<Readyness>;
 
   // close any server connections
   close(): void;
@@ -124,9 +159,22 @@ export interface FeatureHubConfig {
   ): ReadinessListenerHandle;
   removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle): void;
 
-  // add an analytics collector
-  addAnalyticCollector(collector: AnalyticsCollector): void;
-
   // add a value interceptor (e.g. baggage handler)
-  addValueInterceptor(interceptor: FeatureStateValueInterceptor): void;
+  addValueInterceptor(interceptor: FeatureValueInterceptor): void;
+
+  addUsagePlugin(plugin: UsagePlugin): FeatureHubConfig;
+
+  restActive(intervalInMilliseconds?: number): FeatureHubConfig;
+
+  restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig;
+
+  streaming(): FeatureHubConfig;
+
+  // internal APIs
+  get edgeType(): EdgeType;
+  get edgeSupplierTimeout(): number;
+  get environmentId(): string;
+
+  // this only works in no-op mode because an ID is required generally
+  set environmentId(envId: string);
 }

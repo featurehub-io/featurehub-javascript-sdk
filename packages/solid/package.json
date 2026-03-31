@@ -1,6 +1,6 @@
 {
   "name": "featurehub-solid-sdk",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "The Solid SDK for FeatureHub",
   "private": false,
   "author": "info@featurehub.io",
@@ -27,7 +27,7 @@
     "clean": "rimraf node_modules dist",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "release": "pnpm run build && pnpm publish",
+    "pre-release": "",
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {

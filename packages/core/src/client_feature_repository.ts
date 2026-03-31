@@ -1,5 +1,5 @@
-import type { AnalyticsCollector } from "./analytics";
-import type { ClientContext } from "./client_context";
+import type { ClientContext, ContextRecord } from "./client_context";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import {
   type CatchReleaseListenerHandler,
   fhLog,
@@ -9,10 +9,11 @@ import type { FeatureStateHolder } from "./feature_state";
 import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
   type PostLoadNewFeatureStateAvailableListener,
+  type RawUpdateFeatureListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
-import { type FeatureStateValueInterceptor, InterceptorValueMatch } from "./interceptors";
+import type { FeatureValueInterceptor } from "./interceptors";
 import type { InternalFeatureRepository } from "./internal_feature_repository";
 import { ListenerUtils } from "./listener_utils";
 // leave this here, prevents circular deps
@@ -23,16 +24,28 @@ import {
   SSEResultState,
 } from "./models";
 import { Applied, ApplyFeature } from "./strategy_matcher";
+import {
+  defaultUsageProvider,
+  FeatureHubUsageValue,
+  type UsageEvent,
+  type UsageEventListener,
+  type UsageProvider,
+} from "./usage/usage";
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState = false;
   // indexed by key as that what the user cares about
   private features = new Map<string, FeatureStateBaseHolder>();
-  private analyticsCollectors = new Array<AnalyticsCollector>();
   private readynessState: Readyness = Readyness.NotReady;
   private _readinessListeners: Map<number, ReadynessListener> = new Map<
     number,
     ReadynessListener
+  >();
+  private _listenerCounter = 1;
+  private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
+  private _rawUpdateListeners: Map<number, RawUpdateFeatureListener> = new Map<
+    number,
+    RawUpdateFeatureListener
   >();
   private _catchAndReleaseMode = false;
   // indexed by id
@@ -41,12 +54,58 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     number,
     PostLoadNewFeatureStateAvailableListener
   > = new Map<number, PostLoadNewFeatureStateAvailableListener>();
-  private _matchers: Array<FeatureStateValueInterceptor> = [];
+  private _matchers: Array<FeatureValueInterceptor> = [];
   private readonly _applyFeature: ApplyFeature;
   private _catchReleaseCheckForDeletesOnRelease?: FeatureState[];
+  private _usageProvider: UsageProvider = defaultUsageProvider;
 
   constructor(applyFeature?: ApplyFeature) {
     this._applyFeature = applyFeature || new ApplyFeature();
+  }
+
+  registerUsageStream(listener: UsageEventListener): number {
+    const counter = this._listenerCounter++;
+
+    this._usageStreams.set(counter, listener);
+
+    return counter;
+  }
+
+  get featureKeys(): Array<string> {
+    return this.features
+      .values()
+      .map((f) => f.key)
+      .toArray();
+  }
+
+  removeUsageStream(handler: number): void {
+    this._usageStreams.delete(handler);
+  }
+
+  registerRawUpdateFeatureListener(listener: RawUpdateFeatureListener): number {
+    const counter = this._listenerCounter++;
+    this._rawUpdateListeners.set(counter, listener);
+    return counter;
+  }
+
+  removeRawUpdateFeatureListener(handler: number): void {
+    this._rawUpdateListeners.delete(handler);
+  }
+
+  get serverProvidedFeatureKeys(): Array<string> {
+    return this.features
+      .values()
+      .filter((f) => f.exists)
+      .map((f) => f.key)
+      .toArray();
+  }
+
+  public set usageProvider(provider: UsageProvider) {
+    this._usageProvider = provider;
+  }
+
+  get usageProvider(): UsageProvider {
+    return this._usageProvider;
   }
 
   public apply(
@@ -62,14 +121,20 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return this.readynessState;
   }
 
-  public notify(state: SSEResultState, data: any) {
+  public notify(state: SSEResultState, data: unknown, source: string) {
     if (state !== null && state !== undefined) {
       switch (state) {
         case SSEResultState.Ack: // do nothing, expect state shortly
         case SSEResultState.Bye: // do nothing, we expect a reconnection shortly
           break;
         case SSEResultState.DeleteFeature:
-          this.deleteFeature(data);
+          this.deleteFeature(data as FeatureState);
+          this._rawUpdateListeners
+            .values()
+            .forEach(
+              (rul) =>
+                void Promise.resolve().then(() => rul.deleteFeature(data as FeatureState, source)),
+            );
           break;
         case SSEResultState.Failure:
           this.readynessState = Readyness.Failed;
@@ -88,19 +153,31 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
                 this.triggerNewStateAvailable();
               }
             }
+
+            this._rawUpdateListeners
+              .values()
+              .forEach((rul) => void Promise.resolve().then(() => rul.processUpdate(fs, source)));
           }
           break;
         case SSEResultState.Features:
           {
-            const features = (data as [])
-              .filter((f: any) => f?.key !== undefined)
-              .map((f: any) => f as FeatureState);
+            const features = (data as FeatureState[]).filter((f) => f?.key !== undefined);
             if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
               this._catchUpdatedFeatures(features, true);
+              this._rawUpdateListeners
+                .values()
+                .forEach(
+                  (rul) => void Promise.resolve().then(() => rul.processUpdates(features, source)),
+                );
             } else {
               let updated = false;
               features.forEach((f) => (updated = this.featureUpdate(f) || updated));
               this._checkForDeletedFeatures(features);
+              this._rawUpdateListeners
+                .values()
+                .forEach(
+                  (rul) => void Promise.resolve().then(() => rul.processUpdates(features, source)),
+                );
               this.readynessState = Readyness.Ready;
               if (!this.hasReceivedInitialState) {
                 this.hasReceivedInitialState = true;
@@ -119,8 +196,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   /**
    * We have a whole list of all the features come in, we need to make sure that none of the
-   * features we have been deleted. If they have, we need to remove them like we received
-   * a delete.
+   * features we have been deleted. If they have, we need to remove them like we received a delete request.
    *
    * @param features
    * @private
@@ -137,21 +213,33 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     }
   }
 
-  public addValueInterceptor(matcher: FeatureStateValueInterceptor): void {
+  public addValueInterceptor(matcher: FeatureValueInterceptor): void {
     this._matchers.push(matcher);
-
-    matcher.repository(this);
   }
 
-  public valueInterceptorMatched(key: string): InterceptorValueMatch | undefined {
+  public close(): void {
+    this._matchers.forEach((m) => m.close?.());
+    this._matchers.length = 0;
+    // these might try and unregister themselves as we close them.
+    [...this._rawUpdateListeners.values()].forEach(
+      (l) => void Promise.resolve().then(() => l.close()),
+    );
+    this._rawUpdateListeners.clear();
+  }
+
+  public valueInterceptorMatched(
+    key: string,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
     for (const matcher of this._matchers) {
-      const m = matcher.matched(key);
-      if (m?.value) {
-        return m;
+      const [matched, value] = matcher.matched(key, this, featureState);
+
+      if (matched) {
+        return [true, value];
       }
     }
 
-    return undefined;
+    return [false, undefined];
   }
 
   public addPostLoadNewFeatureStateAvailableListener(
@@ -207,11 +295,21 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   public broadcastReadynessState(firstState: boolean): void {
-    this._readinessListeners.forEach((l) => l(this.readynessState, firstState));
-  }
+    // if there are usage listeners, give them all the features
+    if (this._usageStreams.size) {
+      const ready = this.usageProvider.createUsageCollectionEvent();
 
-  public addAnalyticCollector(collector: AnalyticsCollector): void {
-    this.analyticsCollectors.push(collector);
+      ready.eventName = "readyness";
+      ready.featureValues = this.features
+        .values()
+        .map((fs) => FeatureHubUsageValue.fromFeature(fs.internalGetValue(false)))
+        .filter((s) => s !== undefined)
+        .toArray();
+
+      this._usageStreams.values().forEach((v) => v(ready));
+    }
+
+    this._readinessListeners.forEach((l) => l(this.readynessState, firstState));
   }
 
   public simpleFeatures(): Map<string, string | undefined> {
@@ -246,31 +344,15 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return vals;
   }
 
-  public logAnalyticsEvent(action: string, other?: Map<string, string>, ctx?: ClientContext): void {
-    const featureStateAtCurrentTime: Array<FeatureStateBaseHolder> = [];
-
-    for (const fs of this.features.values()) {
-      if (fs.isSet()) {
-        const fsVal: FeatureStateBaseHolder =
-          ctx == null ? fs : (fs.withContext(ctx) as FeatureStateBaseHolder);
-        featureStateAtCurrentTime.push(fsVal.analyticsCopy());
-      }
-    }
-
-    this.analyticsCollectors.forEach((ac) =>
-      ac.logEvent(action, other || new Map<string, string>(), featureStateAtCurrentTime),
-    );
-  }
-
   public hasFeature(key: string): undefined | FeatureStateHolder {
     return this.features.get(key);
   }
 
-  public feature<T = any>(key: string): FeatureStateHolder<T> {
+  public feature(key: string): FeatureStateHolder {
     let holder = this.features.get(key);
 
     if (holder === undefined) {
-      holder = new FeatureStateBaseHolder<T>(this, key);
+      holder = new FeatureStateBaseHolder(this, key);
       this.features.set(key, holder);
     }
 
@@ -278,7 +360,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   // deprecated
-  public getFeatureState<T = any>(key: string): FeatureStateHolder<T> {
+  public getFeatureState(key: string): FeatureStateHolder {
     return this.feature(key);
   }
 
@@ -422,5 +504,23 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     ) {
       holder.setFeatureState(undefined);
     }
+  }
+
+  public used(
+    value: EvaluatedFeature,
+    attrs: ContextRecord | undefined,
+    userKey: string | undefined,
+  ): void {
+    const usageProvider = this.usageProvider;
+    if (usageProvider) {
+      // in testing with substitutions this can be undefined
+      this.recordUsageEvent(
+        usageProvider.createUsageFeature(FeatureHubUsageValue.fromFeature(value)!, attrs, userKey),
+      );
+    }
+  }
+
+  public recordUsageEvent(event: UsageEvent): void {
+    this._usageStreams.values().forEach((v) => v(event));
   }
 }

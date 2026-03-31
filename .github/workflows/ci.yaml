@@ -37,3 +37,9 @@ jobs:
         run: pnpm run lint
       - name: Test (Packages)
         run: pnpm run test:packages
+      - name: Test (Usage)
+        run: pnpm run test:usage
+      - name: Test (Interceptors)
+        run: pnpm run test:interceptors
+      - name: Test (Stores)
+        run: pnpm run test:stores

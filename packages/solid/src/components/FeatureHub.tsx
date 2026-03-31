@@ -3,8 +3,6 @@ import {
   EdgeFeatureHubConfig,
   FeatureHub as fh,
   type FeatureHubConfig,
-  FeatureHubPollingClient,
-  type InternalFeatureRepository,
   Readyness,
 } from "featurehub-javascript-client-sdk";
 import {
@@ -24,7 +22,7 @@ export const [ready, setReady] = createSignal(false);
 
 export type UseFeatureHub = {
   /** The FeatureHub config object */
-  readonly config: Accessor<EdgeFeatureHubConfig>;
+  readonly config: Accessor<FeatureHubConfig>;
   /** The FeatureHub client context */
   readonly client: Accessor<ClientContext>;
 };
@@ -65,8 +63,6 @@ type Props = {
 export const FeatureHub: Component<Props> = (props): JSX.Element => {
   let listenerId: number | undefined;
   const userKey = () => props.userKey ?? "";
-  const provider = (repo: InternalFeatureRepository, c: FeatureHubConfig) =>
-    new FeatureHubPollingClient(repo, c, props.pollInterval ?? 60000);
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
@@ -77,8 +73,9 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
   const config = createMemo(() => {
     console.info("FeatureHub Solid SDK: Creating config and context...");
 
-    EdgeFeatureHubConfig.defaultEdgeServiceSupplier = provider;
-    const fhConfig = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+    const fhConfig = EdgeFeatureHubConfig.config(props.url, props.apiKey).restActive(
+      props.pollInterval ?? 60000,
+    );
     const context = fhConfig.newContext();
     fh.set(fhConfig, context);
 

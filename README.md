@@ -29,26 +29,38 @@ Interested in contributing to the FeatureHub JavaScript SDK? Please see our [Con
 
 ## SDK installation
 
-Run to install the dependency:
+There are four different packages, which you can install using the package manager of your choice (we use pnpm):
 
-if you are intending to use this SDK with React, Angular and other browser frameworks:
+- `featurehub-javascript-client-sdk` - this installs the basic Browser compatible SDK. All Browser based frameworks are compatible with this library. It ships in both CommonJS and ES Modules format.
+- `featurehub-javascript-react-sdk` - this installs the `client` SDK + the React compatible extra layer on top.
+- `featurehub-javascript-solid-sdk` - this installs the `client` SDK + the SolidJS compatible extra layer on top.
+- `featurehub-javascript-node-sdk` - if you are running a NodeJS compatible (node, bun, etc) server side application, this is the library you would choose.
 
-`pnpm install featurehub-javascript-client-sdk`
+All of these libraries use the `core` sdk which provides all common functionality, but the `client` and `node` adapt to their own environments.
 
-if you are using NodeJS use
+## Changes from the 1.x Version
 
-`pnpm install featurehub-javascript-node-sdk`
-
-(and further imports you see below should refer to this node library instead of the client library)
+- There are now 3 ways to use the client, SSE ("near realtime"), Active REST (you set a polling interval and it polls at that interval regardless), and Passive REST (you set a polling interval and only if a feature is evaluated at or after that interval is a request for a data refresh made). Passive REST is new.
+- Interacting with the FeatureHub Context (the per user evaluation context for features) has dramatically improved and is now essentially `Record<string,number|string|boolean|Array<number>|Array<string>|Array<boolean>`
+  from being a `Record<string,string>`. The signature of the ClientContext has changed to match this, and creation, addition and merging of new values into your context has significantly improved.
+- The API now has a *Usage Tracking* feature for feature evaluation, which is completely pluggable and able
+  to collect information on individual evaluations as well as collections of feature updates and user's
+  context while evaluating. Using this, we support *Full-trace Feature Value consistency support*, *OpenTelemetry Feature Evaluation Span Augmentation*, and *Twilio Segment feature evaluation usage tracking*. This usage
+  tracking is what is used to enable the Passive REST capability.
+- *Session Stores* are also now available, you can use the Browser's local storage as a backing store, and Redis is provided for Node users. 
+- *Local Development* is more easily enabled, you can create a config with no edge url or api keys, and wire in a yaml file of features that you can even watch for updates.
 
 ## Options to get feature updates
 
-There are 2 ways to request for feature updates via this SDK:
+There are 3 ways to request for feature updates via this SDK:
 
-- **FeatureHub polling client (GET request updates)**
+- **FeatureHub Active REST polling client (GET request updates)**
 
-  In this mode, you make a GET request, which you can choose to either do once, when specific things happen in your application,
-  (such as navigation change) or on a regular basis (say every 5 minutes) and the changes will be passed into the FeatureHub repository for processing. This mode is recommended for browser type applications (React, Angular, Vue) and Mobile applications. The `featurehub-javascript-client-sdk` defaults to this behaviour as of 1.2.0, and we have updated and streamlined the browser API to reflect this.
+  In this mode, updates to feature state are under your control but are regularly fetched (or only fetched once if you set your polling interval to 0). Regardless of what is going on with the user, the features will keep getting fetched at the interval you set. As feature updates are fairly rare and you may wish to see them as soon as possible within an interval, this is ideal for low cost serving and browser based applications.
+
+- **FeatureHub Passive REST polling client (GET request updates)**
+  In this mode, updates to feature state are set at a threshold, after which a poll will happen but only if the user is actively evaluating features. If no path in your application is taken where a feature is evaluated or the user has moved away from the application (a different browser tab, a different mobile
+  application for example), then polling will stop until evaluation occurs again. You can trigger it yourself if you wish simply by making an API call when your application comes active.
 
 - **SSE (Server Sent Events) realtime updates mechanism**
 
@@ -87,7 +99,19 @@ In your page's HTML, add the following (replacing the urls and keys with your ow
 <meta name="featurehub-interval" content="15000" />
 ```
 
-The interval indicates polling frequency to get feature updates and set at 15 seconds. It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments.
+The interval indicates the polling frequency in milliseconds, set to 15 seconds here. By default this uses Active REST polling. To use Passive REST instead (polling only when features are actually evaluated), add:
+
+```html
+<meta name="featurehub-client" content="passive" />
+```
+
+To use SSE real-time streaming instead of polling:
+
+```html
+<meta name="featurehub-client" content="streaming" />
+```
+
+It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments.
 
 ```typescript
 import { FeatureHub } from "featurehub-javascript-client-sdk";
@@ -188,10 +212,10 @@ export function userMiddleware(fhConfig: FeatureHubConfig) {
   return (req: any, res: any, next: any) => {
     const user = detectUser(req); // function to analyse the Bearer token and determine who the user is
 
-    let fhClient = fhConfig.newContext();
+    let fhClient = fhConfig.context();
 
     if (user) {
-      fhClient = fhClient.userKey(user.email);
+      fhClient.userKey(user.email);
       // add anything else relevant to the context
     }
 
@@ -299,37 +323,24 @@ You can always ask the config what the readiness is.
 fhConfig.readiness();
 ```
 
-### Changing the polling interval
+### Choosing a connection mode
 
-If you are directly creating the EdgeFeatureHubConfig or you are using polling in your app for some other reason,
-you may wish to change the interval. So you can change it by setting the
-provider for the "Edge Connector". An example that sets it to five seconds is as follows:
+Call one of these fluent methods on your `EdgeFeatureHubConfig` **before** calling `.init()` or `.build()`:
 
 ```typescript
-import { FeatureHubPollingClient } from "featurehub-javascript-client-sdk";
-const FREQUENCY = 5000; // 5 seconds
-EdgeFeatureHubConfig.edgeServiceProvider(
-  (repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY),
-);
+const fhConfig = new EdgeFeatureHubConfig(url, apiKey);
+
+// Active REST — polls at a fixed interval regardless of user activity (default for browser SDK)
+fhConfig.restActive(5000); // every 5 seconds
+
+// Passive REST — only polls after the cache expires AND a feature is evaluated
+fhConfig.restPassive(15000); // cache expires after 15 seconds
+
+// SSE — real-time streaming updates (default for Node SDK)
+fhConfig.streaming();
 ```
 
-You can specify however many seconds you want. FeatureHub also has the ability for the server to
-override the polling interval, either globally or per environment, but that is not covered here. Note,
-NodeJS servers use the SSE real time streaming updater, they can swap to using polling via the same
-mechanism as above.
-
-Please note - you should do this before doing an `EdgeFeatureHubConfig.config()`.
-
-### Changing to SSE (Server Sent Events) - real time streaming updates
-
-If you are keen to see real time updates, then swapping to the Streaming connector is achieved by:
-
-```typescript
-EdgeFeatureHubConfig.defaultEdgeServiceSupplier = (repository, config) =>
-  new FeatureHubEventSourceClient(config, repository);
-```
-
-This is a default method for feature updates in the featurehub-node-sdk.
+FeatureHub also has the ability for the server to override the polling interval via cache-control headers, either globally or per environment.
 
 ## General Documentation
 
@@ -631,65 +642,205 @@ export enum Readyness {
 }
 ```
 
-## Analytics
+## Usage Tracking
 
-Allows you to connect your application and see your features performing in Google Analytics.
+The SDK has a pluggable usage tracking system that fires whenever a feature is evaluated through a context. This
+serves two purposes: it powers the Passive REST polling mode (a feature evaluation can trigger a poll when the
+cache has expired), and it lets you send evaluation data to external analytics or observability tools.
 
-When you log an event on the repository,
-it will capture the value of all of the feature flags and feature values (in case they change),
-and log that event against your Google Analytics, once for each feature. This allows you to
-slice and dice your events by state each of the features were in. We send them as a batch, so it
-is only one request.
+UsagePlugins will operate _asynchronously_ but default, so when a UsageEvent is sent to them, it will be inside a "fire and forget"
+promise. If you want to ensure it affects something within the context of what the user is doing then it should be synchronous
+and you will need to override the `canSendAsync` to `false`. The OpenTelemetry plugins are _not_ async because they need to modify the
+baggage of the current context the user is in, the Twilio Segment however is async as it is just sending tracking information.
 
-Note that if you log the analytics event _on the client context_ (`ctx.logAnalyticsEvent`) it captures that user's features. If you log
-them on the repository itself (`fhConfig.repository().logAnalyticsEvent...`) then it logs the features as they are
-handed back from the server. If you are using a Server Evaluated Key, these will be the same, but you should try
-and always use the Client Context to log analytics events.
+### Writing a plugin
 
-There are two different implementations, one for when you are in the browser and one for when you
-are in the server, like nodejs. You don't need to worry about this, the code detects which one it is in and
-creates the correct instance.
-
-There is a plan to support other Analytics tools in the future. The only one we
-currently support is Google Analytics, so you need:
-
-- a Google analytics key - usually in the form `UA-123456`. You must provide this up front.
-- a CID - a customer id this is associate with this. You can provide this up front or you can
-  provide it with each call, or you can set it later.
-
-1. You can set it in the constructor:
+Implement `UsagePlugin` (or extend `DefaultUsagePlugin`) and implement `send(event: UsageEvent)`:
 
 ```typescript
-const collector = new GoogleAnalyticsCollector("UA-123456", "some-CID");
+import {
+  DefaultUsagePlugin,
+  type UsageEvent,
+  isUsageEventWithFeature,
+  isUsageFeaturesCollection,
+} from "featurehub-javascript-client-sdk";
+
+class MyPlugin extends DefaultUsagePlugin {
+  // canSendAsync defaults to true — send() is called asynchronously.
+  // Set to false if your send() must run synchronously (e.g. inside a span).
+  // canSendAsync = false;
+
+  send(event: UsageEvent) {
+    const record = event.collectUsageRecord(); // plain object of key/value pairs
+
+    if (isUsageEventWithFeature(event)) {
+      // single feature evaluation — event.feature, event.attributes available
+    } else if (isUsageFeaturesCollection(event)) {
+      // batch of feature values — event.featureValues available
+    }
+
+    // send to your analytics system...
+  }
+}
 ```
 
-2. You can tell the collector later.
+Register it with your config before any features are evaluated:
 
 ```typescript
-const collector = new GoogleAnalyticsCollector("UA-123456");
-collector.cid = "some-value"; // you can set it here
+fhConfig.addUsagePlugin(new MyPlugin());
 ```
 
-3. When you log an event, you can pass it in the map:
+### Provided plugins
+
+Two reference plugins are available as separate packages:
+
+#### [`featurehub-usage-segment`](https://www.npmjs.com/package/featurehub-usage-segment) — Twilio Segment
+
+Forwards each feature evaluation to Segment as a `track` call. A companion
+`FeatureHubSegmentEnrichmentPlugin` enriches all outgoing Segment events with the current
+FeatureHub context. See the [package README](https://www.npmjs.com/package/featurehub-usage-segment)
+for full setup instructions.
 
 ```typescript
-const data = new Map<string, string>();
-data.set("cid", "some-cid");
-
-ctx.logAnalyticsEvent("event-name", data);
+import { SegmentUsagePlugin } from "featurehub-usage-segment";
+fhConfig.addUsagePlugin(new SegmentUsagePlugin(() => analytics));
 ```
 
-4. For a NODE server, you can set as an environment variable named `GA_CID`.
+#### [`featurehub-usage-opentelemetry`](https://www.npmjs.com/package/featurehub-usage-opentelemetry) — OpenTelemetry
+
+Attaches feature evaluations as attributes or events on the active OpenTelemetry span
+(`OpenTelemetryTrackerUsagePlugin`). Also provides **Full-trace Feature Value consistency
+support** via `OpenTelemetryBaggagePlugin` and `OpenTelemetryFeatureInterceptor` — a pair that
+freezes evaluated feature values into the W3C `baggage` header so every service in a distributed
+trace uses the same flag values, even if they change partway through. Node.js only. See the
+[package README](https://www.npmjs.com/package/featurehub-usage-opentelemetry) for full setup
+instructions.
 
 ```typescript
-fhConfig.addAnalyticCollector(collector);
+import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
+fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
 ```
 
-As you can see from above (in option 3), to log an event, you simply tell the repository to
-log an analytics event. It will take care of bundling everything up, passing it off to the
-Google Analytics collector which will post it off.
+## Feature Value Interceptors
 
-Read more on how to interpret events in Google Analytics [here](https://docs.featurehub.io/featurehub/latest/analytics.html)
+Feature value interceptors let you override the value of any feature before it is returned to the caller. This is useful for local development overrides, test harnesses, or loading values from a custom source (e.g. a query parameter or a local config file).
+
+### The interface
+
+Implement `FeatureValueInterceptor` from the SDK:
+
+```typescript
+import {
+  type FeatureValueInterceptor,
+  type FeatureHubRepository,
+  type FeatureState,
+} from "featurehub-javascript-client-sdk";
+
+class MyInterceptor implements FeatureValueInterceptor {
+  // Called on every feature value read.
+  // Return [true, value] to override, or [false, undefined] to let the normal value through.
+  // value can be string | boolean | number | undefined.
+  // Returning [true, undefined] overrides the feature to have no value (null/unset).
+  matched(
+    key: string,
+    repo: FeatureHubRepository,
+    featureState?: FeatureState,
+  ): [boolean, string | boolean | number | undefined] {
+    if (key === "MY_FLAG") {
+      return [true, true]; // force the flag on
+    }
+    return [false, undefined]; // no override
+  }
+}
+```
+
+### Registering an interceptor
+
+```typescript
+fhConfig.addValueInterceptor(new MyInterceptor());
+```
+
+Or directly on the repository:
+
+```typescript
+fhConfig.repository().addValueInterceptor(new MyInterceptor());
+```
+
+Multiple interceptors can be registered; they are evaluated in registration order and the first match wins.
+
+### Provided interceptor and store: [`featurehub-yaml-interceptor`](https://www.npmjs.com/package/featurehub-yaml-interceptor)
+
+The [`featurehub-yaml-interceptor`](https://www.npmjs.com/package/featurehub-yaml-interceptor)
+package (Node.js only) provides two classes for working with feature flags from a local YAML file
+during development and testing, without needing a live FeatureHub connection.
+
+**`LocalYamlValueInterceptor`** — intercepts individual feature lookups and substitutes values
+from the YAML file, leaving all other features unaffected. Supports optional hot-reload via
+`{ watchForChanges: true }` which polls the file every 500 ms.
+
+```typescript
+import { LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
+// File resolved from: explicit arg → FEATUREHUB_LOCAL_YAML env var → featurehub-features.yaml
+fhConfig.addValueInterceptor(new LocalYamlValueInterceptor());
+```
+
+**`LocalYamlFeatureStore`** — reads the YAML file once at construction and pushes the full
+feature set into the repository, making the SDK ready immediately with no network connection.
+Types are inferred automatically from the YAML values.
+
+```typescript
+import { LocalYamlFeatureStore } from "featurehub-yaml-interceptor";
+new LocalYamlFeatureStore(fhConfig);
+```
+
+The two classes can be used together: `LocalYamlFeatureStore` for instant startup and
+`LocalYamlValueInterceptor` with `watchForChanges: true` for live hot-reload as you edit the
+file. See the [package README](https://www.npmjs.com/package/featurehub-yaml-interceptor) for
+the full YAML format, type-conversion rules, and combined usage examples.
+
+## Backing Stores
+
+Backing stores sit behind the FeatureHub repository and automatically persist feature state to a
+durable location. On startup they replay the stored state into the repository immediately — before
+the first edge connection is established — so your application has a usable set of feature values
+from the moment it starts.
+
+### [`featurehub-store-localstorage`](https://www.npmjs.com/package/featurehub-store-localstorage) — Browser storage
+
+Persists the full feature state to `sessionStorage` (default) or `localStorage` in the browser.
+Useful for single-page applications where you want features available before the FeatureHub
+connection resolves. Pass `localStorage` as the second argument to persist across page loads.
+
+```typescript
+import { LocalSessionStore } from "featurehub-store-localstorage";
+const store = new LocalSessionStore(fhConfig);          // sessionStorage
+const store = new LocalSessionStore(fhConfig, localStorage); // across page loads
+```
+
+Call `store.close()` to deregister the listener on teardown. See the
+[package README](https://www.npmjs.com/package/featurehub-store-localstorage) for full details.
+
+### [`featurehub-store-redis`](https://www.npmjs.com/package/featurehub-store-redis) — Redis (Node.js only)
+
+Persists feature state to Redis for multi-instance Node.js deployments. All instances share a
+single cached copy, so a cold-starting process serves features immediately without waiting for
+FeatureHub. **Client-evaluated keys only** — server-evaluated keys must not be shared across
+evaluation contexts and the store will refuse to initialise if one is detected.
+
+Three connection styles are supported: URL string, `RedisClientOptions` object (TLS, auth, etc.),
+or Redis Cluster. Single-node writes use `WATCH`/`MULTI`/`EXEC` optimistic locking with
+configurable retry and backoff; cluster writes fall back to sequential SETs. A periodic refresh
+timer (default 5 min) detects changes made by other instances via a SHA-256 fingerprint key.
+
+```typescript
+import { RedisSessionStoreUrl } from "featurehub-store-redis";
+const store = new RedisSessionStoreUrl("redis://localhost:6379", fhConfig);
+await store.init();
+```
+
+Call `store.close()` on shutdown. See the
+[package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor
+variants and configuration options.
 
 ## FeatureHub Test API
 

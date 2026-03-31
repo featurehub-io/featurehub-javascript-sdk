@@ -9,7 +9,9 @@
     "moduleResolution": "Node",
     "verbatimModuleSyntax": false,
     "paths": {
-      "featurehub-javascript-node-sdk": ["../../packages/node/src"]
+      "featurehub-javascript-node-sdk": ["../../packages/node/src"],
+      "featurehub-usage-opentelemetry": ["../../plugins/usage/featurehub-usage-opentelemetry/src"],
+      "featurehub-usage-segment": ["../../plugins/usage/featurehub-usage-segment/src"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

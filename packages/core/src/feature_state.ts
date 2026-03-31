@@ -1,13 +1,15 @@
 import type { ClientContext } from "./client_context";
 import { FeatureValueType } from "./models";
 
-export interface FeatureListener<T = any> {
-  (featureChanged: FeatureStateHolder<T>): void;
+export interface FeatureListener {
+  (featureChanged: FeatureStateHolder): void;
 }
 
 export type FeatureListenerHandle = number;
 
-export interface FeatureStateHolder<T = any> {
+export type FeatureValue = boolean | string | number | undefined;
+
+export interface FeatureStateHolder {
   /**
    * getKey: returns feature key if feature exists
    */
@@ -85,21 +87,24 @@ export interface FeatureStateHolder<T = any> {
    * Adds a new listener and returns a handle so that the listener can be removed.
    * @param listener
    */
-  addListener(listener: FeatureListener<T>): FeatureListenerHandle;
+  addListener(listener: FeatureListener): FeatureListenerHandle;
 
   /**
    * Allows the SDK client to remove the listener as part of a teardown
    * @param handle - removes it from the trigger list if it exists, otherwise ignored
    */
-  removeListener(handle: FeatureListener<T> | FeatureListenerHandle): void;
+  removeListener(handle: FeatureListener | FeatureListenerHandle): void;
 
   // this is intended for override repositories (such as the UserFeatureRepository)
   // to force the listeners to trigger if they detect an actual state change in their layer
   // it passes in the feature state holder to notify with
-  triggerListeners(feature?: FeatureStateHolder<T>): void;
+  triggerListeners(feature?: FeatureStateHolder): void;
 
   /** the value of the feature flag */
-  get value(): T | undefined;
+  get value(): FeatureValue;
+
+  /** the value of the feature flag but not triggering any usage */
+  get untrackedValue(): FeatureValue;
 
   /**
    * getVersion: returns feature update version number (every change on the feature causes its version to update).
@@ -116,4 +121,7 @@ export interface FeatureStateHolder<T = any> {
   withContext(param: ClientContext): FeatureStateHolder;
 
   get featureProperties(): Record<string, string> | undefined;
+
+  get id(): string | undefined;
+  get environmentId(): string | undefined;
 }

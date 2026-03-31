@@ -23,25 +23,33 @@ describe("When any feature changes, post new feature update should trigger", () 
       } as FeatureState,
     ];
 
-    repo.notify(SSEResultState.Features, features);
+    repo.notify(SSEResultState.Features, features, "test");
     expect(postNewTrigger).toBe(0);
 
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 2,
-      type: FeatureValueType.Boolean,
-      value: true,
-    } as FeatureState);
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 2,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+      "test",
+    );
 
     expect(postNewTrigger).toBe(0);
-    repo.notify(SSEResultState.Feature, {
-      id: "1",
-      key: "banana",
-      version: 3,
-      type: FeatureValueType.Boolean,
-      value: false,
-    } as FeatureState);
+    repo.notify(
+      SSEResultState.Feature,
+      {
+        id: "1",
+        key: "banana",
+        version: 3,
+        type: FeatureValueType.Boolean,
+        value: false,
+      } as FeatureState,
+      "test",
+    );
 
     expect(postNewTrigger).toBe(1);
   });

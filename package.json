@@ -15,6 +15,7 @@
     "build:node": "pnpm --filter './packages/node' run build",
     "build:react": "pnpm --filter './packages/react' run build",
     "build:solid": "pnpm --filter './packages/solid' run build",
+    "prerelease:packages": "pnpm --filter './packages/*' run pre-release",
     "clean": "pnpm -r run clean && rimraf node_modules",
     "format": "prettier . --check",
     "format:fix": "prettier . --write",
@@ -25,6 +26,9 @@
     "test": "pnpm run test:packages && pnpm run test:examples",
     "test:examples": "pnpm --filter './examples/*' run test",
     "test:packages": "pnpm --filter './packages/*' run test",
+    "test:usage": "pnpm --filter './plugins/usage/*' run test",
+    "test:interceptors": "pnpm --filter './plugins/interceptors/*' run test",
+    "test:stores": "pnpm --filter './plugins/stores/*' run test",
     "test:js": "pnpm --filter './packages/js' run test",
     "test:server": "pnpm --filter './examples/todo-server-tests' run test",
     "typecheck": "pnpm -r run typecheck"

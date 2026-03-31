@@ -1,16 +1,17 @@
+import { Analytics } from "@segment/analytics-node";
 import cors from "cors";
 import express from "express";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
-  featurehubMiddleware,
-  FeatureHubPollingClient,
   FHLog,
   Readyness,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
+import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
+import { SegmentUsagePlugin } from "featurehub-usage-segment";
 import fs from "fs";
 import path from "path";
 
@@ -36,22 +37,19 @@ const fhConfig = new EdgeFeatureHubConfig(
   process.env["FEATUREHUB_CLIENT_API_KEY"]!,
 );
 
-fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
-
-if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
-  fhConfig.edgeServiceProvider(
-    (repo, config) =>
-      new FeatureHubPollingClient(
-        repo,
-        config,
-        parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!),
-      ),
-  );
+// if a Segment key is defined, set it up and register it as a usage plugin
+if (process.env["SEGMENT_WRITE_KEY"] && process.env["SEGMENT_ENABLED"]) {
+  console.log("configuring Segment plugin");
+  const analytics = new Analytics({ writeKey: process.env["SEGMENT_WRITE_KEY"] });
+  fhConfig.addUsagePlugin(new SegmentUsagePlugin(() => analytics));
 }
 
-// Add override to use polling client
-// const FREQUENCY = 5000; // 5 seconds
-// fhConfig.edgeServiceProvider((repo, config) => new FeatureHubPollingClient(repo, config, FREQUENCY));
+if (process.env["OTEL_USAGE_ENABLED"]) {
+  console.log("configuring otel plugin");
+  fhConfig.addUsagePlugin(new OpenTelemetryTrackerUsagePlugin());
+}
+
+fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
 
 fhConfig.init();
 
@@ -78,7 +76,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(featurehubMiddleware(fhConfig.repository()));
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, "todo-frontend")));
@@ -100,7 +97,7 @@ class TodoController implements ITodoApiController {
 
   async removeTodo(parameters: { id: string; user: string }): Promise<Array<Todo>> {
     const ctx = await this.ctx(parameters.user);
-    ctx.logAnalyticsEvent("todo-remove", new Map([["gaValue", "5"]]));
+    ctx.recordNamedUsage("todo-remove", { gaValue: "5" });
     const index: number = todos.findIndex((todo) => todo.id === parameters.id);
     todos.splice(index, 1);
     return this.listTodos(ctx);
@@ -113,7 +110,7 @@ class TodoController implements ITodoApiController {
         throw new Error("Todo body is required");
       }
 
-      ctx.logAnalyticsEvent("todo-add", new Map([["gaValue", "10"]]));
+      ctx.recordNamedUsage("todo-add", { gaValue: "10" });
 
       const todo: Todo = {
         id: Math.floor(Math.random() * 20).toString(),
