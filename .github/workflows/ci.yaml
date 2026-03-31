@@ -2,6 +2,15 @@ name: CI
 
 on:
   pull_request:
+    paths:
+      - 'packages/**'
+      - 'plugins/**'
+      - 'examples/**'
+      -  '*.ts'
+      - 'package.json'
+      - 'pnpm*'
+      - '.prettier*'
+      - '.github/workflows/ci.yaml'
     branches:
       - main
 
