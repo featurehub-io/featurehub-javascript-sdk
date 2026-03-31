@@ -15,6 +15,7 @@
     "build:node": "pnpm --filter './packages/node' run build",
     "build:react": "pnpm --filter './packages/react' run build",
     "build:solid": "pnpm --filter './packages/solid' run build",
+    "prerelease:packages": "pnpm --filter './packages/*' run pre-release",
     "clean": "pnpm -r run clean && rimraf node_modules",
     "format": "prettier . --check",
     "format:fix": "prettier . --write",

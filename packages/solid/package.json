@@ -27,7 +27,7 @@
     "clean": "rimraf node_modules dist",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "release": "pnpm run build && pnpm publish",
+    "pre-release": "",
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {

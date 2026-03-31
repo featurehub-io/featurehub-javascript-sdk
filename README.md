@@ -41,12 +41,14 @@ All of these libraries use the `core` sdk which provides all common functionalit
 ## Changes from the 1.x Version
 
 - There are now 3 ways to use the client, SSE ("near realtime"), Active REST (you set a polling interval and it polls at that interval regardless), and Passive REST (you set a polling interval and only if a feature is evaluated at or after that interval is a request for a data refresh made). Passive REST is new.
-- The Client Context (the per user evaluation context for features) is now essentially `Record<string,number|string|boolean|Array<number>|Array<string>|Array<boolean>`
-  from being a `Record<string,string>`. The signature of the ClientContext has changed to match this.
-- The API now has a Usage Tracking feature for feature evaluation, which is completely pluggable and able
+- Interacting with the FeatureHub Context (the per user evaluation context for features) has dramatically improved and is now essentially `Record<string,number|string|boolean|Array<number>|Array<string>|Array<boolean>`
+  from being a `Record<string,string>`. The signature of the ClientContext has changed to match this, and creation, addition and merging of new values into your context has significantly improved.
+- The API now has a *Usage Tracking* feature for feature evaluation, which is completely pluggable and able
   to collect information on individual evaluations as well as collections of feature updates and user's
-  context while evaluating. A Twilio Segment plugin and OpenTelemetry plugin are provided as examples. This usage
+  context while evaluating. Using this, we support *Full-trace Feature Value consistency support*, *OpenTelemetry Feature Evaluation Span Augmentation*, and *Twilio Segment feature evaluation usage tracking*. This usage
   tracking is what is used to enable the Passive REST capability.
+- *Session Stores* are also now available, you can use the Browser's local storage as a backing store, and Redis is provided for Node users. 
+- *Local Development* is more easily enabled, you can create a config with no edge url or api keys, and wire in a yaml file of features that you can even watch for updates.
 
 ## Options to get feature updates
 

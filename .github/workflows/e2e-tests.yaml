@@ -1,16 +1,19 @@
 name: e2e-tests
 
-on:
-  pull_request:
-    types: [labeled, synchronize, reopened]
-    branches: [master]
-
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
+  manual_approval_job:
+    runs-on: ubuntu-latest
+    environment:
+      name: requires-approval # Reference the environment created in Step 1
+    steps:
+      - name: Awaiting Approval
+        run: echo "Waiting for manual approval"
+
   e2e:
     name: e2e-tests
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'e2e-test') || github.event_name == 'workflow_dispatch' }}
+    needs: [manual_approval_job]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -86,7 +89,7 @@ jobs:
             --network ${{ job.container.network }} \
             --name todo-server \
             -p 8099:8099 \
-            --work-dir examples/todo-backend-typescript
+            --workdir /sdk/examples/todo-backend-typescript \
             --env-file adk-env/server.env \
              todo-server:e2e \
             /bin/bash -c "pnpm run start"
@@ -116,7 +119,7 @@ jobs:
             -v $PWD/adk-env:/opt/e2e \
             -e APP_SERVER_URL=http://todo-server:8099 \
             --env-file adk-env/server.env \
-            --work-dir examples/todo-server-tests \
+            --workdir /sdk/examples/todo-server-tests \
             --name jsdk-sse-client \
             todo-server:e2e \
             /bin/bash -c "pnpm run test"
@@ -129,7 +132,7 @@ jobs:
             -e FEATUREHUB_POLLING_INTERVAL=3s \
             --name todo-server \
             -p 8099:8099 \
-            --work-dir examples/todo-backend-typescript
+            --workdir /sdk/examples/todo-backend-typescript \
             --env-file adk-env/server.env \
              todo-server:e2e \
             /bin/bash -c "pnpm run start"
@@ -160,7 +163,7 @@ jobs:
             -e FEATUREHUB_POLLING_INTERVAL=3s \
             -e APP_SERVER_URL=http://todo-server:8099 \
             --env-file adk-env/server.env \
-            --work-dir examples/todo-server-tests \
+            --workdir /sdk/examples/todo-server-tests \
             --name jsdk-poll-client \
             todo-server:e2e \
             /bin/bash -c "pnpm run test"
