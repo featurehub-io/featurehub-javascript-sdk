@@ -1,5 +1,16 @@
 # ChangeLog
 
+## 2.0.0-beta.0
+
+### Major Changes
+
+- 5c4cee5: Major SDK release for the 2.0 release
+
+### Patch Changes
+
+- Updated dependencies [5c4cee5]
+  - featurehub-javascript-client-sdk@2.0.0-beta.0
+
 ### 1.2.1
 
 - update the children of FeatureHub to allow for more generic types as per https://www.totaltypescript.com/jsx-element-vs-react-reactnode
