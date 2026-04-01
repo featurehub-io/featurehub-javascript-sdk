@@ -178,8 +178,8 @@ describe("RedisSessionStore", () => {
     });
 
     it("registers itself as a RawUpdateFeatureListener", async () => {
-      const { store, config } = makeStore(redis, repo);
-      const spy = vi.spyOn(config, "registerRawUpdateFeatureListener");
+      const { store } = makeStore(redis, repo);
+      const spy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       await store.init();
       expect(spy).toHaveBeenCalledOnce();
       store.close();
@@ -208,19 +208,19 @@ describe("RedisSessionStore", () => {
 
     it("refuses to init with server-evaluated API keys", async () => {
       const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { store, config } = makeStore(redis, repo, {
+      const { store } = makeStore(redis, repo, {
         clientEval: false,
         apiKeys: ["server-key"],
       });
-      const regSpy = vi.spyOn(config, "registerRawUpdateFeatureListener");
+      const regSpy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       await store.init();
       expect(regSpy).not.toHaveBeenCalled();
       errSpy.mockRestore();
     });
 
     it("allows init with empty API keys regardless of clientEvaluated", async () => {
-      const { store, config } = makeStore(redis, repo, { clientEval: false, apiKeys: [] });
-      const regSpy = vi.spyOn(config, "registerRawUpdateFeatureListener");
+      const { store } = makeStore(redis, repo, { clientEval: false, apiKeys: [] });
+      const regSpy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       await store.init();
       expect(regSpy).toHaveBeenCalledOnce();
       store.close();

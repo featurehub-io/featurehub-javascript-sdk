@@ -295,7 +295,7 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
       fhLog.trace("connected to redis");
     }
 
-    this._config.registerRawUpdateFeatureListener(this);
+    this._config.repository().registerRawUpdateFeatureListener(this);
 
     this._lastSha = (await this._client.get(this._shaKey())) ?? undefined;
     if (this._lastSha !== undefined) {
