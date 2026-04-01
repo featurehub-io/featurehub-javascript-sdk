@@ -43,6 +43,7 @@ export interface ClientContext {
   build(): Promise<ClientContext>;
 
   get attributes(): ContextRecord;
+  // add new attributes
   set attributes(data: ContextRecord);
 
   getAttr(key: string, defaultValue?: ContextAttribute): ContextAttribute;

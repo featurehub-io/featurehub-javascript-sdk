@@ -10,7 +10,114 @@ after they arrive on any one of them, without every instance needing its own per
 connection to FeatureHub. Also, if a connection temporarily fails to FeatureHub, as long as Redis is available
 then updates will keep arriving.
 
+**Note** This is a standard format across the SDKs that support Redis, all languages will be able  to use the same Redis backing store and set of keys.
+
 **Node.js only.** Requires Node.js ≥ 20.
+
+---
+
+## Installation
+
+```bash
+npm install featurehub-store-redis
+# or
+pnpm add featurehub-store-redis
+```
+
+The `redis` package (v5) and `featurehub-javascript-core-sdk` are peer dependencies.
+
+---
+
+## Usage
+
+### Connect via URL
+
+```typescript
+import { EdgeFeatureHubConfig } from 'featurehub-javascript-node-sdk';
+import { RedisSessionStoreUrl } from 'featurehub-store-redis';
+
+const fhConfig = new EdgeFeatureHubConfig(edgeUrl, apiKey);
+
+const store = new RedisSessionStoreUrl('redis://localhost:6379', fhConfig);
+
+await fhConfig.init();
+```
+
+### Connect via client options (TLS, auth, etc.)
+
+```typescript
+import { RedisSessionStoreClient } from 'featurehub-store-redis';
+
+const store = new RedisSessionStoreClient(
+  {
+    socket: { host: 'redis.internal', port: 6380, tls: true },
+    password: process.env.REDIS_PASSWORD,
+  },
+  fhConfig,
+);
+
+```
+
+### Connect to a Redis Cluster
+
+```typescript
+import { RedisSessionStoreCluster } from 'featurehub-store-redis';
+
+const store = new RedisSessionStoreCluster(
+  {
+    rootNodes: [
+      { host: 'redis-node-1', port: 6379 },
+      { host: 'redis-node-2', port: 6379 },
+    ],
+  },
+  fhConfig, { delay}
+);
+await store.init();
+```
+
+Call `store.close()` during graceful shutdown to stop the refresh timer and deregister the
+listener.
+
+---
+
+## Options
+
+All three classes accept an optional `RedisSessionStoreOptions` object as their last argument.
+
+| Option             | Type | Default        | Description |
+|--------------------|------|----------------|-------------|
+| `prefix`           | `string` | `"featurehub"` | Prefix for all Redis keys written by this store. Change this if multiple environments or applications share the same Redis instance. |
+| `backoffTimeout`   | `number` | `500`          | Milliseconds to wait between write retries when a `WATCH` conflict is detected (single-node only). |
+| `retryUpdateCount` | `number` | `10`           | Maximum number of write attempts before giving up on a conflicted write. |
+| `refreshTimeout`   | `number` | `300`          | How often (in seconds) the store polls Redis for changes made by other instances. |
+|`delayInit` | `boolean| `false`        | Whether to delay calling `init()` or do it in the constructor in  the background| 
+
+```typescript
+const store = new RedisSessionStoreUrl('redis://localhost:6379', fhConfig, {
+  prefix: 'myapp',
+  refreshTimeout: 60,   // check for external changes every minute
+  backoff_timeout: 200,  // faster retry on conflict
+});
+```
+
+---
+
+## Lifecycle
+
+```
+new RedisSessionStoreUrl(url, fhConfig, options)
+        │
+        ▼
+await store.init()   ← connects to Redis, loads cached state into repository,
+        │              starts periodic refresh timer. This is done implicitly unless delayInit is `true`.
+        │
+  [application runs]
+        │
+store.close()        ← stops refresh timer, deregisters feature listener
+```
+
+`store.connected` returns `true` while the store is initialised and the Redis client reports
+the connection as open.
 
 ---
 
@@ -56,111 +163,6 @@ Two keys are written per environment:
 | `{prefix}_{environmentId}_sha` | SHA-256 fingerprint of the above (used for change detection) |
 
 The default prefix is `featurehub`.
-
----
-
-## Installation
-
-```bash
-npm install featurehub-store-redis
-# or
-pnpm add featurehub-store-redis
-```
-
-The `redis` package (v5) and `featurehub-javascript-core-sdk` are peer dependencies.
-
----
-
-## Usage
-
-### Connect via URL
-
-```typescript
-import { EdgeFeatureHubConfig } from 'featurehub-javascript-node-sdk';
-import { RedisSessionStoreUrl } from 'featurehub-store-redis';
-
-const fhConfig = new EdgeFeatureHubConfig(edgeUrl, apiKey);
-
-const store = new RedisSessionStoreUrl('redis://localhost:6379', fhConfig);
-await store.init();
-
-await fhConfig.init();
-```
-
-### Connect via client options (TLS, auth, etc.)
-
-```typescript
-import { RedisSessionStoreClient } from 'featurehub-store-redis';
-
-const store = new RedisSessionStoreClient(
-  {
-    socket: { host: 'redis.internal', port: 6380, tls: true },
-    password: process.env.REDIS_PASSWORD,
-  },
-  fhConfig,
-);
-await store.init();
-```
-
-### Connect to a Redis Cluster
-
-```typescript
-import { RedisSessionStoreCluster } from 'featurehub-store-redis';
-
-const store = new RedisSessionStoreCluster(
-  {
-    rootNodes: [
-      { host: 'redis-node-1', port: 6379 },
-      { host: 'redis-node-2', port: 6379 },
-    ],
-  },
-  fhConfig,
-);
-await store.init();
-```
-
-Call `store.close()` during graceful shutdown to stop the refresh timer and deregister the
-listener.
-
----
-
-## Options
-
-All three classes accept an optional `RedisSessionStoreOptions` object as their last argument.
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `prefix` | `string` | `"featurehub"` | Prefix for all Redis keys written by this store. Change this if multiple environments or applications share the same Redis instance. |
-| `backoff_timeout` | `number` | `500` | Milliseconds to wait between write retries when a `WATCH` conflict is detected (single-node only). |
-| `retry_update_count` | `number` | `10` | Maximum number of write attempts before giving up on a conflicted write. |
-| `refresh_timeout` | `number` | `300` | How often (in seconds) the store polls Redis for changes made by other instances. |
-
-```typescript
-const store = new RedisSessionStoreUrl('redis://localhost:6379', fhConfig, {
-  prefix: 'myapp',
-  refresh_timeout: 60,   // check for external changes every minute
-  backoff_timeout: 200,  // faster retry on conflict
-});
-```
-
----
-
-## Lifecycle
-
-```
-new RedisSessionStoreUrl(url, fhConfig, options)
-        │
-        ▼
-await store.init()   ← connects to Redis, loads cached state into repository,
-        │              starts periodic refresh timer
-        │
-  [application runs]
-        │
-store.close()        ← stops refresh timer, deregisters feature listener
-```
-
-`store.connected` returns `true` while the store is initialised and the Redis client reports
-the connection as open.
 
 ---
 

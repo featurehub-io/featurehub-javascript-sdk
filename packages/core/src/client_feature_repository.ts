@@ -122,6 +122,8 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   }
 
   public notify(state: SSEResultState, data: unknown, source: string) {
+    fhLog.trace(`received ${state} from ${source} ${JSON.stringify(data ?? '<none>')}`);
+
     if (state !== null && state !== undefined) {
       switch (state) {
         case SSEResultState.Ack: // do nothing, expect state shortly

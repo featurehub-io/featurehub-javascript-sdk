@@ -129,12 +129,18 @@ importers:
       featurehub-javascript-node-sdk:
         specifier: workspace:*
         version: link:../../packages/node
+      featurehub-store-redis:
+        specifier: workspace:*
+        version: link:../../plugins/stores/featurehub-store-redis
       featurehub-usage-opentelemetry:
         specifier: workspace:*
         version: link:../../plugins/usage/featurehub-usage-opentelemetry
       featurehub-usage-segment:
         specifier: workspace:*
         version: link:../../plugins/usage/featurehub-usage-segment
+      featurehub-yaml-interceptor:
+        specifier: workspace:*
+        version: link:../../plugins/interceptors/featurehub-yaml-interceptor
     devDependencies:
       '@types/cors':
         specifier: ^2.8.19

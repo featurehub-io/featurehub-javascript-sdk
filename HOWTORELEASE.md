@@ -28,3 +28,7 @@ You must indicate these are not to be handled by publish using `"private": true`
 ## Cross dependencies
 
 If a package depends on another, make sure to use `workspace:^` instead of `workspace:*` so that when the package is published it uses semver versions.
+
+## To confirm packaging
+
+Use `pnpm pack` which will create the same file it would update as. To be exact it will do a `pnpm run prepublishOnly` then a pack.

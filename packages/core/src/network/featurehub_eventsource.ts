@@ -107,7 +107,6 @@ export class FeatureHubEventSourceClient implements EdgeService {
       this.eventSource.addEventListener(fName, (e) => {
         try {
           const data = JSON.parse((e as any).data);
-          fhLog.trace(`received ${fName}`, data);
           if (fName === SSEResultState.Config) {
             this.processConfig(data);
           } else {
