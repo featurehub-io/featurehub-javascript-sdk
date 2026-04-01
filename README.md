@@ -813,21 +813,6 @@ durable location. On startup they replay the stored state into the repository im
 the first edge connection is established — so your application has a usable set of feature values
 from the moment it starts.
 
-### [`featurehub-store-localstorage`](https://www.npmjs.com/package/featurehub-store-localstorage) — Browser storage
-
-Persists the full feature state to `sessionStorage` (default) or `localStorage` in the browser.
-Useful for single-page applications where you want features available before the FeatureHub
-connection resolves. Pass `localStorage` as the second argument to persist across page loads.
-
-```typescript
-import { LocalSessionStore } from "featurehub-store-localstorage";
-const store = new LocalSessionStore(fhConfig);          // sessionStorage
-const store = new LocalSessionStore(fhConfig, localStorage); // across page loads
-```
-
-Call `store.close()` to deregister the listener on teardown. See the
-[package README](https://www.npmjs.com/package/featurehub-store-localstorage) for full details.
-
 ### [`featurehub-store-redis`](https://www.npmjs.com/package/featurehub-store-redis) — Redis (Node.js only)
 
 Persists feature state to Redis for multi-instance Node.js deployments. All instances share a

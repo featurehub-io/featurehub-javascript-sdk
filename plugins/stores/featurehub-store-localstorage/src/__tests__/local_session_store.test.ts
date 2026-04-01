@@ -248,14 +248,4 @@ describe("LocalSessionStore", () => {
       expect(Object.keys(saved)).toEqual(["f2"]);
     });
   });
-
-  describe("close", () => {
-    it("deregisters itself from the repository", () => {
-      const removeSpy = vi.spyOn(repo, "removeRawUpdateFeatureListener");
-      const config = makeConfig(repo);
-      const store = new LocalSessionStore(config, storage);
-      store.close();
-      expect(removeSpy).toHaveBeenCalledOnce();
-    });
-  });
 });

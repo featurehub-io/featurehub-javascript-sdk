@@ -9,12 +9,12 @@
     "clean": "rimraf node_modules dist",
     "preview": "vite preview",
     "start": "vite",
-    "link": "pnpm link ../../packages/js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "axios": "1.13.5",
     "featurehub-javascript-client-sdk": "workspace:*",
+    "featurehub-store-localstorage": "workspace:^",
     "immutability-helper": "^3.1.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",

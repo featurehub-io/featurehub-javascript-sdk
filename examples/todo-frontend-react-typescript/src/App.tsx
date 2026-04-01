@@ -4,6 +4,7 @@ import { FeatureHub, Readyness } from "featurehub-javascript-client-sdk";
 import * as React from "react";
 
 import { Configuration, type Todo, TodoServiceApi } from "./api";
+import {LocalSessionStore} from "featurehub-store-localstorage";
 
 let todoApi: TodoServiceApi;
 const user = "fred";
@@ -41,6 +42,9 @@ class App extends React.Component<object, { todos: TodoData }> {
   }
 
   async initializeFeatureHub() {
+    // self registers
+    new LocalSessionStore(FeatureHub.config);
+
     FeatureHub.config.addReadinessListener((_readyness: Readyness, firstTimeReady: boolean) => {
       if (firstTimeReady) {
         const color = FeatureHub.context.getString("SUBMIT_COLOR_BUTTON");
@@ -84,7 +88,7 @@ class App extends React.Component<object, { todos: TodoData }> {
       resolved: false,
     };
 
-    // Send an event to Google Analytics
+    // Send an event to Usage
     FeatureHub.context.recordNamedUsage("todo-add", { gaValue: "10" });
     const todoResult = (await todoApi.addTodo(user, todo)).data;
     this.setState({ todos: this.state.todos.changeTodos(todoResult) });

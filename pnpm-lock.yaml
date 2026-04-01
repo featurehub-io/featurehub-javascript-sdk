@@ -215,6 +215,9 @@ importers:
       featurehub-javascript-client-sdk:
         specifier: workspace:*
         version: link:../../packages/js
+      featurehub-store-localstorage:
+        specifier: workspace:^
+        version: link:../../plugins/stores/featurehub-store-localstorage
       immutability-helper:
         specifier: ^3.1.1
         version: 3.1.1
@@ -723,8 +726,8 @@ importers:
   plugins/stores/featurehub-store-redis:
     dependencies:
       featurehub-javascript-core-sdk:
-        specifier: 2.0.0
-        version: 2.0.0
+        specifier: workspace:^
+        version: link:../../../packages/core
       redis:
         specifier: ^5.11.0
         version: 5.11.0
@@ -3518,10 +3521,6 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
-
-  featurehub-javascript-core-sdk@2.0.0:
-    resolution: {integrity: sha512-/aaqdC6xCKT/DXc54bSS3uugXh14UHzPG/dcbNDcgHXoUpGka/MXt9H6dqhWLYfhVM6T7nv7ikRwzjAIxAYlmg==}
-    engines: {node: '>=20.0.0'}
 
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
@@ -8838,12 +8837,6 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
-
-  featurehub-javascript-core-sdk@2.0.0:
-    dependencies:
-      murmurhash: 2.0.1
-      netmask: 2.0.2
-      semver-compare: 1.0.0
 
   fetch-blob@3.2.0:
     dependencies:

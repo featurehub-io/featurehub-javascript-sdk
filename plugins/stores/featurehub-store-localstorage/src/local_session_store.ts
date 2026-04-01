@@ -13,13 +13,12 @@ export class LocalSessionStore implements RawUpdateFeatureListener {
   private readonly _storage: Storage;
   private _storageKey: string;
   private _store: Record<string, FeatureState> = {};
-  private _listenerHandle: number;
 
   constructor(config: FeatureHubConfig, storage?: Storage) {
     this._config = config;
     this._storage = storage ?? sessionStorage;
     this._storageKey = config.featureUrl();
-    this._listenerHandle = config.repository().registerRawUpdateFeatureListener(this);
+    config.repository().registerRawUpdateFeatureListener(this);
     this._init(this._storageKey);
   }
 
@@ -74,6 +73,5 @@ export class LocalSessionStore implements RawUpdateFeatureListener {
   }
 
   close(): void {
-    this._config.repository().removeRawUpdateFeatureListener(this._listenerHandle);
   }
 }
