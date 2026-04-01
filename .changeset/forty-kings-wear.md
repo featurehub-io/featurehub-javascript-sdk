@@ -4,6 +4,7 @@
 "featurehub-javascript-core-sdk": patch
 "featurehub-javascript-node-sdk": patch
 "featurehub-javascript-client-sdk": patch
+"featurehub-yaml-interceptor": patch
 ---
 
 ensure ^ versions
