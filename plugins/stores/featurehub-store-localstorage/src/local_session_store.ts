@@ -72,6 +72,5 @@ export class LocalSessionStore implements RawUpdateFeatureListener {
     }
   }
 
-  close(): void {
-  }
+  close(): void {}
 }

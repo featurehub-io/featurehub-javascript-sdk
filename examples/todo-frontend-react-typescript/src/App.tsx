@@ -1,10 +1,10 @@
 import "./App.css";
 
 import { FeatureHub, Readyness } from "featurehub-javascript-client-sdk";
+import { LocalSessionStore } from "featurehub-store-localstorage";
 import * as React from "react";
 
 import { Configuration, type Todo, TodoServiceApi } from "./api";
-import {LocalSessionStore} from "featurehub-store-localstorage";
 
 let todoApi: TodoServiceApi;
 const user = "fred";
