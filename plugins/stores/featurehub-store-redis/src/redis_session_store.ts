@@ -22,18 +22,21 @@ export interface RedisSessionStoreOptions {
   /** Key prefix for all FeatureHub state in Redis (default: "featurehub") */
   prefix?: string;
   /** Milliseconds to wait between write retries on WATCH conflict (default: 500) */
-  backoff_timeout?: number;
+  backoffTimeout?: number;
   /** Maximum number of write attempts before giving up (default: 10) */
-  retry_update_count?: number;
+  retryUpdateCount?: number;
   /** How often (in seconds) to poll Redis for external changes (default: 300) */
-  refresh_timeout?: number;
+  refreshTimeout?: number;
+  /** don't do an immediate init (default: false) */
+  delayInit?: boolean;
 }
 
 const DEFAULTS: Required<RedisSessionStoreOptions> = {
   prefix: "featurehub",
-  backoff_timeout: 500,
-  retry_update_count: 10,
-  refresh_timeout: 300,
+  backoffTimeout: 500,
+  retryUpdateCount: 10,
+  refreshTimeout: 300,
+  delayInit: false,
 };
 
 // Minimal structural interface covering what we actually call on both single-node and cluster clients.
@@ -65,7 +68,6 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
   private readonly _backoffTimeout: number;
   private readonly _retryCount: number;
   private readonly _refreshTimeout: number;
-  private _listenerHandle: number | undefined;
   private _timer: ReturnType<typeof setInterval> | undefined;
   private _lastSha: string | undefined;
   private _active = false;
@@ -73,9 +75,9 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
   protected constructor(config: FeatureHubConfig, options?: Partial<RedisSessionStoreOptions>) {
     this._config = config;
     this._prefix = options?.prefix ?? DEFAULTS.prefix;
-    this._backoffTimeout = options?.backoff_timeout ?? DEFAULTS.backoff_timeout;
-    this._retryCount = options?.retry_update_count ?? DEFAULTS.retry_update_count;
-    this._refreshTimeout = options?.refresh_timeout ?? DEFAULTS.refresh_timeout;
+    this._backoffTimeout = options?.backoffTimeout ?? DEFAULTS.backoffTimeout;
+    this._retryCount = options?.retryUpdateCount ?? DEFAULTS.retryUpdateCount;
+    this._refreshTimeout = options?.refreshTimeout ?? DEFAULTS.refreshTimeout;
   }
 
   // ── key derivation ───────────────────────────────────────────────────────
@@ -103,7 +105,10 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
 
   private async _readFeaturesFromRedis(): Promise<FeatureState[] | null> {
     const raw = await this._client.get(this._featuresKey());
-    if (!raw) return null;
+    if (!raw) {
+      fhLog.trace("[featurehubsdk] no features found in redis source");
+      return null;
+    }
     try {
       return JSON.parse(raw) as FeatureState[];
     } catch {
@@ -153,6 +158,8 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
     let featuresToWrite = features;
     let shaToWrite = newSha;
     let encodedToWrite = encoded;
+
+    fhLog.trace(`[featurehubsdk] writing ${features.length} features to redis`);
 
     for (let attempt = 0; attempt < this._retryCount; attempt++) {
       try {
@@ -209,7 +216,10 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
 
   private async _loadFromRedis(): Promise<void> {
     const features = await this._readFeaturesFromRedis();
-    if (!features) return;
+    if (!features) {
+      return;
+    }
+
     (this._config.repository() as InternalFeatureRepository).notify(
       SSEResultState.Features,
       features,
@@ -280,10 +290,12 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
     }
 
     if (!this._client.isOpen) {
+      fhLog.trace("connecting to redis");
       await this._client.connect();
+      fhLog.trace("connected to redis");
     }
 
-    this._listenerHandle = this._config.repository().registerRawUpdateFeatureListener(this);
+    this._config.repository().registerRawUpdateFeatureListener(this);
 
     this._lastSha = (await this._client.get(this._shaKey())) ?? undefined;
     if (this._lastSha !== undefined) {
@@ -308,10 +320,6 @@ abstract class RedisSessionStoreBase implements RawUpdateFeatureListener {
     if (this._timer !== undefined) {
       clearInterval(this._timer);
       this._timer = undefined;
-    }
-    if (this._listenerHandle !== undefined) {
-      this._config.repository().removeRawUpdateFeatureListener(this._listenerHandle);
-      this._listenerHandle = undefined;
     }
   }
 
@@ -351,6 +359,9 @@ export class RedisSessionStoreUrl extends RedisSessionStoreBase {
     super(config, options);
     this._client = createClient({ url }) as unknown as RedisLike;
     this._isCluster = false;
+    if (!options?.delayInit) {
+      this.init();
+    }
   }
 }
 
@@ -364,6 +375,9 @@ export class RedisSessionStoreClient extends RedisSessionStoreBase {
     super(config, options);
     this._client = createClient(clientOptions) as unknown as RedisLike;
     this._isCluster = false;
+    if (!options?.delayInit) {
+      this.init();
+    }
   }
 }
 
@@ -377,5 +391,8 @@ export class RedisSessionStoreCluster extends RedisSessionStoreBase {
     super(config, options);
     this._client = createCluster(clusterOptions) as unknown as RedisLike;
     this._isCluster = true;
+    if (!options?.delayInit) {
+      this.init();
+    }
   }
 }

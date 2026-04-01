@@ -1,6 +1,10 @@
 # featurehub-store-localstorage
 
 Browser storage persistence for the [FeatureHub](https://featurehub.io) JavaScript SDK.
+       
+HALTED: the polling delegate already does this in a browser. It doesn't
+exist for streaming, but it is there for polling.
+
 
 Without this plugin, a browser-based application must wait for the FeatureHub connection to
 deliver the current feature state before it can render. This adds latency on every page load or

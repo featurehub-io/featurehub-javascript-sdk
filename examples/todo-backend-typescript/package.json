@@ -30,7 +30,9 @@
     "express": "^5.1.0",
     "featurehub-javascript-node-sdk": "workspace:*",
     "featurehub-usage-opentelemetry": "workspace:*",
-    "featurehub-usage-segment": "workspace:*"
+    "featurehub-usage-segment": "workspace:*",
+    "featurehub-store-redis": "workspace:*",
+    "featurehub-yaml-interceptor": "workspace:*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

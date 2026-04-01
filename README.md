@@ -241,17 +241,6 @@ app.get("/", function (req, res) {
 
 In this section we cover a bundle of different variations for clients and servers.
 
-### Does my existing code from 1.x work?
-
-If you have browser code that uses the version earlier than 1.2.0, it still works largely the same and its unlikely you will need to change anything.
-The biggest change we made in 1.2.+ is in the browser handling. The 99% use case for a browser is a single user, so
-that means requests for a new context (`FeatureHub.config.newContext()` for example) always actually give
-you back exactly the same context. And we reference count your requests as well, once your connection is open,
-its open until all requests to create a new context also close them.
-
-If you actually _want_ a second (or third, or forth) context in a browser, you can absolutely get one, you will
-need to create one - a new `ServerEvalFeatureContext`.
-
 ### Can the browser initialize like the NodeJS example?
 
 Yes, the `<meta>` tag headers are simply an easy way to initialise we introduced in the 1.2.0 version of the API.
@@ -276,27 +265,27 @@ FeatureHub.set(fhConfig);
 FeatureHub is able to provide user targeting - to support progressive rollouts, targeted rollouts and even
 A/B testing. This will require you to pass ClientContext. When you create config and immediately initialize it, it doesn't contain any Client Context information, however you can customise this connection at any time and add the context:
 
-Example to specify the languages  
-and username of the person up front you can do this:
+Example to specify the languages and username of the person up front you can do this:
 
 ```typescript
 const fhConfig = EdgeFeatureHubConfig.config(edgeUrl, apiKey);
 fhConfig
-  .newContext()
-  .userKey("<some-user-key>")
-  .attributeValues("languages", navigator.languages)
-  .build();
+  .context({
+    "userKey": "<some-user-key>",
+    "languages": navigator.languages,
+    "warehouses": ['a', 'b']
+  }).build();
 ```
 
 This tells the SDK to hold onto those pieces of information and provide targeted evaluation
 against them.
 
-**Important Note** - you can change these at any time, just remember to add `.build()` on the end. You also do not require the `init()` because the `.build()` will do it for you.
+**Important Note** - you can change these at any time, just remember to add `.build()` on the end. You also do not require the `init()` because the `.build()` will do it for you. `.build()` on its own performs no function when using client evaluated keys however, except to ensure that `init()` has been called.
 
-### What is the deal with readyness?
+### What is the deal with readiness?
 
-Readyness indicates when the SDK has received state or failed to receive state. There is an event on the SDK called
-`addReadynessListener`. You get two pieces of information, the readyness status and whether its the first time its been ready.
+Readiness indicates when the SDK has received state or failed to receive state. There is an event on the SDK called
+`addReadinessListener`. You get two pieces of information, the readiness status and whether it is the first time it has been ready.
 This is often the information you need to kick your UI into gear in some way.
 
 ```typescript
@@ -317,6 +306,15 @@ You can always ask the config what the readiness is.
 ```typescript
 fhConfig.readiness();
 ```
+
+You can also decide to wait for your connection to become ready before proceeding,
+e.g.
+
+```typescript
+await fhConfig.waitForReady();
+```
+
+This will delay up to 10 seconds by default if you do not specify a time (in milliseconds). 
 
 ### Choosing a connection mode
 
@@ -377,9 +375,9 @@ to make it available in a server app, it is shown in the Quick Start.
 FeatureHub supports client and server side evaluation of complex rollout strategies
 that are applied to individual feature values in a specific environment. This includes support of preset rules, e.g. per **_user key_**, **_country_**, **_device type_**, **_platform type_** as well as **_percentage splits_** rules and custom rules that you can create according to your application needs.
 
-Client Contexts are _mutable_ objects - which means you can keep changing them as you need to.
+Client Contexts are _mutable_ objects - which means you can keep changing them as you need to. Unlike many other Featue flag providers, Context are a *central concept* used by FeatureHub and it is you hold onto them and for a single request chain, you do *NOT* mutate them, otherwise you run the risk of evaluating the same feature in a different way. The alternative is to rebuild the context again and again on each evaluation, which is less desirable, runs the risk of evaluation drift, but it is the type of API used by OpenFeatures. 
 
-- For server side evaluation, you need to indicate when you have finished a set of changes and call `.build()`. This grabs all of the
+- For *server side evaluation*, you need to indicate when you have finished a set of changes and call `.build()`. This grabs all of the
   attributes in a context evaluation and sends them off to the server for evaluation to get the new state of the features. If you
   want an accurate subsequent representation of the features, you should `await` this request.
 - For client side evaluation, simply changing and using them in evaluations is all that is required. You can however use `.build()`,
@@ -389,7 +387,12 @@ Client Contexts are _mutable_ objects - which means you can keep changing them a
 Getting a new context is covered above, but as a refresher, once you have a `FeatureHubConfig` you can just call:
 
 ```typescript
+// an empty context
 const fhContext = fhConfig.newContext();
+
+// where you already know some information up front
+const fhContext = fhConfig.context({ "userKey": userObject.name || 'anon' });
+
 ```
 
 We will assume in the following examples you have a variable called `fhContext` that represents your context.
@@ -399,7 +402,7 @@ For more details on rollout strategies, targeting rules and feature experiments 
 ```typescript
 await fhContext
   .userKey("user.email@host.com")
-  .country(StrategyAttributeCountryName.NewZealand)
+  .country(StrategyAttributeCountryName.Thailand)
   .build();
 
 if (fhClient.isEnabled("FEATURE_KEY")) {
@@ -465,14 +468,24 @@ wish to remove what was there before.
 To add a custom key/value pair, use `attributeValue(key, value)`
 
 ```typescript
-await fhContext.attributeValue("first-language", "italian").build();
+await fhContext.attributeValue("first-language", "cantonese").build();
 ```
 
 Or with array of values (only applicable to custom rules):
 
 ```typescript
-await fhContext.attributeValue("languages", ["italian", "english", "german"]).build();
+await fhContext.attributeValue("languages", ["thai", "english", "mandarin", "cantonese"]).build();
 ```
+
+an alternative for the above two would be:
+
+```typescript
+await fhContext.attributes({
+  "first-language": "cantonese",
+  "languages": ["thai", "english", "mandarin", "cantonese"]}).build();
+```
+
+These do not replace your context, merely merge into them.
 
 If you define a strategy using a custom rule, providing an array will make the SDK compare each value in turn against the rule
 and if _any_ matches, the rule will be considered fulfilled.
@@ -643,7 +656,7 @@ The SDK has a pluggable usage tracking system that fires whenever a feature is e
 serves two purposes: it powers the Passive REST polling mode (a feature evaluation can trigger a poll when the
 cache has expired), and it lets you send evaluation data to external analytics or observability tools.
 
-UsagePlugins will operate _asynchronously_ but default, so when a UsageEvent is sent to them, it will be inside a "fire and forget"
+UsagePlugins will operate _asynchronously_ by default, so when a UsageEvent is sent to them, it will be inside a "fire and forget"
 promise. If you want to ensure it affects something within the context of what the user is doing then it should be synchronous
 and you will need to override the `canSendAsync` to `false`. The OpenTelemetry plugins are _not_ async because they need to modify the
 baggage of the current context the user is in, the Twilio Segment however is async as it is just sending tracking information.
@@ -800,21 +813,6 @@ durable location. On startup they replay the stored state into the repository im
 the first edge connection is established — so your application has a usable set of feature values
 from the moment it starts.
 
-### [`featurehub-store-localstorage`](https://www.npmjs.com/package/featurehub-store-localstorage) — Browser storage
-
-Persists the full feature state to `sessionStorage` (default) or `localStorage` in the browser.
-Useful for single-page applications where you want features available before the FeatureHub
-connection resolves. Pass `localStorage` as the second argument to persist across page loads.
-
-```typescript
-import { LocalSessionStore } from "featurehub-store-localstorage";
-const store = new LocalSessionStore(fhConfig);          // sessionStorage
-const store = new LocalSessionStore(fhConfig, localStorage); // across page loads
-```
-
-Call `store.close()` to deregister the listener on teardown. See the
-[package README](https://www.npmjs.com/package/featurehub-store-localstorage) for full details.
-
 ### [`featurehub-store-redis`](https://www.npmjs.com/package/featurehub-store-redis) — Redis (Node.js only)
 
 Persists feature state to Redis for multi-instance Node.js deployments. All instances share a
@@ -829,9 +827,11 @@ timer (default 5 min) detects changes made by other instances via a SHA-256 fing
 
 ```typescript
 import { RedisSessionStoreUrl } from "featurehub-store-redis";
-const store = new RedisSessionStoreUrl("redis://localhost:6379", fhConfig);
-await store.init();
+new RedisSessionStoreUrl("redis://localhost:6379", fhConfig);
 ```
+
+The Redis store self registers with the config on start and unless you specify (in the third option, see the package for details), it will immediately initialise itself.
+It is compatible with the Redis backing store of all other SDKs.
 
 Call `store.close()` on shutdown. See the
 [package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor

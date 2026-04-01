@@ -74,10 +74,7 @@ curl -X POST \
 and to get the list of to-dos:
 
 ```bash
-curl -X GET \
-http://0.0.0.0:8099/todo/list \
--H 'Postman-Token: 6bfe318a-5481-4e8e-a3e4-ab881202ba31' \
--H 'cache-control: no-cache'
+curl -X GET http://0.0.0.0:8099/todo/list 
 ```
 
 Watch how "title" value in the response changes from lower case to upper case when you turn feature on/off from the FeatureHub Admin Console

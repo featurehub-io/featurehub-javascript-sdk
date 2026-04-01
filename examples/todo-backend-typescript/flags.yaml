@@ -1,0 +1,9 @@
+flagValues:
+  FEATURE_NUMBER: 64
+  text_colour:
+  FEATURE_JSON:
+    x: 1
+  FEATURE_TITLE_TO_UPPERCASE: false
+  FEATURE_STRING: "ugg-boots"
+  SUBMIT_COLOR_BUTTON: ""
+  uppercase_text: true

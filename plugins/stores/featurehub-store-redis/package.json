@@ -13,7 +13,10 @@
   "files": [
     "dist"
   ],
-  "private": true,
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "keywords": [
     "feature-flag-api",
     "feature-flag-sdk",
@@ -63,7 +66,7 @@
     "vitest": "catalog:vitest"
   },
   "dependencies": {
-    "featurehub-javascript-core-sdk": "workspace:*",
+    "featurehub-javascript-core-sdk": "workspace:^",
     "redis": "^5.11.0"
   },
   "engines": {

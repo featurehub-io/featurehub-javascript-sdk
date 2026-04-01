@@ -4,38 +4,57 @@ import express from "express";
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
+  type FeatureHubConfig,
   FHLog,
   Readyness,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
+import { RedisSessionStoreUrl } from "featurehub-store-redis";
 import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
+import { LocalYamlFeatureStore, LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
 import fs from "fs";
 import path from "path";
 
 import type { ITodoApiController } from "./generated-interface";
 import { Todo, TodoApiRouter } from "./generated-interface";
 
+FHLog.fhLog.trace = (...args: any) => console.log(args);
+
+let fhConfig: FeatureHubConfig;
 if (
   process.env["FEATUREHUB_EDGE_URL"] === undefined ||
   process.env["FEATUREHUB_CLIENT_API_KEY"] === undefined
 ) {
-  console.error(
-    "You must define the location of your FeatureHub Edge URL in the environment variable FEATUREHUB_EDGE_URL, and your API Key in FEATUREHUB_CLIENT_API_KEY",
+  if (process.env["FEATUREHUB_LOCAL_YAML"]) {
+    fhConfig = new EdgeFeatureHubConfig();
+    // it is a one off load, not a rawUpdateListeenr
+    new LocalYamlFeatureStore(fhConfig);
+    fhConfig.addValueInterceptor(new LocalYamlValueInterceptor(null, { watchForChanges: true }));
+  } else {
+    console.error(
+      "You must define the location of your FeatureHub Edge URL in the environment variable FEATUREHUB_EDGE_URL, and your API Key in FEATUREHUB_CLIENT_API_KEY",
+    );
+    process.exit(-1);
+  }
+} else {
+  fhConfig = new EdgeFeatureHubConfig(
+    process.env["FEATUREHUB_EDGE_URL"]!,
+    process.env["FEATUREHUB_CLIENT_API_KEY"]!,
   );
-  process.exit(-1);
+
+  if (process.env["FEATUREHUB_REDIS_URL"]) {
+    FHLog.fhLog.trace(`registering for redis`);
+    new RedisSessionStoreUrl(process.env["FEATUREHUB_REDIS_URL"], fhConfig, {
+      refreshTimeout: parseInt(process.env["FEATUREHUB_REDIS_POLL_INTERVAL"] || "3"),
+    });
+  }
 }
 
 //provide EDGE_URL, e.g. 'http://localhost:8553/'
 //provide API_KEY, e.g. default/ff8635ef-ed28-4cc3-8067-b9ffd8882100/lOopBkGPALBcI0p6AGpf4jAdUi2HxR0RkhYvV00i1XsMQLWkltaoFvEfs7uFsZaQ45kF5FmhGE7rWTSg'
-
-FHLog.fhLog.trace = (...args: any) => console.log(args);
-const fhConfig = new EdgeFeatureHubConfig(
-  process.env["FEATUREHUB_EDGE_URL"]!,
-  process.env["FEATUREHUB_CLIENT_API_KEY"]!,
-);
 
 // if a Segment key is defined, set it up and register it as a usage plugin
 if (process.env["SEGMENT_WRITE_KEY"] && process.env["SEGMENT_ENABLED"]) {
@@ -64,6 +83,12 @@ app.get("/health/liveness", (_req, res) => {
   } else {
     res.status(500).send("not ready");
   }
+});
+
+// used when we want to rely only on the backing store
+app.get("/health/disconnect", (_, res) => {
+  fhConfig.closeEdge();
+  res.status(200).send("ok");
 });
 
 app.use(

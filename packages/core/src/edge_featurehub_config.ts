@@ -11,6 +11,7 @@ import {
 import type { FeatureStateHolder } from "./feature_state";
 import {
   type EdgeServiceProvider,
+  type RawUpdateFeatureListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
@@ -292,19 +293,29 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     }
   }
 
-  forceClose(): void {
-    fhLog.trace(`force close requested`);
-    this._edgeServices.forEach((es) => {
+  closeEdge(): void {
+    if (this._isClosed) return;
+    const edges = [...this._edgeServices];
+
+    this._edgeServices.length = 0;
+
+    edges.forEach((es) => {
       es.close();
     });
-    this._edgeServices.length = 0;
+
+    // if someone tries to open one,  they get a "fake".
+    this._edgeService = noopEdgeServiceProvider;
+  }
+
+  forceClose(): void {
+    fhLog.trace(`force close requested`);
+    this.closeEdge();
     this._initialized = false;
     this._isClosed = true;
     this._usageAdapter?.close();
     this._usageAdapter = undefined;
     this._repository?.close();
     this._repository = undefined;
-    this._edgeService = undefined;
     this._clientContext = undefined;
   }
 
@@ -467,5 +478,11 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     }
 
     return this._environmentId;
+  }
+
+  registerRawUpdateFeatureListener(listener: RawUpdateFeatureListener): void {
+    if (this._isClosed) return;
+
+    this.repository().registerRawUpdateFeatureListener(listener);
   }
 }

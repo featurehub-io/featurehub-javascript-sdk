@@ -107,6 +107,8 @@ function makeConfig(
     clientEvaluated: () => opts.clientEval ?? true,
     getApiKeys: () => opts.apiKeys ?? ["key*"],
     repository: () => repo,
+    registerRawUpdateFeatureListener: (listener: unknown) =>
+      repo.registerRawUpdateFeatureListener(listener as never),
   } as unknown as FeatureHubConfig;
 }
 
@@ -114,12 +116,21 @@ function makeStore(
   fakeRedis: FakeRedis,
   repo: ClientFeatureRepository,
   configOpts: { clientEval?: boolean; apiKeys?: string[] } = {},
-  storeOpts: Partial<{ prefix: string; backoff_timeout: number; retry_update_count: number }> = {},
+  storeOpts: Partial<{
+    prefix: string;
+    backoffTimeout: number;
+    retryUpdateCount: number;
+    delayInit: boolean;
+  }> = {},
 ) {
   const config = makeConfig(repo, configOpts);
+  if (storeOpts.delayInit === undefined) {
+    // reverse of normal
+    storeOpts.delayInit = true;
+  }
   const store = new RedisSessionStoreUrl("redis://unused", config, {
-    refresh_timeout: 9999, // disable timer in most tests
-    backoff_timeout: 0,
+    refreshTimeout: 9999, // disable timer in most tests
+    backoffTimeout: 0,
     ...storeOpts,
   });
   (store as unknown as { _client: FakeRedis })._client = fakeRedis;
@@ -167,8 +178,8 @@ describe("RedisSessionStore", () => {
     });
 
     it("registers itself as a RawUpdateFeatureListener", async () => {
-      const spy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       const { store } = makeStore(redis, repo);
+      const spy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       await store.init();
       expect(spy).toHaveBeenCalledOnce();
       store.close();
@@ -197,16 +208,19 @@ describe("RedisSessionStore", () => {
 
     it("refuses to init with server-evaluated API keys", async () => {
       const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { store } = makeStore(redis, repo, {
+        clientEval: false,
+        apiKeys: ["server-key"],
+      });
       const regSpy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
-      const { store } = makeStore(redis, repo, { clientEval: false, apiKeys: ["server-key"] });
       await store.init();
       expect(regSpy).not.toHaveBeenCalled();
       errSpy.mockRestore();
     });
 
     it("allows init with empty API keys regardless of clientEvaluated", async () => {
-      const regSpy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       const { store } = makeStore(redis, repo, { clientEval: false, apiKeys: [] });
+      const regSpy = vi.spyOn(repo, "registerRawUpdateFeatureListener");
       await store.init();
       expect(regSpy).toHaveBeenCalledOnce();
       store.close();
@@ -458,7 +472,7 @@ describe("RedisSessionStore", () => {
     it("retries after WatchError and succeeds", async () => {
       vi.useFakeTimers();
       redis.watchFailTimes = 2;
-      const { store } = makeStore(redis, repo, {}, { backoff_timeout: 1, retry_update_count: 5 });
+      const { store } = makeStore(redis, repo, {}, { backoffTimeout: 1, retryUpdateCount: 5 });
       await store.init();
 
       store.processUpdates([feat({ id: "f1" })], "polling");
@@ -469,11 +483,11 @@ describe("RedisSessionStore", () => {
       store.close();
     });
 
-    it("gives up after exhausting retry_update_count", async () => {
+    it("gives up after exhausting retryUpdateCount", async () => {
       vi.useFakeTimers();
       redis.watchFailTimes = 99;
       const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { store } = makeStore(redis, repo, {}, { backoff_timeout: 1, retry_update_count: 3 });
+      const { store } = makeStore(redis, repo, {}, { backoffTimeout: 1, retryUpdateCount: 3 });
       await store.init();
 
       store.processUpdates([feat()], "polling");
@@ -513,8 +527,9 @@ describe("RedisSessionStore", () => {
       vi.useFakeTimers();
       const config = makeConfig(repo);
       const s = new RedisSessionStoreUrl("redis://unused", config, {
-        refresh_timeout: 1,
-        backoff_timeout: 0,
+        refreshTimeout: 1,
+        backoffTimeout: 0,
+        delayInit: true,
       });
       (s as unknown as { _client: FakeRedis })._client = redis;
       await s.init();
@@ -536,8 +551,9 @@ describe("RedisSessionStore", () => {
 
       const config = makeConfig(repo);
       const s = new RedisSessionStoreUrl("redis://unused", config, {
-        refresh_timeout: 1,
-        backoff_timeout: 0,
+        refreshTimeout: 1,
+        backoffTimeout: 0,
+        delayInit: true,
       });
       (s as unknown as { _client: FakeRedis })._client = redis;
       await s.init();
@@ -553,14 +569,6 @@ describe("RedisSessionStore", () => {
   // ── close ────────────────────────────────────────────────────────────────────
 
   describe("close", () => {
-    it("deregisters the listener from the repository", async () => {
-      const removeSpy = vi.spyOn(repo, "removeRawUpdateFeatureListener");
-      const { store } = makeStore(redis, repo);
-      await store.init();
-      store.close();
-      expect(removeSpy).toHaveBeenCalledOnce();
-    });
-
     it("sets connected to false", async () => {
       const { store } = makeStore(redis, repo);
       await store.init();

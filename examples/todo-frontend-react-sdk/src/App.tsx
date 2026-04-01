@@ -39,7 +39,7 @@ function App() {
       */
     <FeatureHub
       url="http://localhost:8085"
-      apiKey="34dd1279-2080-4dd8-8e7a-a0de35a03727/nl2poOELhloGwEj9WjIM6DlzamxjTtizKbfnzqgI"
+      apiKey="826d3a18-0eb2-4a7c-86ca-056f14b659a2/Y0ZLgljjGmHjYu0dxJJGCAsZiHpMmKOK1RnC9Lqc"
       userKey={userKey}
       pollInterval={5000}
     >

@@ -8,8 +8,9 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "pnpm run build:packages && pnpm run build:examples",
+    "build": "pnpm run build:packages && pnpm run build:plugins && pnpm run build:examples",
     "build:packages": "pnpm --filter './packages/*' run build",
+    "build:plugins": "pnpm --filter './plugins/**' run build",
     "build:examples": "pnpm --filter './examples/*' run build",
     "build:core": "pnpm --filter './packages/core' run build",
     "build:js": "pnpm --filter './packages/js' run build",
