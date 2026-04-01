@@ -67,7 +67,7 @@
   },
   "dependencies": {
     "eventsource": "^4.0.0",
-    "featurehub-javascript-core-sdk": "workspace:*"
+    "featurehub-javascript-core-sdk": "workspace:^"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -3,7 +3,8 @@ import type { EdgeService } from "./edge_service";
 import type { FeatureStateHolder } from "./feature_state";
 import {
   type EdgeServiceProvider,
-  type FeatureHubRepository, type RawUpdateFeatureListener,
+  type FeatureHubRepository,
+  type RawUpdateFeatureListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";
@@ -128,7 +129,7 @@ export interface FeatureHubConfig {
   close(): void;
 
   // close just the server connection leaving the repository, etc open.
-  closeEdge(): void
+  closeEdge(): void;
 
   /**
    * Is this config open or closed? If closed it has no edge connections

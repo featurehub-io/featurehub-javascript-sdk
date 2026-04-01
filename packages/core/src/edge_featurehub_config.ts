@@ -10,7 +10,8 @@ import {
 } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import {
-  type EdgeServiceProvider, type RawUpdateFeatureListener,
+  type EdgeServiceProvider,
+  type RawUpdateFeatureListener,
   Readyness,
   type ReadynessListener,
 } from "./featurehub_repository";

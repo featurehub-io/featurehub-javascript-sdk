@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:node",
-    "featurehub-javascript-client-sdk": "workspace:*",
+    "featurehub-javascript-client-sdk": "workspace:^",
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "tsup": "catalog:tsup",

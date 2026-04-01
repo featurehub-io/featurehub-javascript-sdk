@@ -36,7 +36,7 @@ const DEFAULTS: Required<RedisSessionStoreOptions> = {
   backoffTimeout: 500,
   retryUpdateCount: 10,
   refreshTimeout: 300,
-  delayInit: false
+  delayInit: false,
 };
 
 // Minimal structural interface covering what we actually call on both single-node and cluster clients.

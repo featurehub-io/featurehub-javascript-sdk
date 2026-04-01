@@ -3,23 +3,23 @@ import cors from "cors";
 import express from "express";
 import {
   type ClientContext,
-  type FeatureHubConfig,
   EdgeFeatureHubConfig,
+  type FeatureHubConfig,
   FHLog,
   Readyness,
   StrategyAttributeCountryName,
   StrategyAttributeDeviceName,
   StrategyAttributePlatformName,
 } from "featurehub-javascript-node-sdk";
+import { RedisSessionStoreUrl } from "featurehub-store-redis";
 import { OpenTelemetryTrackerUsagePlugin } from "featurehub-usage-opentelemetry";
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
+import { LocalYamlFeatureStore, LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
 import fs from "fs";
 import path from "path";
 
 import type { ITodoApiController } from "./generated-interface";
 import { Todo, TodoApiRouter } from "./generated-interface";
-import { LocalYamlFeatureStore,LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
-import {RedisSessionStoreUrl} from "featurehub-store-redis";
 
 FHLog.fhLog.trace = (...args: any) => console.log(args);
 
@@ -28,7 +28,7 @@ if (
   process.env["FEATUREHUB_EDGE_URL"] === undefined ||
   process.env["FEATUREHUB_CLIENT_API_KEY"] === undefined
 ) {
-  if (process.env['FEATUREHUB_LOCAL_YAML']) {
+  if (process.env["FEATUREHUB_LOCAL_YAML"]) {
     fhConfig = new EdgeFeatureHubConfig();
     // it is a one off load, not a rawUpdateListeenr
     new LocalYamlFeatureStore(fhConfig);
@@ -45,10 +45,10 @@ if (
     process.env["FEATUREHUB_CLIENT_API_KEY"]!,
   );
 
-  if (process.env['FEATUREHUB_REDIS_URL']) {
+  if (process.env["FEATUREHUB_REDIS_URL"]) {
     FHLog.fhLog.trace(`registering for redis`);
-    new RedisSessionStoreUrl(process.env['FEATUREHUB_REDIS_URL'], fhConfig, {
-      refreshTimeout: parseInt(process.env['FEATUREHUB_REDIS_POLL_INTERVAL'] || '3')
+    new RedisSessionStoreUrl(process.env["FEATUREHUB_REDIS_URL"], fhConfig, {
+      refreshTimeout: parseInt(process.env["FEATUREHUB_REDIS_POLL_INTERVAL"] || "3"),
     });
   }
 }
