@@ -14,11 +14,6 @@
     "vite-template-solid",
     "featurehub-react-example-catch-and-release",
     "featurehub-react-feature-override-example",
-    "featurehub-react-example",
-    "featurehub-store-localstorage",
-    "featurehub-usage-opentelemetry",
-    "featurehub-usage-segment",
-    "featurehub-store-redis",
-    "featurehub-yaml-interceptor"
+    "featurehub-react-example"
   ]
 }
