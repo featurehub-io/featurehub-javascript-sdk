@@ -18,7 +18,7 @@ COPY / /sdk/
 RUN pnpm install --frozen-lockfile
 
 RUN pnpm run build:packages
-RUN pnpm --filter 'featurehub-usage-*' run build
+RUN pnpm run build:plugins
 #RUN pnpm --filter './examples/todo-server-tests' run build
 RUN pnpm --filter './examples/todo-backend-typescript' run build
 
