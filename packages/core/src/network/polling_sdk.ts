@@ -185,7 +185,12 @@ export class PollingBase implements PollingService {
         this._callback(environments);
       }
 
-      this._stopped = response.status === 236;
+      if (!this._stopped) this._stopped = response.status === 236;
+      if (response.status === 236) {
+        fhLog.warn(
+          "[featurehubsdk] SaaS warning, your account has hit its maximum usage for the month, you will not get any more updates unless you increase it.",
+        );
+      }
       this.resolveOutstanding();
     } catch (e) {
       this.rejectOutstanding(e);
@@ -256,6 +261,7 @@ export class FeatureHubPollingClient implements EdgeService {
   private _xHeader: string | undefined;
   private _currentTimer: ReturnType<typeof setTimeout> | undefined;
   private _whenPollingCacheExpires: number;
+  private _closed = false;
 
   public static pollingClientProvider: PollingClientProvider;
 
@@ -339,6 +345,7 @@ export class FeatureHubPollingClient implements EdgeService {
 
   private stop() {
     fhLog.trace("polling stopping");
+    this._closed = true;
     this._cancelTimer();
 
     // stop the polling service and clear it
@@ -412,6 +419,11 @@ export class FeatureHubPollingClient implements EdgeService {
     resolve?: (value: void | PromiseLike<void>) => void,
     reject?: (reason?: unknown) => void,
   ) {
+    if (this._closed) {
+      resolve?.();
+      return;
+    }
+
     // only be true for active polling
     this._cancelTimer();
 
@@ -471,6 +483,8 @@ export class FeatureHubPollingClient implements EdgeService {
     resolve?: (value: void | PromiseLike<void>) => void,
     reject?: (reason?: unknown) => void,
   ) {
+    if (this._closed) return;
+
     const frequency = this._pollingService?.frequency || this._frequency;
 
     if (frequency > 0 && this._options.active) {
