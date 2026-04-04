@@ -1,6 +1,6 @@
 {
   "name": "featurehub-yaml-interceptor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FeatureHub local YAML file value interceptor for Node.js",
   "author": "info@featurehub.io",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "featurehub-react-sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "The React SDK for FeatureHub",
   "private": false,
   "author": "info@featurehub.io",
@@ -37,7 +37,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
-    "featurehub-javascript-client-sdk": ">=2.0.0",
+    "featurehub-javascript-client-sdk": ">=2.0.1",
     "react": ">=18.2.0"
   },
   "devDependencies": {
