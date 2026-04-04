@@ -1,3 +1,9 @@
+#### 2.0.1
+
+- race condition in the polling client where if a poll was in operation and you asked
+  to close the connection, it would re-open once the poll completed.
+- better messaging for SaaS if your account has run out.
+
 #### 2.0.0
 
 - additions:
