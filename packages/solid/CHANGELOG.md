@@ -1,3 +1,11 @@
+## 2.0.1
+
+### Patch Changes
+
+- be61eae: ensure ^ versions
+- Updated dependencies [be61eae]
+  - featurehub-javascript-client-sdk@2.0.1
+
 ## 2.0.0
 
 ### Major Changes
