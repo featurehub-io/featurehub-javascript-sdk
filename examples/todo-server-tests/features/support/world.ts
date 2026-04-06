@@ -5,6 +5,7 @@ import {
   FeatureUpdater,
   FeatureStateHolder,
   FeatureStateUpdate,
+  fhLog,
 } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
@@ -57,7 +58,7 @@ export class CustomWorld extends World<any> {
             data: reqConfig.data,
             url: reqConfig.url,
           };
-          console.log({
+          fhLog.log({
             level: "verbose",
             message: "request",
             http: JSON.stringify(req, undefined, 2),
@@ -72,10 +73,10 @@ export class CustomWorld extends World<any> {
         const responseToLog = responseToRecord(resp);
         if (responseToLog !== undefined) {
           if (process.env["LOUD"]) {
-            console.log(JSON.stringify(responseToLog, undefined, 2));
+            fhLog.log(JSON.stringify(responseToLog, undefined, 2));
           } else {
             if (responseToLog.request.method?.toLowerCase() !== "get") {
-              console.log(
+              fhLog.log(
                 `${responseToLog.request.method?.toUpperCase()} ${
                   responseToLog.request.url
                 } -> ${JSON.stringify(responseToLog.request.data)} ==> ${JSON.stringify(
@@ -83,7 +84,7 @@ export class CustomWorld extends World<any> {
                 )}`,
               );
             }
-            console.log(
+            fhLog.log(
               `GET ${responseToLog.request.url}: ${JSON.stringify(responseToLog.data, null, 2)}`,
             );
           }
@@ -92,7 +93,7 @@ export class CustomWorld extends World<any> {
       },
       (error) => {
         if (error.response) {
-          console.log(JSON.stringify(responseToRecord(error.response), undefined, 2));
+          fhLog.error(JSON.stringify(responseToRecord(error.response), undefined, 2));
         }
         return Promise.reject(error);
       },
@@ -112,9 +113,7 @@ export class CustomWorld extends World<any> {
     this.response = await featureUpdater.updateKey(name, {
       value: newValue,
     } as FeatureStateUpdate);
-    console.log(
-      `Feature ${name}: new value ${newValue} (no lock change) : result ${this.response}`,
-    );
+    fhLog.log(`Feature ${name}: new value ${newValue} (no lock change) : result ${this.response}`);
   }
 
   async justLockFeature(name: string, locked: boolean = true) {
@@ -122,7 +121,7 @@ export class CustomWorld extends World<any> {
     this.response = await featureUpdater.updateKey(name, {
       lock: locked,
     } as FeatureStateUpdate);
-    console.log(`Feature ${name}: lock true, response is ${this.response}`);
+    fhLog.log(`Feature ${name}: lock true, response is ${this.response}`);
   }
 
   async lockFeature(name: string, locked: boolean = true) {
@@ -132,14 +131,14 @@ export class CustomWorld extends World<any> {
     let counter = 0;
 
     await this.justLockFeature(name, locked);
-    console.log(
+    fhLog.log(
       `Feature ${name}: waiting for lock to be ${locked}, timeout is ${timeout} interval is ${interval}`,
     );
     const ctx = await Config.fhConfig.newContext().build();
     await waitForExpect(
       async () => {
         const feature: FeatureStateHolder = ctx.feature(name);
-        console.log(`Lock is ${feature.isLocked()} vs ${locked}`);
+        fhLog.log(`Lock is ${feature.isLocked()} vs ${locked}`);
         counter++;
         if (counter % 3 == 0 && feature.isLocked() !== locked) {
           // might have failed due to a conflicting update
@@ -154,10 +153,13 @@ export class CustomWorld extends World<any> {
 
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
     const updater = new FeatureUpdater(Config.fhConfig);
+    const world = this;
 
     updater.defaultOptions = {
       modifyRequestFunction: (req) => {
-        req.headers["Baggage"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}-${requestId}`;
+        const reqId = `${Config.reqIdPrefix}-${Config.cukeId}-${requestId}`;
+        world.attach(`Feature Update ${reqId}`, "text/plain");
+        req.headers["Baggage"] = `cuke-req-id=${reqId}`;
         requestId++;
       },
     };
@@ -171,7 +173,7 @@ export class CustomWorld extends World<any> {
       lock: false,
       value: newValue,
     } as FeatureStateUpdate);
-    console.log(`Feature ${name}: lock false, new value ${newValue}, response is ${this.response}`);
+    fhLog.log(`Feature ${name}: lock false, new value ${newValue}, response is ${this.response}`);
   }
 
   getFeatureUpdateResponse() {
@@ -185,7 +187,7 @@ export class CustomWorld extends World<any> {
       lock: false,
       value: newValue,
     } as FeatureStateUpdate);
-    console.log(`Feature ${name}: lock: false, new value ${newValue}, response is ${response}`);
+    fhLog.log(`Feature ${name}: lock: false, new value ${newValue}, response is ${response}`);
     expect(response).to.equal(true);
   }
 
@@ -195,7 +197,7 @@ export class CustomWorld extends World<any> {
       lock: false,
       updateValue: true,
     } as FeatureStateUpdate);
-    console.log(`Feature ${name}: lock: false, clear feature, response is ${response}`);
+    fhLog.log(`Feature ${name}: lock: false, clear feature, response is ${response}`);
   }
 }
 

@@ -73,7 +73,16 @@ function getFhConfig(): EdgeFeatureHubConfig {
   }
 
   FHLog.fhLog.trace = (...args: any[]) => {
-    console.log(args);
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.log = (...args: any[]) => {
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.warn = (...args: any[]) => {
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.error = (...args: any[]) => {
+    console.error(new Date().toISOString(), ...args);
   };
 
   fhConfig.init();

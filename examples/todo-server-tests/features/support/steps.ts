@@ -1,6 +1,6 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import { expect } from "chai";
-import { FeatureValueType } from "featurehub-javascript-node-sdk";
+import { FeatureValueType, fhLog } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
 import { Configuration, Todo, TodoServiceApi } from "../../src/client-axios";
@@ -17,7 +17,7 @@ Then("my list of todos should contain {string}", async function (todoDescription
   async function extracted(this: any) {
     const response = await todoApi.listTodos(this.user);
     const responseData: Todo[] = response.data;
-    console.log(`finding ${todoDescription} in`, responseData);
+    fhLog.log(`finding ${todoDescription} in`, responseData);
     const todo = responseData.find((item) => item.title === todoDescription) as Todo;
     return { responseData, todo };
   }
@@ -25,7 +25,7 @@ Then("my list of todos should contain {string}", async function (todoDescription
   await waitForExpect(
     async () => {
       const { responseData, todo } = await extracted.call(this);
-      console.log("compare", todo, responseData);
+      fhLog.log("compare", todo, responseData);
       expect(
         todo,
         `Expected ${todoDescription} but found in the response: ${responseData[0]?.title}`,
