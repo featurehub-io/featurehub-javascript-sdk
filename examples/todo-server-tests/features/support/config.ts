@@ -57,23 +57,25 @@ function getFhConfig(): EdgeFeatureHubConfig {
       options.headers["cuke-req-id"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}`;
     };
 
+    if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
+      const timeout = parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]);
+      opt.timeout = timeout < 3000 ? 3000 : timeout;
+    }
     // we are overriding the provider here so we can modify the request function
     return new NodejsPollingService(opt, url, freq, cb);
   };
 
-  if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
-    fhConfig.edgeServiceProvider(
-      (repo, config) =>
-        new FeatureHubPollingClient(
-          repo,
-          config,
-          parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!),
-        ),
-    );
-  }
-
   FHLog.fhLog.trace = (...args: any[]) => {
-    console.log(args);
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.log = (...args: any[]) => {
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.warn = (...args: any[]) => {
+    console.log(new Date().toISOString(), ...args);
+  };
+  FHLog.fhLog.error = (...args: any[]) => {
+    console.error(new Date().toISOString(), ...args);
   };
 
   fhConfig.init();

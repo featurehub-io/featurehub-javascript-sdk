@@ -174,6 +174,7 @@ export class PollingBase implements PollingService {
       this.parseCacheControl(response.headers.get("cache-control"));
 
       if (response.status === 304) {
+        fhLog.trace("304 - no updates");
         this.resolveOutstanding();
         return;
       }
@@ -430,7 +431,7 @@ export class FeatureHubPollingClient implements EdgeService {
     // we will only call readyNextPoll if this was the FIRST poll being requested, the polling service
     // can stack up callers and call them all back and we don't want readyNextPoll being triggered multiple times
     const pollingBusy = this._pollingService?.busy || false;
-    console.log("polling busy", pollingBusy);
+
     this._pollingService!.poll()
       .then(() => {
         fhLog.trace("poll successful");
