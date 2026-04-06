@@ -60,7 +60,7 @@
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.2.0",
+    "vite": "7.3.2",
     "vitest": "catalog:vitest"
   },
   "dependencies": {
