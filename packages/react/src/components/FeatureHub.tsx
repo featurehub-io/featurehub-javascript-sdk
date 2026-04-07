@@ -3,10 +3,10 @@ import {
   EdgeFeatureHubConfig,
   FeatureHub as fh,
   type FeatureHubConfig,
+  fhLog,
   type ReadinessListenerHandle,
   Readyness,
 } from "featurehub-javascript-client-sdk";
-import { fhLog } from "featurehub-javascript-core-sdk";
 import {
   createContext,
   type FC,

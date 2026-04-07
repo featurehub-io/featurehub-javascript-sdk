@@ -83,6 +83,22 @@ function NavBar() {
 
 If for some reason `useFeature` is not sufficient and you require access to the underlying FeatureHub config or client context objects, you can do so via this hook.
 
+## Testing
+
+An example of testing using `vitest`, `testing-library` and `jsdom` have been given in `examples/todo-frontend-react-sdk`. e.g.:
+
+```typescript
+vi.mock("featurehub-react-sdk", () => ({
+    FeatureHub: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useFeatureHub: () => ({ client: mockFhContext }),
+    useFeature: (key: string) => {
+        if (key === "uppercase_text") return uppercaseTextValue;
+        if (key === "text_colour") return textColourValue;
+        return undefined;
+    },
+}));
+```
+
 ## Bundling
 
 We use [tsup](https://tsup.egoist.dev/#usage) to bundle this SDK.
