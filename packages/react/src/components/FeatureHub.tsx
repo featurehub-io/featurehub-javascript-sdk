@@ -39,6 +39,8 @@ type Props = {
   readonly username?: string;
   /** Interval (in milliseconds) to poll FeatureHub for updates. [default: 60 seconds] */
   readonly pollInterval?: number;
+  /** rest-active, rest-passive, streaming, defaults to rest-active */
+  readonly connectionType?: string;
   /** The React application tree to inject the FeatureHub client into */
   readonly children: ReactNode;
 };
@@ -51,6 +53,7 @@ type Props = {
  * @param {string} apiKey - the apiKey key to use. Make sure it is the server-eval key! (required)
  * @param {string} userKey - the optional userKey to add user information to the FeatureHub context (optional)
  * @param {number} pollInterval - the desired polling interval (ms) to check for value updates (optional -- default 60 seconds)
+ * @param {string} connectionType - rest-active, rest-passive, streaming, defaults to rest-active
  * @param {JSX} children - the React component tree to inject FeatureHub into (required)
  *
  */
@@ -60,12 +63,22 @@ const FeatureHub: FC<Props> = ({
   userKey,
   username,
   pollInterval = 60000,
+  connectionType = "rest-active",
   children,
 }) => {
   useMemo(() => {
     fhLog.log("FeatureHub React SDK: Creating config.", fh.isCompletelyConfigured());
     if (!fh.isCompletelyConfigured()) {
-      fh.setWithContext(EdgeFeatureHubConfig.config(url, apiKey).restActive(pollInterval), {
+      const config = EdgeFeatureHubConfig.config(url, apiKey);
+      if (connectionType?.toLowerCase() === "rest-passive") {
+        config.restPassive(pollInterval ?? 60000);
+      } else if (connectionType?.toLowerCase() === "streaming") {
+        config.streaming();
+      } else {
+        config.restActive(pollInterval ?? 60000);
+      }
+
+      fh.setWithContext(config.restActive(pollInterval), {
         userKey: userKey,
       }).build();
     }

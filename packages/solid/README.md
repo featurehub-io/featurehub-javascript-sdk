@@ -25,7 +25,7 @@ The FeatureHub Solid SDK provides the following:
 
 Configuring `FeatureHub` for your Solid app is very straight forward.
 
-```typescript
+```tsx
 // App.tsx
 import { FeatureHub } from "featurehub-solid-sdk";
 
@@ -38,13 +38,13 @@ function AppContainer() {
 }
 ```
 
-The `url` and `apiKey` props are required as per FeatureHub configuration requirements. By doing the above, you are injecting the `FeatureHub` client into your Solid application tree (via Solid Context) which then allows you to use any of the additionally provided hooks (`useFeatureHub` and `useFeature`) anywhere within your child Solid components.
+The `url` and `apiKey` props are required as per FeatureHub configuration requirements. By doing the above, you are injecting the `FeatureHub` client into your Solid application tree (via Solid Context) which then allows you to use any of the additionally provided hooks (`useFeatureHub` and `useFeature`) anywhere within your child Solid components. `connectionType` gives you control of how you wish to connect - rest (`active/passive`) or realtime with `streaming`.
 
 ## Hooks
 
 ### useFeature<T<T>>
 
-```typescript
+```tsx
 // Navbar.tsx
 import { useFeature } from "featurehub-solid-sdk";
 
@@ -66,7 +66,7 @@ The implementation of `useFeature` leverages TypeScript generics (default is `bo
 
 ### useFeatureHub
 
-```typescript
+```tsx
 // Navbar.tsx
 import { useFeatureHub } from "featurehub-solid-sdk";
 

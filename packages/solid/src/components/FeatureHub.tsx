@@ -3,6 +3,7 @@ import {
   EdgeFeatureHubConfig,
   FeatureHub as fh,
   type FeatureHubConfig,
+  fhLog,
   Readyness,
 } from "featurehub-javascript-client-sdk";
 import {
@@ -45,6 +46,8 @@ type Props = {
   readonly userKey?: string;
   /** Interval (in milliseconds) to poll FeatureHub for updates. [default: 60 seconds] */
   readonly pollInterval?: number;
+  /** Connection type (rest-active, rest-passive, streaming). Defaults to rest-active */
+  readonly connectionType?: string;
   /** The Solid application tree to inject the FeatureHub client into */
   readonly children: JSX.Element;
 };
@@ -71,24 +74,33 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
 
   // SolidJS 'eagerly' creates things wrapped by createMemo
   const config = createMemo(() => {
-    console.info("FeatureHub Solid SDK: Creating config and context...");
+    fhLog.log("FeatureHub Solid SDK: Creating config and context...");
 
-    const fhConfig = EdgeFeatureHubConfig.config(props.url, props.apiKey).restActive(
-      props.pollInterval ?? 60000,
-    );
-    const context = fhConfig.newContext();
-    fh.set(fhConfig, context);
+    if (!fh.isCompletelyConfigured()) {
+      const config = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+      if (props.connectionType?.toLowerCase() === "rest-passive") {
+        config.restPassive(props.pollInterval ?? 60000);
+      } else if (props.connectionType?.toLowerCase() === "streaming") {
+        config.streaming();
+      } else {
+        config.restActive(props.pollInterval ?? 60000);
+      }
 
-    setClient(context); // immediately assign anonymous context
-
-    if (listenerId) {
-      fhConfig.removeReadinessListener(listenerId);
+      fh.setWithContext(config, {
+        userKey: props.userKey,
+      });
     }
 
-    listenerId = fhConfig.addReadinessListener(setReadiness, true);
-    fhConfig.init();
+    setClient(fh.context); // immediately assign anonymous context
 
-    return fhConfig;
+    if (listenerId) {
+      fh.config.removeReadinessListener(listenerId);
+    }
+
+    listenerId = fh.config.addReadinessListener(setReadiness, true);
+    fh.config.init();
+
+    return fh.config;
   });
 
   /*
@@ -110,10 +122,10 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
       */
       switch (readiness()) {
         case Readyness.Failed:
-          if (!ready()) console.error("FeatureHub Solid SDK: Connection failed!");
+          if (!ready()) fhLog.error("FeatureHub Solid SDK: Connection failed!");
           break;
         case Readyness.NotReady:
-          if (!ready()) console.warn("FeatureHub Solid SDK: Connection not ready yet!");
+          if (!ready()) fhLog.warn("FeatureHub Solid SDK: Connection not ready yet!");
           break;
         default: {
           if (!userKey()) {
@@ -131,9 +143,10 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
   );
 
   onCleanup(() => {
-    console.warn("FeatureHub Solid SDK: Terminating connection!");
+    fhLog.warn("FeatureHub Solid SDK: Terminating connection!");
     if (listenerId) config().removeReadinessListener(listenerId);
-    config().close();
+    // stop polling or whatever
+    config().closeEdge();
   });
 
   return (

@@ -8,16 +8,6 @@ import logoVite from "./vite.svg";
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
 
-/*
-  DEVELOPER NOTE:
-  If making changes to the FeatureHub Solid SDK implementation, there is a convenience npm script that
-  is part of this example project "pnpm run install-sdk" that will allow you to make changes to the
-  SDK and regenerate the lib source files for this example to install and then use.
-
-  This should hopefully save you time from going back and forth having to package everything for the SDK
-  within its own local directory to then come back here and run things again.
-*/
-
 function App() {
   const [userKey, setUserKey] = createSignal("");
 
@@ -36,7 +26,12 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey()} pollInterval={5000}>
+    <FeatureHub
+      url="http://localhost:8085"
+      apiKey="099981b4-faf3-4f5b-baa4-6e439e5fcb5f/fKW5fxoXdCPaOQuC0OAAYNbefw966d6NF6266b9w"
+      userKey={userKey()}
+      pollInterval={5000}
+    >
       <Main />
     </FeatureHub>
   );
