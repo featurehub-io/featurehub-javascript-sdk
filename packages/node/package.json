@@ -61,7 +61,7 @@
     "rimraf": "catalog:rimraf",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.2.0",
+    "vite": "catalog:vite",
     "vitest": "catalog:vitest",
     "sinon": "catalog:sinon"
   },

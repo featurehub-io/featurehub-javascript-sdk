@@ -6,6 +6,7 @@ import {
   type ReadinessListenerHandle,
   Readyness,
 } from "featurehub-javascript-client-sdk";
+import { fhLog } from "featurehub-javascript-core-sdk";
 import {
   createContext,
   type FC,
@@ -62,15 +63,13 @@ const FeatureHub: FC<Props> = ({
   children,
 }) => {
   useMemo(() => {
-    // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
-    // Noticed that React has a tendency to create two with the nature of the render cycles
-    // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
-    console.info("FeatureHub React SDK: Creating config.");
-    const config = EdgeFeatureHubConfig.config(url, apiKey).restActive(pollInterval);
-    const context = config.context().userKey(userKey);
-    fh.set(config, context);
-    context.build();
-  }, [url, apiKey, pollInterval]);
+    fhLog.log("FeatureHub React SDK: Creating config.", fh.isCompletelyConfigured());
+    if (!fh.isCompletelyConfigured()) {
+      fh.setWithContext(EdgeFeatureHubConfig.config(url, apiKey).restActive(pollInterval), {
+        userKey: userKey,
+      }).build();
+    }
+  }, [url, apiKey, pollInterval, userKey]);
 
   const [client] = useState(fh.context);
   const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
@@ -79,21 +78,21 @@ const FeatureHub: FC<Props> = ({
     const listener = async (readyness: Readyness) => {
       switch (readyness) {
         case Readyness.Failed:
-          console.error("FeatureHub React SDK: Connection failed!");
+          fhLog.error("FeatureHub React SDK: Connection failed!");
           break;
         case Readyness.NotReady:
-          console.warn("FeatureHub React SDK: Connection not ready yet!");
+          fhLog.log("FeatureHub React SDK: Connection not ready yet!");
           break;
         default: {
           // TODO: Remove deprecated username prop at some point since userKey keeps API language consistent
           const userInfo = username ?? userKey;
 
           if (!userInfo) {
-            console.info("FeatureHub React SDK: Connection ready! Using anonymous user context.");
+            fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
             return;
           }
 
-          console.info("FeatureHub React SDK: Connection ready! Using context with userKey set.");
+          fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
           await client.userKey(userInfo).build(); // still the same userKey, doesn't change
         }
       }
@@ -108,9 +107,13 @@ const FeatureHub: FC<Props> = ({
     activeListenerIdRef.current = listenerId; // Keep track of registered listener
 
     return () => {
-      console.warn("FeatureHub React SDK: Context unmounting. Terminating connection!");
-      fh.config.removeReadinessListener(listenerId);
-      fh.config.close();
+      fhLog.log("FeatureHub React SDK: Context unmounting. Terminating connection!");
+      if (fh.isCompletelyConfigured()) {
+        // stop listening
+        fh.config.closeEdge();
+        // don't tell us any longer
+        fh.config.removeReadinessListener(listenerId);
+      }
     };
   }, [userKey]);
 

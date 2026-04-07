@@ -1,4 +1,4 @@
-import type { FeatureStateHolder } from "featurehub-javascript-client-sdk";
+import { type FeatureStateHolder } from "featurehub-javascript-client-sdk";
 import { useEffect, useState } from "react";
 
 import useFeatureHub from "./useFeatureHub";

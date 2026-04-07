@@ -128,7 +128,9 @@ export interface FeatureHubConfig {
   // close any server connections
   close(): void;
 
-  // close just the server connection leaving the repository, etc open.
+  // close just the server connection leaving the repository, etc open. This allows a web page for
+  // example to close connections and tidy up, or leave it open for re-opening again because the config
+  // is loaded into the `window` context.
   closeEdge(): void;
 
   /**

@@ -1,3 +1,15 @@
+#### 2.0.2
+
+- there was a spurious console.log in the polling code
+- closeEdge prevented the edge connection from starting
+  again which caused issues with the spurious reloading that
+  occurs in modern js frameworks. This was removed. `closeEdge`
+  now just closes the edge connections and allows them
+  to be reopened.
+- extra functionality added for the global Config/Context
+  for javascript frameworks (e.g. React and Solid), particularly around support for
+  testability and reloading.
+
 #### 2.0.1
 
 - race condition in the polling client where if a poll was in operation and you asked

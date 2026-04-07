@@ -4,28 +4,32 @@ packages:
   - "plugins/usage/*"
   - "plugins/stores/*"
   - "plugins/interceptors/*"
-
-gitChecks: false
+allowBuilds:
+  esbuild: true
 
 catalogs:
+  node:
+    "@types/node": "22.18.10"
   prettier:
     prettier: "3.6.2"
+  react19:
+    "@types/react": "19.2.2"
+    "@types/react-dom": "19.2.2"
+    react: "19.2.0"
+    react-dom: "19.2.0"
   rimraf:
     rimraf: "6.1.3"
+  sinon:
+    "@types/sinon": "^21.0.0"
+    "sinon": "^21.0.0"
   tsup:
     tsup: "8.5.0"
   typescript:
     typescript: "5.9.3"
+  vite:
+    vite: "^7.3.2"
   vitest:
-    vitest: "^3.2.4"
     "@vitest/coverage-istanbul": "3.2.4"
-  node:
-    "@types/node": "22.18.10"
-  sinon:
-    "@types/sinon": "^21.0.0"
-    "sinon": "^21.0.0"
-  react19:
-    react: "19.2.0"
-    react-dom: "19.2.0"
-    "@types/react": "19.2.2"
-    "@types/react-dom": "19.2.2"
+    vitest: "^3.2.4"
+
+gitChecks: false

@@ -90,8 +90,11 @@ export abstract class BaseClientContext implements ClientContext {
   set attributes(data: ContextRecord) {
     // copy everything except the user key
     Object.entries(data).forEach(([key, val]) => {
-      if (key !== "userkey") {
-        this._attributes.set(key, val as ContextAttribute);
+      const realKey = key.toString(); // in case it is a symbol
+      if (realKey.toLowerCase() !== "userkey") {
+        this._attributes.set(realKey, val as ContextAttribute);
+      } else {
+        this._userKey = val?.toString();
       }
     });
   }

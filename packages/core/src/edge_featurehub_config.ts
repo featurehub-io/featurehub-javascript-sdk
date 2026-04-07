@@ -302,9 +302,6 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     edges.forEach((es) => {
       es.close();
     });
-
-    // if someone tries to open one,  they get a "fake".
-    this._edgeService = noopEdgeServiceProvider;
   }
 
   forceClose(): void {

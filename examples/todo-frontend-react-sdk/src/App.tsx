@@ -8,16 +8,6 @@ import reactLogo from "./assets/react.svg";
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
 
-/*
-  DEVELOPER NOTE:
-  If making changes to the FeatureHub React SDK implementation, there is a convenience npm script that
-  is part of this example project "npm run install-sdk" that will allow you to make changes to the
-  SDK and regenerate the lib source files for this example to install and then use.
-
-  This should hopefully save you time from going back and forth having to package everything for the SDK
-  within its own local directory to then come back here and run things again.
-*/
-
 function App() {
   const [userKey, setUserKey] = useState("");
 
@@ -30,16 +20,15 @@ function App() {
 
   return (
     /*
-        To run a local instance of FeatureHub for testing, run either of the following commands:
-        - docker run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
-        - podman run -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
+        To run a local instance of FeatureHub for testing, run the following commands:
+        - docker run -d -p 8085:8085 --user 999:999 -v $HOME/.featurehub/party/db featurehub/party-server:latest
 
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
     <FeatureHub
       url="http://localhost:8085"
-      apiKey="826d3a18-0eb2-4a7c-86ca-056f14b659a2/Y0ZLgljjGmHjYu0dxJJGCAsZiHpMmKOK1RnC9Lqc"
+      apiKey="099981b4-faf3-4f5b-baa4-6e439e5fcb5f/fKW5fxoXdCPaOQuC0OAAYNbefw966d6NF6266b9w"
       userKey={userKey}
       pollInterval={5000}
     >
