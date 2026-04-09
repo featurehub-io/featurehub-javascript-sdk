@@ -7,15 +7,7 @@ import {
   type ReadinessListenerHandle,
   Readyness,
 } from "featurehub-javascript-client-sdk";
-import {
-  createContext,
-  type FC,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, type FC, type ReactNode, useEffect, useRef, useState } from "react";
 
 export type UseFeatureHub = {
   readonly config: FeatureHubConfig;
@@ -29,9 +21,9 @@ FeatureHubContext.displayName = "FeatureHub";
 
 type Props = {
   /** The url to the running instance of the FeatureHub EDGE API */
-  readonly url: string;
+  readonly url?: string;
   /** The FeatureHub API key -- can be found in the FeatureHub Admin Console */
-  readonly apiKey: string;
+  readonly apiKey?: string;
   /** Scopes FeatureHub context to userKey -- otherwise, context will be anonymous. */
   readonly userKey?: string;
   /** @deprecated use 'userKey` instead. */
@@ -41,6 +33,8 @@ type Props = {
   readonly pollInterval?: number;
   /** rest-active, rest-passive, streaming, defaults to rest-active */
   readonly connectionType?: string;
+  /** wait until the repository becomes ready before rendering the children */
+  readonly waitForReady?: boolean;
   /** The React application tree to inject the FeatureHub client into */
   readonly children: ReactNode;
 };
@@ -54,6 +48,7 @@ type Props = {
  * @param {string} userKey - the optional userKey to add user information to the FeatureHub context (optional)
  * @param {number} pollInterval - the desired polling interval (ms) to check for value updates (optional -- default 60 seconds)
  * @param {string} connectionType - rest-active, rest-passive, streaming, defaults to rest-active
+ * @param {boolean} waitForReady - wait for readyness before rendering children
  * @param {JSX} children - the React component tree to inject FeatureHub into (required)
  *
  */
@@ -64,27 +59,36 @@ const FeatureHub: FC<Props> = ({
   username,
   pollInterval = 60000,
   connectionType = "rest-active",
+  waitForReady = true,
   children,
 }) => {
-  useMemo(() => {
-    fhLog.log("FeatureHub React SDK: Creating config.", fh.isCompletelyConfigured());
-    if (!fh.isCompletelyConfigured()) {
-      const config = EdgeFeatureHubConfig.config(url, apiKey);
-      if (connectionType?.toLowerCase() === "rest-passive") {
-        config.restPassive(pollInterval ?? 60000);
-      } else if (connectionType?.toLowerCase() === "streaming") {
-        config.streaming();
-      } else {
-        config.restActive(pollInterval ?? 60000);
-      }
+  const useSharedConfiguration = fh.isCompletelyConfigured();
 
-      fh.setWithContext(config.restActive(pollInterval), {
-        userKey: userKey,
-      }).build();
+  fhLog.log("FeatureHub React SDK: Creating config.", useSharedConfiguration);
+
+  const config = useSharedConfiguration ? fh.config : EdgeFeatureHubConfig.config(url, apiKey);
+  let context: ClientContext;
+  if (!useSharedConfiguration) {
+    if (connectionType?.toLowerCase() === "rest-passive") {
+      config.restPassive(pollInterval ?? 60000);
+    } else if (connectionType?.toLowerCase() === "streaming") {
+      config.streaming();
+    } else {
+      config.restActive(pollInterval ?? 60000);
     }
-  }, [url, apiKey, pollInterval, userKey]);
 
-  const [client] = useState(fh.context);
+    context = config.restActive(pollInterval).context({
+      userKey: userKey,
+    });
+
+    context.build();
+  } else {
+    context = fh.context;
+    context.userKey(userKey).build();
+  }
+
+  const [client] = useState(context);
+  const [isReady, setIsReady] = useState(config.readiness === Readyness.Ready);
   const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
 
   useEffect(() => {
@@ -100,38 +104,51 @@ const FeatureHub: FC<Props> = ({
           // TODO: Remove deprecated username prop at some point since userKey keeps API language consistent
           const userInfo = username ?? userKey;
 
+          console.log(client);
           if (!userInfo) {
             fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
-            return;
+            await client.build();
+          } else {
+            fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
+            await client.userKey(userInfo).build(); // still the same userKey, doesn't change
           }
 
-          fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
-          await client.userKey(userInfo).build(); // still the same userKey, doesn't change
+          setIsReady(true);
         }
       }
     };
 
     if (activeListenerIdRef.current !== null) {
       // Remove potential previous existing listener (for use-case when the username updates while component still mounted)
-      fh.config.removeReadinessListener(activeListenerIdRef.current);
+      config.removeReadinessListener(activeListenerIdRef.current);
     }
 
-    const listenerId = fh.config.addReadinessListener(listener, true);
+    const listenerId = config.addReadinessListener(listener, true);
+
     activeListenerIdRef.current = listenerId; // Keep track of registered listener
 
     return () => {
-      fhLog.log("FeatureHub React SDK: Context unmounting. Terminating connection!");
-      if (fh.isCompletelyConfigured()) {
-        // stop listening
-        fh.config.closeEdge();
+      if (config) {
         // don't tell us any longer
-        fh.config.removeReadinessListener(listenerId);
+        config.removeReadinessListener(listenerId);
+      }
+
+      if (!useSharedConfiguration && config) {
+        fhLog.trace("FeatureHub React SDK: Terminating connection!");
+
+        // should down the config only if we created it
+        config.close();
       }
     };
   }, [userKey]);
 
+  if (waitForReady && !isReady) {
+    fhLog.trace("FeatureHub React SDK, not ready yet, returning empty div");
+    return <div></div>;
+  }
+
   return (
-    <FeatureHubContext.Provider value={{ config: fh.config, client }}>
+    <FeatureHubContext.Provider value={{ config: config, client }}>
       {children}
     </FeatureHubContext.Provider>
   );
