@@ -102,4 +102,3 @@ vi.mock("featurehub-react-sdk", () => ({
 ## Bundling
 
 We use [tsup](https://tsup.egoist.dev/#usage) to bundle this SDK.
-                             

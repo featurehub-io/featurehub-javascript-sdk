@@ -104,7 +104,6 @@ const FeatureHub: FC<Props> = ({
           // TODO: Remove deprecated username prop at some point since userKey keeps API language consistent
           const userInfo = username ?? userKey;
 
-          console.log(client);
           if (!userInfo) {
             fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
             await client.build();
