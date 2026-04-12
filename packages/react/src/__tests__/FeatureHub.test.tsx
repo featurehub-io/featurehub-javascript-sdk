@@ -200,7 +200,6 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
 
   it("uses deprecated username prop as fallback when userKey is not set", async () => {
     render(
-      // @ts-expect-error — testing deprecated prop
       <FeatureHub
         url="http://localhost"
         apiKey="test-key"

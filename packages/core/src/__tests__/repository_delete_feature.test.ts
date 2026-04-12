@@ -115,6 +115,14 @@ describe("if a feature is deleted it becomes undefined", () => {
     expect(repo.feature("banana").exists).toBe(false);
   });
 
+  it("if a single feature is removed it is properly removed from feature keys", () => {
+    repo.notify(SSEResultState.Features, features, "test");
+    expect(repo.featureKeys).to.include("banana");
+    const newFeatures = [features[1], features[2]];
+    repo.notify(SSEResultState.Features, newFeatures, "test");
+    expect(repo.featureKeys).to.not.include("banana");
+  });
+
   it("should ignore deleting a feature that doesnt exist", () => {
     repo.notify(
       SSEResultState.DeleteFeature,

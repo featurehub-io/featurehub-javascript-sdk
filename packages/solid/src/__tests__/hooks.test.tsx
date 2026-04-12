@@ -37,7 +37,7 @@ function buildBaseMocks() {
 
 function Wrapper(props: { children: any }) {
   return (
-    <FeatureHub url="http://localhost" apiKey="test-key">
+    <FeatureHub url="http://localhost" apiKey="test-key" waitForReady={false}>
       {props.children}
     </FeatureHub>
   );
