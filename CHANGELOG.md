@@ -8,7 +8,10 @@
   to be reopened.
 - extra functionality added for the global Config/Context
   for javascript frameworks (e.g. React and Solid), particularly around support for
-  testability and reloading.
+  testability and reloading, and also waiting for results to appear before rendering.
+- there was a bug in the code around Server Evaluated contexts swapping context details. When
+it happened, the repository would flip to "notReady" and never send a listener event again when
+it actually became ready.
 
 #### 2.0.1
 

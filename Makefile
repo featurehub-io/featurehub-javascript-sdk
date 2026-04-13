@@ -53,6 +53,10 @@ test-server-qa-tags:
 	@echo "Running todo-server-tests (QA mode) with tags: $(TAGS)"
 	@$(MAKE) _run-test TEST_ENV="$(TEST_BASE_ENV)" TAGS="$(TAGS)"
 
+fmt:
+	pnpm run format:fix
+	pnpm run lint:fix
+
 ci:
 	pnpm run build:packages
 	pnpm run typecheck
