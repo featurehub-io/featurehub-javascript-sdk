@@ -1,5 +1,13 @@
 # featurehub-javascript-core-sdk
 
+## 2.0.2
+
+### Patch Changes
+
+- cd5a589: focus on making more robust react and solid sdks
+- cd5a589: Minor fixes
+- 351f41e: A console.log was found in the polling adapter, this removes it
+
 ## 2.0.1
 
 ### Patch Changes

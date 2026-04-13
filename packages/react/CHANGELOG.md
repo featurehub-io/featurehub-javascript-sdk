@@ -1,5 +1,18 @@
 # ChangeLog
 
+## 2.1.0
+
+### Minor Changes
+
+- cd5a589: focus on making more robust react and solid sdks
+- cd5a589: Minor fixes
+
+### Patch Changes
+
+- Updated dependencies [cd5a589]
+- Updated dependencies [cd5a589]
+  - featurehub-javascript-client-sdk@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes

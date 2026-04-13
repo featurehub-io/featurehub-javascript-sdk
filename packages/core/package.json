@@ -1,6 +1,6 @@
 {
   "name": "featurehub-javascript-core-sdk",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "FeatureHub core SDK - not intended to be used directly",
   "author": "info@featurehub.io",
   "type": "module",
