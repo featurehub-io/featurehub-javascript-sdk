@@ -4,6 +4,7 @@ import { FeatureHub, useFeature, useFeatureHub } from "featurehub-react-sdk";
 import { useEffect, useState } from "react";
 
 import reactLogo from "./assets/react.svg";
+import { FHLog } from "featurehub-javascript-client-sdk";
 
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
@@ -18,6 +19,11 @@ function App() {
     }, 1000);
   }, []);
 
+  FHLog.fhLog.trace = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
+  FHLog.fhLog.log = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
+  FHLog.fhLog.warn = (...args: any) => console.warn((new Date()).toISOString(), '-', ...args);
+  FHLog.fhLog.error = (...args: any) => console.error((new Date()).toISOString(), '-', ...args);
+
   return (
     /*
         To run a local instance of FeatureHub for testing, run the following commands:
@@ -27,8 +33,8 @@ function App() {
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
     <FeatureHub
-      url="http://localhost:8085"
-      apiKey="099981b4-faf3-4f5b-baa4-6e439e5fcb5f/fKW5fxoXdCPaOQuC0OAAYNbefw966d6NF6266b9w"
+      url="http://localhost:8903"
+      apiKey="05abaaef-19a3-4276-b7ed-35ade0447182/XAKscM5Cj3aL59Ur43bVC87u0XLO6lKmkY7sPrxY"
       userKey={userKey}
       pollInterval={5000}
     >

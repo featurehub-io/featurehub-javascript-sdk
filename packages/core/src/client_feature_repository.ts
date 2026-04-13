@@ -294,6 +294,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   notReady(): void {
     this.readynessState = Readyness.NotReady;
+    this.hasReceivedInitialState = false;
     this.broadcastReadynessState(false);
   }
 

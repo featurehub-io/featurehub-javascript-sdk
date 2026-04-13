@@ -111,7 +111,7 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
           if (!isReady()) fhLog.error("FeatureHub Solid SDK: Connection failed!");
           break;
         case Readyness.NotReady:
-          if (!isReady()) fhLog.log("FeatureHub Solid SDK: Connection not ready yet!");
+          if (!isReady()) fhLog.trace("FeatureHub Solid SDK: Connection not ready yet!");
           break;
         default: {
           fhLog.log(
@@ -127,7 +127,7 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
 
   onCleanup(() => {
     if (!useSharedConfiguration) {
-      fhLog.log("FeatureHub Solid SDK: Terminating connection!");
+      fhLog.trace("FeatureHub Solid SDK: Terminating connection!");
       config().close();
     }
   });
