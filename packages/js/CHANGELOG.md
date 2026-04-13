@@ -1,5 +1,16 @@
 # featurehub-javascript-client-sdk
 
+## 2.0.2
+
+### Patch Changes
+
+- cd5a589: focus on making more robust react and solid sdks
+- cd5a589: Minor fixes
+- Updated dependencies [cd5a589]
+- Updated dependencies [cd5a589]
+- Updated dependencies [351f41e]
+  - featurehub-javascript-core-sdk@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes
