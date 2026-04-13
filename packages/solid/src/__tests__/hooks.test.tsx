@@ -4,11 +4,11 @@ import {
   FeatureHub as fhStatic,
   type FeatureHubConfig,
 } from "featurehub-javascript-client-sdk";
+import { Readyness } from "featurehub-javascript-client-sdk";
 import { type Accessor } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FeatureHub } from "../components";
-import { setReady } from "../components/FeatureHub";
 import { useFeature } from "../hooks/useFeature";
 import { useFeatureHub } from "../hooks/useFeatureHub";
 
@@ -17,8 +17,12 @@ import { useFeatureHub } from "../hooks/useFeatureHub";
 // ---------------------------------------------------------------------------
 
 function buildBaseMocks() {
+  let capturedListener: (r: Readyness) => void;
   const mockConfig = {
-    addReadinessListener: vi.fn().mockReturnValue(1),
+    addReadinessListener: vi.fn().mockImplementation((fn) => {
+      capturedListener = fn;
+      return 1;
+    }),
     removeReadinessListener: vi.fn(),
     closeEdge: vi.fn(),
     close: vi.fn(),
@@ -32,7 +36,7 @@ function buildBaseMocks() {
     build: vi.fn().mockResolvedValue(undefined),
   } as unknown as ClientContext;
 
-  return { mockConfig, mockContext };
+  return { mockConfig, mockContext, getListener: () => capturedListener };
 }
 
 function Wrapper(props: { children: any }) {
@@ -56,7 +60,6 @@ describe("useFeatureHub", () => {
   });
 
   afterEach(() => {
-    setReady(false);
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
     vi.clearAllMocks();
@@ -123,6 +126,7 @@ describe("useFeature", () => {
     removeListener: ReturnType<typeof vi.fn>;
     isSet: ReturnType<typeof vi.fn>;
   };
+  let getListener: () => (r: Readyness) => void;
 
   beforeEach(() => {
     mockFeatureHolder = {
@@ -132,13 +136,13 @@ describe("useFeature", () => {
       isSet: vi.fn().mockReturnValue(false),
     };
 
-    const { mockConfig, mockContext } = buildBaseMocks();
-    (mockContext.feature as ReturnType<typeof vi.fn>).mockReturnValue(mockFeatureHolder);
-    fhStatic.set(mockConfig, mockContext);
+    const mocks = buildBaseMocks();
+    getListener = mocks.getListener;
+    (mocks.mockContext.feature as ReturnType<typeof vi.fn>).mockReturnValue(mockFeatureHolder);
+    fhStatic.set(mocks.mockConfig, mocks.mockContext);
   });
 
   afterEach(() => {
-    setReady(false);
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
     vi.clearAllMocks();
@@ -168,7 +172,7 @@ describe("useFeature", () => {
 
   it("registers a feature listener when the ready signal fires", async () => {
     renderFeature("my_flag");
-    setReady(true);
+    getListener()?.(Readyness.Ready);
 
     await waitFor(() => expect(mockFeatureHolder.addListener).toHaveBeenCalledOnce());
   });
@@ -178,7 +182,7 @@ describe("useFeature", () => {
     mockFeatureHolder.isSet.mockReturnValue(true);
 
     renderFeature<boolean>("my_flag");
-    setReady(true);
+    getListener()?.(Readyness.Ready);
 
     await waitFor(() => expect(screen.getByTestId("value")).toHaveTextContent("true"));
   });
@@ -192,7 +196,7 @@ describe("useFeature", () => {
     mockFeatureHolder.value = false;
 
     renderFeature<boolean>("my_flag");
-    setReady(true);
+    getListener()?.(Readyness.Ready);
 
     await waitFor(() => expect(capturedFeatureListener).toBeDefined());
 
@@ -204,7 +208,7 @@ describe("useFeature", () => {
 
   it("removes the feature listener on cleanup", async () => {
     const { unmount } = renderFeature("my_flag");
-    setReady(true);
+    getListener()?.(Readyness.Ready);
     await waitFor(() => expect(mockFeatureHolder.addListener).toHaveBeenCalled());
 
     unmount();

@@ -9,7 +9,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FeatureHub } from "../components";
-import { setReady } from "../components/FeatureHub";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -79,7 +78,6 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
   });
 
   afterEach(() => {
-    setReady(false);
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
     vi.clearAllMocks();
@@ -121,7 +119,7 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
     configSpy.mockRestore();
   });
 
-  it("registers a readiness listener and calls init() on mount", () => {
+  it("registers a readiness listener and calls init() on mount", async () => {
     render(() => (
       <FeatureHub url="http://localhost" apiKey="test-key" waitForReady={false}>
         <div>test</div>
@@ -129,7 +127,7 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
     ));
 
     expect(mocks.mockConfig.addReadinessListener).toHaveBeenCalledOnce();
-    expect(mocks.mockContext.build).toHaveBeenCalledOnce();
+    await waitFor(() => expect(mocks.mockContext.build).toHaveBeenCalledOnce());
   });
 
   it("calls build() directly when ready fires and no userKey is set", async () => {
@@ -224,13 +222,12 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
 
 describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.config)", () => {
   afterEach(() => {
-    setReady(false);
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
     vi.clearAllMocks();
   });
 
-  it("creates config via EdgeFeatureHubConfig when not pre-configured", () => {
+  it("creates config via EdgeFeatureHubConfig when not pre-configured", async () => {
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
 
@@ -253,7 +250,7 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     expect(configSpy).toHaveBeenCalledWith("http://localhost:8085", "abc123");
     expect(mockConfig.restActive).toHaveBeenCalledWith(30000);
     expect(mockConfig.addReadinessListener).toHaveBeenCalledOnce();
-    expect(mockContext.build).toHaveBeenCalledOnce();
+    await waitFor(() => expect(mockContext.build).toHaveBeenCalledOnce());
 
     configSpy.mockRestore();
   });

@@ -184,4 +184,6 @@ export interface FeatureHubConfig {
 
   // this only works in no-op mode because an ID is required generally
   set environmentId(envId: string);
+
+  get isReady(): boolean;
 }

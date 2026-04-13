@@ -19,24 +19,18 @@ import {
   Show,
 } from "solid-js";
 
-// Global ready signal — consumed by useFeature to know when to subscribe
-export const [ready, setReady] = createSignal(false);
-
 export type UseFeatureHub = {
   /** The FeatureHub config object */
   readonly config: Accessor<FeatureHubConfig>;
   /** The FeatureHub client context */
   readonly client: Accessor<ClientContext>;
+  /** Whether the SDK is ready and flags are loaded */
+  readonly ready: Accessor<boolean>;
 };
 
-export const FeatureHubContext = createContext<UseFeatureHub>(
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  null, // this will be assigned by the FeatureHub component
-  {
-    name: "FeatureHub",
-  },
-);
+export const FeatureHubContext = createContext<UseFeatureHub | null>(null, {
+  name: "FeatureHub",
+});
 
 type Props = {
   /** The url to the running instance of the FeatureHub EDGE API */
@@ -57,45 +51,17 @@ type Props = {
   readonly children: JSX.Element;
 };
 
-/**
- * The FeatureHub Solid component. Use this as a top-level wrapper around your
- * main App component.
- *
- * @param {string} url - the url of the FeatureHub instance (required)
- * @param {string} apiKey - the apiKey key to use. Make sure it is the server-eval key! (required)
- * @param {string} userKey - the userKey to add user information to the FeatureHub context (optional)
- * @param {number} pollInterval - the desired polling interval (ms) to check for value updates (optional -- default 60 seconds)
- * @param {string} connectionType - rest-active, rest-passive, streaming, defaults to rest-active
- * @param {boolean} waitForReady - wait for readiness before rendering children (default true)
- * @param {JSX} children - the Solid component tree to inject FeatureHub into (required)
- *
- */
 export const FeatureHub: Component<Props> = (props): JSX.Element => {
-  let listenerId: number | undefined;
   const useSharedConfiguration = fh.isCompletelyConfigured();
   const userKey = () => props.username ?? props.userKey ?? "";
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const [client, setClient] = createSignal<ClientContext>(null); // assigned in createMemo below
   const [readiness, setReadiness] = createSignal(Readyness.NotReady);
+  const [isReady, setIsReady] = createSignal(false);
 
-  /*
-    SolidJS eagerly executes createMemo. We use it here to create (or reuse) the
-    FeatureHub config once, register the readiness listener, and start the connection.
-  */
   const config = createMemo<FeatureHubConfig>(() => {
     if (useSharedConfiguration) {
-      fhLog.log("FeatureHub Solid SDK: Using existing config.");
-
-      listenerId = fh.config.addReadinessListener(setReadiness, true);
-      setClient(fh.context);
-      fh.context.userKey(userKey()).build();
-
       return fh.config;
     }
-
-    fhLog.log("FeatureHub Solid SDK: Creating config and context...");
 
     const cfg = EdgeFeatureHubConfig.config(props.url, props.apiKey);
     if (props.connectionType?.toLowerCase() === "rest-passive") {
@@ -106,56 +72,69 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
       cfg.restActive(props.pollInterval ?? 60000);
     }
 
-    listenerId = cfg.addReadinessListener(setReadiness, true);
-    const context = cfg.newContext();
-    setClient(context);
-
-    context.userKey(userKey()).build();
-
     return cfg;
   });
 
-  /*
-    React to readiness state changes and userKey changes. When the connection
-    becomes ready, build the context (with or without a user key).
-  */
+  const client = createMemo(() => {
+    if (useSharedConfiguration) {
+      return fh.context;
+    }
+    return config().newContext();
+  });
+
+  // Handle initialization and readiness listener
+  createEffect(() => {
+    const cfg = config();
+    const id = cfg.addReadinessListener(setReadiness, true);
+    onCleanup(() => cfg.removeReadinessListener(id));
+  });
+
+  // Perform initial build on mount
+  createEffect(() => {
+    const c = client();
+    const uk = userKey();
+    c.userKey(uk).build();
+  });
+
+  // Handle readiness state changes and userKey updates
   createEffect(
-    on([readiness, userKey], async () => {
-      switch (readiness()) {
+    on([readiness, userKey, client], (_, prev) => {
+      // Skip the first run as we handle it in the initial build effect above
+      if (!prev) return;
+
+      const r = readiness();
+      const uk = userKey();
+      const c = client();
+
+      switch (r) {
         case Readyness.Failed:
-          if (!ready()) fhLog.error("FeatureHub Solid SDK: Connection failed!");
+          if (!isReady()) fhLog.error("FeatureHub Solid SDK: Connection failed!");
           break;
         case Readyness.NotReady:
-          if (!ready()) fhLog.log("FeatureHub Solid SDK: Connection not ready yet!");
+          if (!isReady()) fhLog.log("FeatureHub Solid SDK: Connection not ready yet!");
           break;
         default: {
-          if (!userKey()) {
-            fhLog.log("FeatureHub Solid SDK: Connection ready! Using anonymous user context.");
-            await client().build();
-            setReady(true);
-            return;
-          }
-
-          fhLog.log("FeatureHub Solid SDK: Connection ready! Using context with userKey set.");
-          setClient(await client().userKey(userKey()).build());
-          setReady(true);
+          fhLog.log(
+            `FeatureHub Solid SDK: Connection ready! Using context with userKey: ${uk || "anonymous"}`,
+          );
+          c.userKey(uk)
+            .build()
+            .then(() => setIsReady(true));
         }
       }
     }),
   );
 
   onCleanup(() => {
-    fhLog.log("FeatureHub Solid SDK: Terminating connection!");
-    if (listenerId) config().removeReadinessListener(listenerId);
-    // Only shut down a config we created ourselves — don't touch shared configuration
     if (!useSharedConfiguration) {
+      fhLog.log("FeatureHub Solid SDK: Terminating connection!");
       config().close();
     }
   });
 
   return (
-    <FeatureHubContext.Provider value={{ config, client }}>
-      <Show when={props.waitForReady === false || ready()} fallback={<></>}>
+    <FeatureHubContext.Provider value={{ config, client, ready: isReady }}>
+      <Show when={props.waitForReady === false || isReady()} fallback={<></>}>
         {props.children}
       </Show>
     </FeatureHubContext.Provider>

@@ -16,6 +16,7 @@ export function useFeatureHub(): UseFeatureHub {
     return {
       config: () => fh.config,
       client: () => fh.context,
+      ready: () => fh.config.isReady,
     } as UseFeatureHub;
   }
 

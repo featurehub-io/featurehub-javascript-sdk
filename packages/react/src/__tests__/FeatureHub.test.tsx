@@ -58,6 +58,7 @@ function buildOwnConfigMocks() {
     restPassive: vi.fn().mockReturnThis(),
     streaming: vi.fn().mockReturnThis(),
     context: vi.fn().mockReturnValue(mockContext),
+    newContext: vi.fn().mockReturnValue(mockContext),
     addReadinessListener: vi.fn().mockImplementation((listener: any) => {
       capturedListener = async (r: Readyness) => {
         (mockConfig as any).readiness = r;
@@ -269,7 +270,7 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
 
     expect(configSpy).toHaveBeenCalledWith("http://localhost:8085", "abc123");
     expect(mockConfig.restActive).toHaveBeenCalledWith(30000);
-    expect(mockConfig.context).toHaveBeenCalled();
+    expect(mockConfig.newContext).toHaveBeenCalled();
     expect(mockContext.build).toHaveBeenCalled();
 
     configSpy.mockRestore();

@@ -42,7 +42,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
           const data = JSON.parse(storedData);
           if (data.e) {
             // save space with short name
-            this._callback(data.e as Array<FeatureEnvironmentCollection>, 'browser-store');
+            this._callback(data.e as Array<FeatureEnvironmentCollection>, "browser-store");
           }
         } catch (_) {
           // ignore exception

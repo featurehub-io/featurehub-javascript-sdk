@@ -22,7 +22,10 @@ export interface PollingService {
   awaitingFirstPollResult: boolean;
 }
 
-export type FeaturesFunction = (environments: Array<FeatureEnvironmentCollection>, source?: string) => void;
+export type FeaturesFunction = (
+  environments: Array<FeatureEnvironmentCollection>,
+  source?: string,
+) => void;
 export type PromiseLikeFunction = (value: void | PromiseLike<void>) => void;
 export type RejectLikeFunction = (response?: unknown) => void;
 

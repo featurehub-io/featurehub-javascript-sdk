@@ -482,4 +482,8 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
     this.repository().registerRawUpdateFeatureListener(listener);
   }
+
+  get isReady(): boolean {
+    return this.readiness === Readyness.Ready;
+  }
 }
