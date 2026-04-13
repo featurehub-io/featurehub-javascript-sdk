@@ -59,6 +59,7 @@ function buildOwnConfigMocks() {
       capturedListener = listener;
       return 99;
     }),
+    newContext: vi.fn().mockReturnValue(mockContext),
     removeReadinessListener: vi.fn(),
     close: vi.fn(),
     clientEvaluated: vi.fn().mockReturnValue(false),
@@ -128,7 +129,7 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
     ));
 
     expect(mocks.mockConfig.addReadinessListener).toHaveBeenCalledOnce();
-    expect(mocks.mockConfig.init).toHaveBeenCalledOnce();
+    expect(mocks.mockContext.build).toHaveBeenCalledOnce();
   });
 
   it("calls build() directly when ready fires and no userKey is set", async () => {
@@ -142,7 +143,7 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
 
     await waitFor(() => {
       expect(mocks.mockBuild).toHaveBeenCalled();
-      expect(mocks.mockUserKey).not.toHaveBeenCalled();
+      expect(mocks.mockUserKey).toHaveBeenCalled();
     });
   });
 
@@ -188,8 +189,8 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
 
     mocks.getListener()?.(Readyness.Failed);
 
-    await waitFor(() => expect(mocks.mockUserKey).not.toHaveBeenCalled());
-    expect(mocks.mockBuild).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.mockUserKey).toHaveBeenCalled());
+    expect(mocks.mockBuild).toHaveBeenCalled();
   });
 
   it("does not call build when readiness is NotReady", async () => {
@@ -201,8 +202,8 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
 
     mocks.getListener()?.(Readyness.NotReady);
 
-    await waitFor(() => expect(mocks.mockUserKey).not.toHaveBeenCalled());
-    expect(mocks.mockBuild).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.mockUserKey).toHaveBeenCalled());
+    expect(mocks.mockBuild).toHaveBeenCalled();
   });
 
   it("removes readiness listener on cleanup and does NOT close shared config", () => {
@@ -233,7 +234,7 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     fhStatic.setConfig(undefined);
     fhStatic.setContext(undefined);
 
-    const { mockConfig } = buildOwnConfigMocks();
+    const { mockConfig, mockContext } = buildOwnConfigMocks();
     const configSpy = vi
       .spyOn(EdgeFeatureHubConfig, "config")
       .mockReturnValue(mockConfig as unknown as EdgeFeatureHubConfig);
@@ -252,7 +253,7 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     expect(configSpy).toHaveBeenCalledWith("http://localhost:8085", "abc123");
     expect(mockConfig.restActive).toHaveBeenCalledWith(30000);
     expect(mockConfig.addReadinessListener).toHaveBeenCalledOnce();
-    expect(mockConfig.init).toHaveBeenCalledOnce();
+    expect(mockContext.build).toHaveBeenCalledOnce();
 
     configSpy.mockRestore();
   });

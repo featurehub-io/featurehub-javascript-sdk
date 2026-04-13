@@ -84,34 +84,35 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
     SolidJS eagerly executes createMemo. We use it here to create (or reuse) the
     FeatureHub config once, register the readiness listener, and start the connection.
   */
-  const config = createMemo(() => {
+  const config = createMemo<FeatureHubConfig>(() => {
+    if (useSharedConfiguration) {
+      fhLog.log("FeatureHub Solid SDK: Using existing config.");
+
+      listenerId = fh.config.addReadinessListener(setReadiness, true);
+      setClient(fh.context);
+      fh.context.userKey(userKey()).build();
+
+      return fh.config;
+    }
+
     fhLog.log("FeatureHub Solid SDK: Creating config and context...");
 
-    if (!useSharedConfiguration) {
-      const cfg = EdgeFeatureHubConfig.config(props.url, props.apiKey);
-      if (props.connectionType?.toLowerCase() === "rest-passive") {
-        cfg.restPassive(props.pollInterval ?? 60000);
-      } else if (props.connectionType?.toLowerCase() === "streaming") {
-        cfg.streaming();
-      } else {
-        cfg.restActive(props.pollInterval ?? 60000);
-      }
-
-      fh.setWithContext(cfg, {
-        userKey: props.userKey,
-      });
+    const cfg = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+    if (props.connectionType?.toLowerCase() === "rest-passive") {
+      cfg.restPassive(props.pollInterval ?? 60000);
+    } else if (props.connectionType?.toLowerCase() === "streaming") {
+      cfg.streaming();
+    } else {
+      cfg.restActive(props.pollInterval ?? 60000);
     }
 
-    setClient(fh.context); // immediately assign the (anonymous) context
+    listenerId = cfg.addReadinessListener(setReadiness, true);
+    const context = cfg.newContext();
+    setClient(context);
 
-    if (listenerId) {
-      fh.config.removeReadinessListener(listenerId);
-    }
+    context.userKey(userKey()).build();
 
-    listenerId = fh.config.addReadinessListener(setReadiness, true);
-    fh.config.init();
-
-    return fh.config;
+    return cfg;
   });
 
   /*

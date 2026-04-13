@@ -4,19 +4,23 @@ import {
   FeatureHub as fh,
   type FeatureHubConfig,
   fhLog,
-  type ReadinessListenerHandle,
   Readyness,
 } from "featurehub-javascript-client-sdk";
-import { createContext, type FC, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  type FC,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 export type UseFeatureHub = {
   readonly config: FeatureHubConfig;
   readonly client: ClientContext;
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-export const FeatureHubContext = createContext<UseFeatureHub>(undefined);
+export const FeatureHubContext = createContext<UseFeatureHub | null>(null);
 FeatureHubContext.displayName = "FeatureHub";
 
 type Props = {
@@ -64,87 +68,65 @@ const FeatureHub: FC<Props> = ({
 }: Props) => {
   const useSharedConfiguration = fh.isCompletelyConfigured();
 
-  const {config, context} = useMemo(() => {
+  const { config, client } = useMemo(() => {
     if (useSharedConfiguration) {
       fhLog.log("FeatureHub React SDK: Using existing configuration.");
-      return {config: fh.config, context: fh.context};
+      return { config: fh.config, client: fh.context };
     }
 
     fhLog.log("FeatureHub React SDK: Creating config.");
 
     const config = EdgeFeatureHubConfig.config(url, apiKey);
     if (connectionType?.toLowerCase() === "rest-passive") {
-      config.restPassive(pollInterval ?? 60000);
+      config.restPassive(pollInterval);
     } else if (connectionType?.toLowerCase() === "streaming") {
       config.streaming();
     } else {
-      config.restActive(pollInterval ?? 60000);
+      config.restActive(pollInterval);
     }
 
-    return {config: config, context: config.context({userKey: userKey})};
-  }, [url, apiKey, pollInterval, connectionType, userKey]);
+    return { config, client: config.newContext() };
+  }, [url, apiKey, pollInterval, connectionType, useSharedConfiguration]); // removed userKey from dependencies to prevent excessive config recreation
 
-  if (useSharedConfiguration) {
-    context.userKey(userKey);
-  }
-
-  context.build();
-
-  const [client] = useState(context);
-  const [isReady, setIsReady] = useState(config.readiness === Readyness.Ready);
-  const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
+  const isReady = useSyncExternalStore(
+    (onStoreChange) => {
+      const handle = config.addReadinessListener(onStoreChange);
+      return () => config.removeReadinessListener(handle);
+    },
+    () => config.readiness === Readyness.Ready,
+  );
 
   useEffect(() => {
-    const listener = async (readyness: Readyness) => {
-      switch (readyness) {
-        case Readyness.Failed:
-          fhLog.error("FeatureHub React SDK: Connection failed!");
-          break;
-        case Readyness.NotReady:
-          fhLog.log("FeatureHub React SDK: Connection not ready yet!");
-          break;
-        default: {
-          // TODO: Remove deprecated username prop at some point since userKey keeps API language consistent
-          const userInfo = username ?? userKey;
+    client.userKey(userKey).build();
+  }, [client, userKey]);
 
-          if (!userInfo) {
-            fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
-            await client.build();
-          } else {
-            fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
-            await client.userKey(userInfo).build(); // still the same userKey, doesn't change
-          }
-
-          setIsReady(true);
-        }
+  useEffect(() => {
+    if (!isReady) {
+      if (config.readiness === Readyness.Failed) {
+        fhLog.error("FeatureHub React SDK: Connection failed!");
       }
-    };
-
-    if (activeListenerIdRef.current !== null) {
-      // Remove potential previous existing listener (for use-case when the username updates while component still mounted)
-      config.removeReadinessListener(activeListenerIdRef.current);
+      return;
     }
 
-    const listenerId = config.addReadinessListener(listener, true);
+    const userInfo = username ?? userKey;
 
-    activeListenerIdRef.current = listenerId; // Keep track of registered listener
+    if (userInfo) {
+      fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
+      client.userKey(userInfo).build();
+    } else {
+      fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
+      client.build();
+    }
+  }, [isReady, config, client, userKey, username]);
 
+  useEffect(() => {
     return () => {
-      fhLog.trace('FeatureHubSDK: shutting down effect of FeatureHub.');
-
-      if (config) {
-        // don't tell us any longer
-        config.removeReadinessListener(listenerId);
-      }
-
       if (!useSharedConfiguration && config) {
         fhLog.trace("FeatureHub React SDK: Terminating connection!");
-
-        // should down the config only if we created it
         config.close();
       }
     };
-  }, [userKey]);
+  }, [config, useSharedConfiguration]);
 
   if (waitForReady && !isReady) {
     fhLog.trace("FeatureHub React SDK, not ready yet, returning empty div");
@@ -152,9 +134,7 @@ const FeatureHub: FC<Props> = ({
   }
 
   return (
-    <FeatureHubContext.Provider value={{ config: config, client }}>
-      {children}
-    </FeatureHubContext.Provider>
+    <FeatureHubContext.Provider value={{ config, client }}>{children}</FeatureHubContext.Provider>
   );
 };
 

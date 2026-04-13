@@ -20,8 +20,12 @@ function buildMocks() {
   let capturedListener: ((r: Readyness) => Promise<void>) | undefined;
 
   const mockConfig = {
+    readiness: Readyness.NotReady,
     addReadinessListener: vi.fn().mockImplementation((listener: any) => {
-      capturedListener = listener;
+      capturedListener = async (r: Readyness) => {
+        (mockConfig as any).readiness = r;
+        return await listener(r);
+      };
       return 42;
     }),
     removeReadinessListener: vi.fn(),
@@ -49,12 +53,16 @@ function buildOwnConfigMocks() {
   };
   let capturedListener: ((r: Readyness) => Promise<void>) | undefined;
   const mockConfig = {
+    readiness: Readyness.NotReady,
     restActive: vi.fn().mockReturnThis(),
     restPassive: vi.fn().mockReturnThis(),
     streaming: vi.fn().mockReturnThis(),
     context: vi.fn().mockReturnValue(mockContext),
     addReadinessListener: vi.fn().mockImplementation((listener: any) => {
-      capturedListener = listener;
+      capturedListener = async (r: Readyness) => {
+        (mockConfig as any).readiness = r;
+        return await listener(r);
+      };
       return 99;
     }),
     removeReadinessListener: vi.fn(),
