@@ -1,10 +1,10 @@
+import { FHLog } from "featurehub-javascript-client-sdk";
 import { FeatureHub, useFeature } from "featurehub-solid-sdk";
 import { createEffect, createSignal } from "solid-js";
 
 import styles from "./App.module.css";
 import logoSolid from "./logo.svg";
 import logoVite from "./vite.svg";
-import { FHLog } from "featurehub-javascript-client-sdk";
 
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
@@ -12,10 +12,10 @@ const SAMPLE_TEXT =
 function App() {
   const [userKey, setUserKey] = createSignal("");
 
-  FHLog.fhLog.trace = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.log = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.warn = (...args: any) => console.warn((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.error = (...args: any) => console.error((new Date()).toISOString(), '-', ...args);
+  FHLog.fhLog.trace = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.log = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.warn = (...args: any) => console.warn(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.error = (...args: any) => console.error(new Date().toISOString(), "-", ...args);
 
   setTimeout(() => {
     console.log("ASSIGNING USER AFTER DELAY!");

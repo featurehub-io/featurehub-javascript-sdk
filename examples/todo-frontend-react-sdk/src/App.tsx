@@ -1,10 +1,10 @@
 import "./App.css";
 
+import { FHLog } from "featurehub-javascript-client-sdk";
 import { FeatureHub, useFeature, useFeatureHub } from "featurehub-react-sdk";
 import { useEffect, useState } from "react";
 
 import reactLogo from "./assets/react.svg";
-import { FHLog } from "featurehub-javascript-client-sdk";
 
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
@@ -19,10 +19,10 @@ function App() {
     }, 1000);
   }, []);
 
-  FHLog.fhLog.trace = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.log = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.warn = (...args: any) => console.warn((new Date()).toISOString(), '-', ...args);
-  FHLog.fhLog.error = (...args: any) => console.error((new Date()).toISOString(), '-', ...args);
+  FHLog.fhLog.trace = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.log = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.warn = (...args: any) => console.warn(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.error = (...args: any) => console.error(new Date().toISOString(), "-", ...args);
 
   return (
     /*

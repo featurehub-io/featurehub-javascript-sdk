@@ -21,10 +21,10 @@ import path from "path";
 import type { ITodoApiController } from "./generated-interface";
 import { Todo, TodoApiRouter } from "./generated-interface";
 
-FHLog.fhLog.trace = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-FHLog.fhLog.log = (...args: any) => console.log((new Date()).toISOString(), '-', ...args);
-FHLog.fhLog.warn = (...args: any) => console.warn((new Date()).toISOString(), '-', ...args);
-FHLog.fhLog.error = (...args: any) => console.error((new Date()).toISOString(), '-', ...args);
+FHLog.fhLog.trace = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+FHLog.fhLog.log = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+FHLog.fhLog.warn = (...args: any) => console.warn(new Date().toISOString(), "-", ...args);
+FHLog.fhLog.error = (...args: any) => console.error(new Date().toISOString(), "-", ...args);
 
 let fhConfig: FeatureHubConfig;
 if (
