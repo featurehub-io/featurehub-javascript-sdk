@@ -1,3 +1,4 @@
+import { FHLog } from "featurehub-javascript-client-sdk";
 import { FeatureHub, useFeature } from "featurehub-solid-sdk";
 import { createEffect, createSignal } from "solid-js";
 
@@ -8,18 +9,13 @@ import logoVite from "./vite.svg";
 const SAMPLE_TEXT =
   "This is some random text content which may have its case-sensitivity modified.";
 
-/*
-  DEVELOPER NOTE:
-  If making changes to the FeatureHub Solid SDK implementation, there is a convenience npm script that
-  is part of this example project "pnpm run install-sdk" that will allow you to make changes to the
-  SDK and regenerate the lib source files for this example to install and then use.
-
-  This should hopefully save you time from going back and forth having to package everything for the SDK
-  within its own local directory to then come back here and run things again.
-*/
-
 function App() {
   const [userKey, setUserKey] = createSignal("");
+
+  FHLog.fhLog.trace = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.log = (...args: any) => console.log(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.warn = (...args: any) => console.warn(new Date().toISOString(), "-", ...args);
+  FHLog.fhLog.error = (...args: any) => console.error(new Date().toISOString(), "-", ...args);
 
   setTimeout(() => {
     console.log("ASSIGNING USER AFTER DELAY!");
@@ -36,7 +32,12 @@ function App() {
         Once you go through the intial setup wizard/guide to create a service account + permissions,
         go to API Keys for the service account, copy the 'Server eval API key' and paste it into the apiKey prop below.
       */
-    <FeatureHub url="http://localhost:8085" apiKey="" userKey={userKey()} pollInterval={5000}>
+    <FeatureHub
+      url="http://localhost:8903"
+      apiKey="05abaaef-19a3-4276-b7ed-35ade0447182/XAKscM5Cj3aL59Ur43bVC87u0XLO6lKmkY7sPrxY"
+      userKey={userKey()}
+      pollInterval={5000}
+    >
       <Main />
     </FeatureHub>
   );

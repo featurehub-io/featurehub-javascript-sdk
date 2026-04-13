@@ -1,3 +1,4 @@
+import { FeatureHub as fh } from "featurehub-javascript-client-sdk";
 import { useContext } from "solid-js";
 
 import { FeatureHubContext, type UseFeatureHub } from "../components/FeatureHub";
@@ -9,11 +10,17 @@ import { FeatureHubContext, type UseFeatureHub } from "../components/FeatureHub"
 export function useFeatureHub(): UseFeatureHub {
   const featureHub = useContext(FeatureHubContext);
 
-  if (!featureHub) {
-    throw new Error(
-      "Error invoking useFeatureHub! Make sure your component is wrapped by the top-level <FeatureHub> component!",
-    );
+  if (featureHub) return featureHub;
+
+  if (fh.isCompletelyConfigured()) {
+    return {
+      config: () => fh.config,
+      client: () => fh.context,
+      ready: () => fh.config.isReady,
+    } as UseFeatureHub;
   }
 
-  return featureHub;
+  throw new Error(
+    "Error invoking useFeatureHub! Make sure your component is wrapped by the top-level <FeatureHub> component!",
+  );
 }

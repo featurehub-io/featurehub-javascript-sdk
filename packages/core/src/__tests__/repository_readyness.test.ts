@@ -105,6 +105,42 @@ describe("Readiness listeners should fire on appropriate events", () => {
     expect(readinessTrigger).toBe(2);
   });
 
+  it("should re-broadcast ready after notReady is called and features arrive again", () => {
+    let readinessTrigger = 0;
+    let lastReadiness: Readyness | undefined = undefined;
+
+    repo.addReadinessListener((state) => {
+      lastReadiness = state;
+      readinessTrigger++;
+    });
+
+    const features = [
+      {
+        id: "1",
+        key: "banana",
+        version: 1,
+        type: FeatureValueType.Boolean,
+        value: true,
+      } as FeatureState,
+    ];
+
+    // First features arrive → Ready
+    repo.notify(SSEResultState.Features, features, "test");
+    expect(lastReadiness).toBe(Readyness.Ready);
+    expect(readinessTrigger).toBe(2); // initial NotReady + Ready
+
+    // Context changes (e.g. userKey), repo goes NotReady
+    repo.notReady();
+    expect(lastReadiness).toBe(Readyness.NotReady);
+    expect(readinessTrigger).toBe(3);
+
+    // Second poll completes with features → must re-broadcast Ready
+    repo.notify(SSEResultState.Features, features, "test");
+    expect(lastReadiness).toBe(Readyness.Ready);
+    expect(readinessTrigger).toBe(4);
+    expect(repo.readyness).toBe(Readyness.Ready);
+  });
+
   it("should allow us to register disinterest in the initial notready status", () => {
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;

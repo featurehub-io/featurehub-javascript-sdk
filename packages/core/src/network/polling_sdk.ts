@@ -22,7 +22,10 @@ export interface PollingService {
   awaitingFirstPollResult: boolean;
 }
 
-export type FeaturesFunction = (environments: Array<FeatureEnvironmentCollection>) => void;
+export type FeaturesFunction = (
+  environments: Array<FeatureEnvironmentCollection>,
+  source?: string,
+) => void;
 export type PromiseLikeFunction = (value: void | PromiseLike<void>) => void;
 export type RejectLikeFunction = (response?: unknown) => void;
 
@@ -297,7 +300,7 @@ export class FeatureHubPollingClient implements EdgeService {
         this._options,
         this._url,
         this._frequency,
-        (e) => this.response(e),
+        (e, source) => this.response(e, source),
       );
 
       fhLog.trace(`featurehub: initialized polling client to ${this._url}`);
@@ -505,12 +508,12 @@ export class FeatureHubPollingClient implements EdgeService {
     this._frequency = frequency;
   }
 
-  private response(environments: Array<FeatureEnvironmentCollection>): void {
+  private response(environments: Array<FeatureEnvironmentCollection>, source?: string): void {
     if (environments.length === 0) {
       fhLog.trace(`There are no environments for this apikey, stopping polling.`);
       this._startable = false;
       this.stop();
-      this._repository.notify(SSEResultState.Failure, null, "polling-service");
+      this._repository.notify(SSEResultState.Failure, null, source || "polling-service");
     } else {
       const features = new Array<FeatureState>();
 

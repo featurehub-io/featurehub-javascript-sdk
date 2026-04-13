@@ -74,6 +74,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   get featureKeys(): Array<string> {
     return this.features
       .values()
+      .filter((f) => !f.isPhantom)
       .map((f) => f.key)
       .toArray();
   }
@@ -293,6 +294,7 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   notReady(): void {
     this.readynessState = Readyness.NotReady;
+    this.hasReceivedInitialState = false;
     this.broadcastReadynessState(false);
   }
 

@@ -43,7 +43,7 @@
     "ts-node": "10.9.2",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vite": "7.2.0"
+    "vite": "catalog:vite"
   },
   "engines": {
     "node": ">=20.0.0"

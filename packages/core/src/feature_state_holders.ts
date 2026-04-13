@@ -144,6 +144,19 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     return val !== undefined && val.value != null;
   }
 
+  // this is not a real feature, its one created by the user or it has been deleted
+  get isPhantom(): boolean {
+    if (this.internalFeatureState) {
+      return false;
+    }
+
+    if (this.parentHolder === undefined) {
+      return true;
+    }
+
+    return this.parentHolder.isPhantom;
+  }
+
   getFeatureState(): FeatureState | undefined {
     return this.featureState();
   }

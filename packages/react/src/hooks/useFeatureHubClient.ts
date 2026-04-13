@@ -1,7 +1,4 @@
-import type { ClientContext } from "featurehub-javascript-client-sdk";
-import { useContext } from "react";
-
-import { FeatureHubContext } from "../components/FeatureHub";
+import { type ClientContext, FeatureHub as fh } from "featurehub-javascript-client-sdk";
 
 /**
  * @deprecated Use `useFeatureHub` instead.
@@ -9,15 +6,13 @@ import { FeatureHubContext } from "../components/FeatureHub";
  * @returns {ClientContext} - the FeatureHub client
  */
 function useFeatureHubClient(): ClientContext {
-  const featureHub = useContext(FeatureHubContext);
-
-  if (!featureHub) {
-    throw new Error(
-      "Cannot get FeatureHub client inside of component not wrapped by the <FeatureHub> component!",
-    );
+  if (fh.isCompletelyConfigured()) {
+    return fh.context;
   }
 
-  return featureHub.client;
+  throw new Error(
+    "Cannot get FeatureHub client inside of component not wrapped by the <FeatureHub> component!",
+  );
 }
 
 export default useFeatureHubClient;

@@ -1,6 +1,5 @@
 import { type Accessor, createEffect, createSignal, on, onCleanup } from "solid-js";
 
-import { ready } from "../components/FeatureHub";
 import { useFeatureHub } from "./useFeatureHub";
 
 /**
@@ -11,7 +10,7 @@ import { useFeatureHub } from "./useFeatureHub";
  * @returns {T | undefined} value - generic type of feature value (default boolean)
  */
 export function useFeature<T = boolean>(key: string): Accessor<T | undefined> {
-  const { client } = useFeatureHub();
+  const { client, ready } = useFeatureHub();
 
   let listenerId: number;
   const [value, setValue] = createSignal(client().feature(key).value);

@@ -124,4 +124,10 @@ export interface FeatureStateHolder {
 
   get id(): string | undefined;
   get environmentId(): string | undefined;
+
+  /**
+   * a phantom flag is one which is created by the user, it hasn't come from any source, often in anticipation of flags from the host,
+   * or it is a deleted feature.
+   */
+  get isPhantom(): boolean;
 }

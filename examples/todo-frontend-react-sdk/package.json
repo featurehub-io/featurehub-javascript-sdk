@@ -9,7 +9,8 @@
     "build": "vite build",
     "clean": "rimraf node_modules dist",
     "preview": "vite preview",
-    "install-sdk": "pnpm --prefix ../../packages/react run build && rm -rf node_modules && pnpm i",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,13 +20,18 @@
     "react-dom": "catalog:react19"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "@vitejs/plugin-react-swc": "^4.2.0",
     "featurehub-tsconfig": "workspace:*",
+    "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",
-    "vite": "^7.2.0"
+    "vite": "catalog:vite",
+    "vitest": "catalog:vitest"
   },
   "packageManager": "pnpm@10.18.3"
 }

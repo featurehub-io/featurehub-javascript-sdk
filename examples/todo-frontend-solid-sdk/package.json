@@ -10,7 +10,6 @@
     "build": "vite build",
     "clean": "rimraf node_modules dist",
     "serve": "vite preview",
-    "install-sdk": "pnpm --prefix ../../featurehub-solid-sdk run build && rm -rf node_modules && pnpm i",
     "typecheck": "tsc --noEmit"
   },
   "license": "MIT",
@@ -18,11 +17,12 @@
     "featurehub-tsconfig": "workspace:*",
     "rimraf": "catalog:rimraf",
     "typescript": "catalog:typescript",
-    "vite": "^7.2.0",
+    "vite": "catalog:vite",
     "vite-plugin-solid": "^2.11.10"
   },
   "dependencies": {
     "featurehub-solid-sdk": "workspace:*",
+    "featurehub-javascript-client-sdk": "workspace:*",
     "solid-js": "^1.9.9"
   },
   "packageManager": "pnpm@10.18.3"

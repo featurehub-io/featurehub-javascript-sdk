@@ -3,7 +3,7 @@ import {
   EdgeFeatureHubConfig,
   FeatureHub as fh,
   type FeatureHubConfig,
-  type ReadinessListenerHandle,
+  fhLog,
   Readyness,
 } from "featurehub-javascript-client-sdk";
 import {
@@ -12,8 +12,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
-  useRef,
-  useState,
+  useSyncExternalStore,
 } from "react";
 
 export type UseFeatureHub = {
@@ -21,16 +20,14 @@ export type UseFeatureHub = {
   readonly client: ClientContext;
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-export const FeatureHubContext = createContext<UseFeatureHub>(undefined);
+export const FeatureHubContext = createContext<UseFeatureHub | null>(null);
 FeatureHubContext.displayName = "FeatureHub";
 
 type Props = {
   /** The url to the running instance of the FeatureHub EDGE API */
-  readonly url: string;
+  readonly url?: string;
   /** The FeatureHub API key -- can be found in the FeatureHub Admin Console */
-  readonly apiKey: string;
+  readonly apiKey?: string;
   /** Scopes FeatureHub context to userKey -- otherwise, context will be anonymous. */
   readonly userKey?: string;
   /** @deprecated use 'userKey` instead. */
@@ -38,6 +35,10 @@ type Props = {
   readonly username?: string;
   /** Interval (in milliseconds) to poll FeatureHub for updates. [default: 60 seconds] */
   readonly pollInterval?: number;
+  /** rest-active, rest-passive, streaming, defaults to rest-active */
+  readonly connectionType?: string;
+  /** wait until the repository becomes ready before rendering the children */
+  readonly waitForReady?: boolean;
   /** The React application tree to inject the FeatureHub client into */
   readonly children: ReactNode;
 };
@@ -50,6 +51,8 @@ type Props = {
  * @param {string} apiKey - the apiKey key to use. Make sure it is the server-eval key! (required)
  * @param {string} userKey - the optional userKey to add user information to the FeatureHub context (optional)
  * @param {number} pollInterval - the desired polling interval (ms) to check for value updates (optional -- default 60 seconds)
+ * @param {string} connectionType - rest-active, rest-passive, streaming, defaults to rest-active
+ * @param {boolean} waitForReady - wait for readyness before rendering children
  * @param {JSX} children - the React component tree to inject FeatureHub into (required)
  *
  */
@@ -59,65 +62,79 @@ const FeatureHub: FC<Props> = ({
   userKey,
   username,
   pollInterval = 60000,
+  connectionType = "rest-active",
+  waitForReady = true,
   children,
-}) => {
-  useMemo(() => {
-    // Need to guarantee creation of only ONE EdgeFeatureHubConfig instance.
-    // Noticed that React has a tendency to create two with the nature of the render cycles
-    // despite leveraging useMemo. So we keep a static reference to help us achieve the outcome.
-    console.info("FeatureHub React SDK: Creating config.");
-    const config = EdgeFeatureHubConfig.config(url, apiKey).restActive(pollInterval);
-    const context = config.context().userKey(userKey);
-    fh.set(config, context);
-    context.build();
-  }, [url, apiKey, pollInterval]);
+}: Props) => {
+  const useSharedConfiguration = fh.isCompletelyConfigured();
 
-  const [client] = useState(fh.context);
-  const activeListenerIdRef = useRef<ReadinessListenerHandle | null>(null);
-
-  useEffect(() => {
-    const listener = async (readyness: Readyness) => {
-      switch (readyness) {
-        case Readyness.Failed:
-          console.error("FeatureHub React SDK: Connection failed!");
-          break;
-        case Readyness.NotReady:
-          console.warn("FeatureHub React SDK: Connection not ready yet!");
-          break;
-        default: {
-          // TODO: Remove deprecated username prop at some point since userKey keeps API language consistent
-          const userInfo = username ?? userKey;
-
-          if (!userInfo) {
-            console.info("FeatureHub React SDK: Connection ready! Using anonymous user context.");
-            return;
-          }
-
-          console.info("FeatureHub React SDK: Connection ready! Using context with userKey set.");
-          await client.userKey(userInfo).build(); // still the same userKey, doesn't change
-        }
-      }
-    };
-
-    if (activeListenerIdRef.current !== null) {
-      // Remove potential previous existing listener (for use-case when the username updates while component still mounted)
-      fh.config.removeReadinessListener(activeListenerIdRef.current);
+  const { config, client } = useMemo(() => {
+    if (useSharedConfiguration) {
+      fhLog.log("FeatureHub React SDK: Using existing configuration.");
+      return { config: fh.config, client: fh.context };
     }
 
-    const listenerId = fh.config.addReadinessListener(listener, true);
-    activeListenerIdRef.current = listenerId; // Keep track of registered listener
+    fhLog.log("FeatureHub React SDK: Creating config.");
 
+    const config = EdgeFeatureHubConfig.config(url, apiKey);
+    if (connectionType?.toLowerCase() === "rest-passive") {
+      config.restPassive(pollInterval);
+    } else if (connectionType?.toLowerCase() === "streaming") {
+      config.streaming();
+    } else {
+      config.restActive(pollInterval);
+    }
+
+    return { config, client: config.newContext() };
+  }, [url, apiKey, pollInterval, connectionType, useSharedConfiguration]); // removed userKey from dependencies to prevent excessive config recreation
+
+  const isReady = useSyncExternalStore(
+    (onStoreChange) => {
+      const handle = config.addReadinessListener(onStoreChange);
+      return () => config.removeReadinessListener(handle);
+    },
+    () => config.readiness === Readyness.Ready,
+  );
+
+  useEffect(() => {
+    client.userKey(userKey).build();
+  }, [client, userKey]);
+
+  useEffect(() => {
+    if (!isReady) {
+      if (config.readiness === Readyness.Failed) {
+        fhLog.error("FeatureHub React SDK: Connection failed!");
+      }
+      return;
+    }
+
+    const userInfo = username ?? userKey;
+
+    if (userInfo) {
+      fhLog.log("FeatureHub React SDK: Connection ready! Using context with userKey set.");
+      client.userKey(userInfo).build();
+    } else {
+      fhLog.log("FeatureHub React SDK: Connection ready! Using anonymous user context.");
+      client.build();
+    }
+  }, [isReady, config, client, userKey, username]);
+
+  useEffect(() => {
     return () => {
-      console.warn("FeatureHub React SDK: Context unmounting. Terminating connection!");
-      fh.config.removeReadinessListener(listenerId);
-      fh.config.close();
+      if (!useSharedConfiguration && config) {
+        fhLog.trace("FeatureHub React SDK: Terminating connection!");
+        config.close();
+      }
     };
-  }, [userKey]);
+  }, [config, useSharedConfiguration]);
+
+  if (waitForReady && !isReady) {
+    fhLog.trace("FeatureHub React SDK, not ready yet, returning empty div");
+    return <div></div>;
+  }
 
   return (
-    <FeatureHubContext.Provider value={{ config: fh.config, client }}>
-      {children}
-    </FeatureHubContext.Provider>
+    <FeatureHubContext.Provider value={{ config, client }}>{children}</FeatureHubContext.Provider>
   );
 };
 

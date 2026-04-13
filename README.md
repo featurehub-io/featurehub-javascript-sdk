@@ -106,6 +106,12 @@ To use SSE real-time streaming instead of polling:
 <meta name="featurehub-client" content="streaming" />
 ```
 
+If you want your code to determine when the FeatureHub client makes its first actual request for data (for example when you have not embedded the context attributes in the html headers), you can use:
+
+```html
+<meta name="featurehub-delayed-start" content="" />
+```
+
 It is normal and expected that your API key will be exposed to the end user in this case, as it is intended to be used in insecure environments.
 
 ```typescript

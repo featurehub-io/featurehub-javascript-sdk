@@ -58,7 +58,8 @@
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vitest": "catalog:vitest"
+    "vitest": "catalog:vitest",
+    "vite": "catalog:vite"
   },
   "dependencies": {
     "featurehub-javascript-core-sdk": "workspace:^",

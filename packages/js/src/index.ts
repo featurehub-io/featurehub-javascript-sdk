@@ -35,8 +35,48 @@ export class FeatureHub {
   }
 
   public static set(config: FeatureHubConfig, context: ClientContext) {
+    const oldConfig = window[fhConfigKey];
+    // if we are swapping configs, make sure the old one is closed
+    if (oldConfig !== config && oldConfig) {
+      oldConfig.close();
+    }
+
     window[fhConfigKey] = config;
     window[fhContextKey] = context;
+
+    return FeatureHub.context;
+  }
+
+  public static setWithContext(config: FeatureHubConfig, attributes: ContextRecord): ClientContext {
+    const ctx = config.context(attributes);
+
+    FeatureHub.set(config, ctx);
+
+    return ctx;
+  }
+
+  public static setConfig(config?: FeatureHubConfig): FeatureHubConfig | undefined {
+    window[fhConfigKey] = config;
+    return config;
+  }
+
+  public static setContext(context?: ClientContext): ClientContext | undefined {
+    window[fhContextKey] = context;
+    return context;
+  }
+
+  // as getting before it is set throws an exception, you can call this method
+  // if you are unsure
+  public static isCompletelyConfigured(): boolean {
+    return window[fhConfigKey] !== undefined && window[fhContextKey] !== undefined;
+  }
+
+  public static isConfigSet(): boolean {
+    return window[fhConfigKey] !== undefined;
+  }
+
+  public static isContextSet(): boolean {
+    return window[fhContextKey] !== undefined;
   }
 
   public static get context(): ClientContext {
@@ -83,10 +123,11 @@ export class FeatureHub {
     let pollInterval: string | undefined;
     let url: string | undefined;
     let client: string | undefined;
+    let delayedStart = false;
     const params: ContextRecord = {};
 
     for (let count = 0; count < metaTags.length; count++) {
-      const name = metaTags[count]?.getAttribute("name");
+      const name = metaTags[count]?.getAttribute("name")?.toLowerCase();
       const content = metaTags[count]?.content;
 
       if (content) {
@@ -98,6 +139,8 @@ export class FeatureHub {
           client = content.toLowerCase();
         } else if (name === "featurehub-interval") {
           pollInterval = content;
+        } else if (name === "featurehub-delayed-start") {
+          delayedStart = true;
         } else if (name === "featurehub-loglevel") {
           switch (content) {
             // @ts-expect-error we want fallthrough
@@ -154,7 +197,9 @@ export class FeatureHub {
 
       const context = config.context(params);
 
-      context.build();
+      if (!delayedStart) {
+        context.build();
+      }
 
       this.set(config, context);
     }
