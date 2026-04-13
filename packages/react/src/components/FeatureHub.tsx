@@ -7,7 +7,7 @@ import {
   type ReadinessListenerHandle,
   Readyness,
 } from "featurehub-javascript-client-sdk";
-import { createContext, type FC, type ReactNode, useEffect, useRef, useState } from "react";
+import { createContext, type FC, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 export type UseFeatureHub = {
   readonly config: FeatureHubConfig;
@@ -61,14 +61,18 @@ const FeatureHub: FC<Props> = ({
   connectionType = "rest-active",
   waitForReady = true,
   children,
-}) => {
+}: Props) => {
   const useSharedConfiguration = fh.isCompletelyConfigured();
 
-  fhLog.log("FeatureHub React SDK: Creating config.", useSharedConfiguration);
+  const {config, context} = useMemo(() => {
+    if (useSharedConfiguration) {
+      fhLog.log("FeatureHub React SDK: Using existing configuration.");
+      return {config: fh.config, context: fh.context};
+    }
 
-  const config = useSharedConfiguration ? fh.config : EdgeFeatureHubConfig.config(url, apiKey);
-  let context: ClientContext;
-  if (!useSharedConfiguration) {
+    fhLog.log("FeatureHub React SDK: Creating config.");
+
+    const config = EdgeFeatureHubConfig.config(url, apiKey);
     if (connectionType?.toLowerCase() === "rest-passive") {
       config.restPassive(pollInterval ?? 60000);
     } else if (connectionType?.toLowerCase() === "streaming") {
@@ -77,15 +81,14 @@ const FeatureHub: FC<Props> = ({
       config.restActive(pollInterval ?? 60000);
     }
 
-    context = config.restActive(pollInterval).context({
-      userKey: userKey,
-    });
+    return {config: config, context: config.context({userKey: userKey})};
+  }, [url, apiKey, pollInterval, connectionType, userKey]);
 
-    context.build();
-  } else {
-    context = fh.context;
-    context.userKey(userKey).build();
+  if (useSharedConfiguration) {
+    context.userKey(userKey);
   }
+
+  context.build();
 
   const [client] = useState(context);
   const [isReady, setIsReady] = useState(config.readiness === Readyness.Ready);
@@ -127,6 +130,8 @@ const FeatureHub: FC<Props> = ({
     activeListenerIdRef.current = listenerId; // Keep track of registered listener
 
     return () => {
+      fhLog.trace('FeatureHubSDK: shutting down effect of FeatureHub.');
+
       if (config) {
         // don't tell us any longer
         config.removeReadinessListener(listenerId);
