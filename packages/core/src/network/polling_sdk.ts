@@ -200,6 +200,9 @@ export class PollingBase implements PollingService {
       this.rejectOutstanding(e);
       throw e;
     } finally {
+      // if this has already been done, it is fine
+      clearTimeout(timeoutId);
+
       this._awaitingFirstPollResult = false;
     }
   }

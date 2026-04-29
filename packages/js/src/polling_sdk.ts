@@ -9,6 +9,11 @@ import { fhLog, PollingBase } from "featurehub-javascript-core-sdk";
 
 import { createBase64UrlSafeHash } from "./crypto-browser";
 
+interface StoredData {
+  e?: Array<FeatureEnvironmentCollection>;
+  tz?: number;
+}
+
 /**
  * This should never be used directly but we are exporting it because we need it
  */
@@ -39,10 +44,17 @@ export class BrowserPollingService extends PollingBase implements PollingService
       const storedData = BrowserPollingService.localStorageRequestor().getItem(url);
       if (storedData) {
         try {
-          const data = JSON.parse(storedData);
+          const data = JSON.parse(storedData) as StoredData;
           if (data.e) {
             // save space with short name
             this._callback(data.e as Array<FeatureEnvironmentCollection>, "browser-store");
+          }
+          // has the data been loaded from this host within the frequency period already? If so, lets not do it again and
+          // assume the poll has succeeded
+          if (data.e && data.tz) {
+            if (this._frequency !== 0 && Date.now() - data.tz < this._frequency) {
+              return true;
+            }
           }
         } catch (_) {
           // ignore exception
@@ -58,7 +70,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
       if (this.localStorageLastUrl) {
         BrowserPollingService.localStorageRequestor().setItem(
           this.localStorageLastUrl,
-          JSON.stringify({ e: environments }),
+          JSON.stringify({ e: environments, tz: Date.now() }),
         );
       }
     } catch (_) {

@@ -1,3 +1,10 @@
+#### 2.0.3
+
+- If a web 1.0 is frequently page swapping, it will attempt to reload the
+features from FH on every page change, which is expensive and unnecessary.
+This change writes the timestamp of the last change (in ms) in the local storage,
+- and compares it with the frequency.
+
 #### 2.0.2
 
 - there was a spurious console.log in the polling code
@@ -10,8 +17,8 @@
   for javascript frameworks (e.g. React and Solid), particularly around support for
   testability and reloading, and also waiting for results to appear before rendering.
 - there was a bug in the code around Server Evaluated contexts swapping context details. When
-it happened, the repository would flip to "notReady" and never send a listener event again when
-it actually became ready.
+  it happened, the repository would flip to "notReady" and never send a listener event again when
+  it actually became ready.
 
 #### 2.0.1
 
