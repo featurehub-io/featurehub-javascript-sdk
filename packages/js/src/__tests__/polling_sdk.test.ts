@@ -1,7 +1,9 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import type { FeatureEnvironmentCollection } from "featurehub-javascript-core-sdk";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  BrowserPollingService,
   type FeatureHubConfig,
   FeatureHubPollingClient,
   FHLog,
@@ -37,6 +39,8 @@ describe("basic polling sdk works as expected", () => {
     let dom: any;
     let originalWindow: any;
     let originalDocument: any;
+    let originalStorage: any;
+    let storage: any;
 
     beforeAll(async () => {
       // Create JSDOM environment to simulate browser
@@ -47,12 +51,19 @@ describe("basic polling sdk works as expected", () => {
         resources: "usable",
       });
 
+      storage = {};
+
       // Store original window
       originalWindow = (globalThis as any).window;
       originalDocument = (globalThis as any).document;
+      originalStorage = (globalThis as any).localStorage;
 
       // Set up browser-like environment
       (globalThis as any).window = dom.window;
+      (globalThis as any).localStorage = {
+        getItem: (key: string) => storage![key],
+        setItem: (key: string, val: any) => (storage![key] = val),
+      };
 
       Object.defineProperty(globalThis, "window", {
         value: dom.window,
@@ -75,6 +86,7 @@ describe("basic polling sdk works as expected", () => {
       // Restore original window
       (globalThis as any).window = originalWindow;
       (globalThis as any).document = originalDocument;
+      (globalThis as any).localStorage = originalStorage;
       dom.window.close();
     });
 
@@ -123,6 +135,28 @@ describe("basic polling sdk works as expected", () => {
 
       const sessionHash = await createBase64UrlSafeHash("sha256", "user-id:12345,session:abcdef");
       expect(sessionHash).toBe(SESSION_HASH);
+    });
+
+    it("should not actually attempt to poll if it is within the frequency window", async () => {
+      let features: Array<FeatureEnvironmentCollection> | undefined = undefined;
+      let src: string | undefined = undefined;
+
+      storage["http://localhost"] = JSON.stringify({ e: [], tz: Date.now() + 1000 });
+      const bp = new BrowserPollingService({}, "http://localhost", 3000, (e, s) => {
+        features = e;
+        src = s;
+      });
+
+      let result = await bp.preload(Substitute.for(), "http://localhost");
+      expect(result).to.be.true;
+      expect(src).to.eq("browser-store");
+      expect(features!.length).eq(0);
+
+      // when the timer exceeds the threshold, it should return false and let us poll
+
+      storage["http://localhost"] = JSON.stringify({ e: [], tz: Date.now() + 3001 });
+      result = await bp.preload(Substitute.for(), "http://localhost");
+      expect(result).to.be.false;
     });
   });
 });
