@@ -1,5 +1,11 @@
 # featurehub-javascript-core-sdk
 
+## 2.0.3
+
+### Patch Changes
+
+- 90db9f7: Support for preventing polling on page change for Web 1.0 apps when the poll is not within the requisite interval
+
 ## 2.0.2
 
 ### Patch Changes
