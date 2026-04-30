@@ -1,8 +1,8 @@
 #### 2.0.3
 
 - If a web 1.0 is frequently page swapping, it will attempt to reload the
-features from FH on every page change, which is expensive and unnecessary.
-This change writes the timestamp of the last change (in ms) in the local storage,
+  features from FH on every page change, which is expensive and unnecessary.
+  This change writes the timestamp of the last change (in ms) in the local storage,
 - and compares it with the frequency.
 
 #### 2.0.2
