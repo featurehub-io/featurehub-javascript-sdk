@@ -5,7 +5,11 @@ packages:
   - "plugins/stores/*"
   - "plugins/interceptors/*"
 allowBuilds:
-  esbuild: true
+  '@parcel/watcher': false
+  '@swc/core': false
+  esbuild: false
+  protobufjs: false
+  unrs-resolver: false
 
 catalogs:
   node:
