@@ -14,18 +14,18 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "featurehub-react-sdk": "workspace:*",
     "featurehub-javascript-client-sdk": "workspace:*",
+    "featurehub-react-sdk": "workspace:*",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react-swc": "^4.2.0",
+    "@vitejs/plugin-react-swc": "^4.2.1",
     "featurehub-tsconfig": "workspace:*",
     "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",

@@ -44,12 +44,12 @@
     "react": ">=18.2.0"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "catalog:node",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react-swc": "^4.2.0",
+    "@vitejs/plugin-react-swc": "^4.2.1",
     "featurehub-javascript-client-sdk": "workspace:^",
     "featurehub-tsconfig": "workspace:*",
     "jsdom": "^27.1.0",
