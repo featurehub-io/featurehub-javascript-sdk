@@ -87,6 +87,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private _clientContext: ServerEvalFeatureContext | undefined;
   private _initialized = false;
   private _usageAdapter: UsageAdapter | undefined;
+  private _usageAdapterRepository: InternalFeatureRepository | undefined;
   private _timeout: number | undefined = undefined;
   private _edgeType: EdgeType = EdgeType.STREAMING;
   private readonly _noopMode: boolean;
@@ -388,8 +389,17 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       this._repository = new ClientFeatureRepository();
     }
 
-    this._usageAdapter = new UsageAdapter(this._repository);
-    this._usageAdapter.registerPlugin(new PassiveRestUsagePlugin(this));
+    // The usage adapter subscribes to the repository and nothing removes that
+    // subscription, so it has to be created once per repository rather than on every
+    // call. newContext() calls this method, so creating one here unconditionally leaked
+    // a usage stream per context, and every feature evaluation then fanned out over all
+    // of them.
+    if (this._usageAdapterRepository !== this._repository) {
+      this._usageAdapter?.close();
+      this._usageAdapter = new UsageAdapter(this._repository);
+      this._usageAdapter.registerPlugin(new PassiveRestUsagePlugin(this));
+      this._usageAdapterRepository = this._repository;
+    }
 
     return this._repository;
   }
