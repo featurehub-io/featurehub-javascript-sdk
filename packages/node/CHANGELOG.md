@@ -1,3 +1,12 @@
+## 2.0.2
+
+### Patch Changes
+
+- e193e87: Create the usage adapter once per repository rather than on every `repository()` call. Because `newContext()` calls `repository()`, every context previously registered a usage stream that was never removed, so feature evaluation fanned out over an ever-growing list of listeners and got progressively slower for the life of the process.
+- Updated dependencies [e193e87]
+- Updated dependencies [90db9f7]
+  - featurehub-javascript-core-sdk@2.0.3
+
 ## 2.0.1
 
 ### Patch Changes
