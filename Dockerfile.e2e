@@ -1,16 +1,17 @@
 # ================================
 # STAGE 0: Setup Base Image
 # ================================
-FROM node:22.20-bullseye-slim AS base
+FROM node:24-alpine AS base
 
+RUN apk update && apk add --no-cache bash
+RUN mkdir -p /pnpm
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PATH:/pnpm:/pnpm/bin
 # Install pnpm globally
-RUN npm install -g pnpm@latest && mkdir -p /sdk
+RUN npm install -g pnpm@11 && mkdir -p /sdk
 
 # Set working directory
 WORKDIR /sdk
-
-# Enable pnpm
-RUN corepack enable pnpm
 
 COPY / /sdk/
 
