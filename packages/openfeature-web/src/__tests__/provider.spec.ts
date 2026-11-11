@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach,describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---- hoisted shared state for the SDK mock ----
 const h = vi.hoisted(() => {
@@ -16,7 +16,7 @@ const h = vi.hoisted(() => {
       getRawJson?: () => string | undefined;
       getType?: () => string | undefined;
       getVersion?: () => number | undefined;
-      internalGetValue?: (triggerUsage: boolean) => { strategyId?: string } | undefined;
+      getValue?: () => { value?: unknown; strategyId?: string } | undefined;
     }
   >();
   const appliedContexts: Array<Record<string, unknown>> = [];
@@ -64,7 +64,7 @@ vi.mock("featurehub-javascript-client-sdk", () => {
   };
 });
 
-import { InvalidContextError,mapEvaluationContext, toContextRecord } from "../context-mapper";
+import { InvalidContextError, mapEvaluationContext, toContextRecord } from "../context-mapper";
 import { FeatureHubWebProvider } from "../provider";
 
 const noopLogger = { error: () => {}, warn: () => {}, info: () => {}, debug: () => {} };
@@ -75,26 +75,25 @@ function resetFixtures() {
   h.holders.clear();
   h.holders.set("bool-flag", {
     exists: true,
-    getBoolean: () => true,
+    getValue: () => ({ value: true }),
     getType: () => "BOOLEAN",
     getVersion: () => 3,
   });
   h.holders.set("str-flag", {
     exists: true,
-    getString: () => "blue",
+    getValue: () => ({ value: "blue" }),
     getType: () => "STRING",
     getVersion: () => 5,
   });
   h.holders.set("pct-flag", {
     exists: true,
-    getBoolean: () => true,
     getType: () => "BOOLEAN",
     getVersion: () => 2,
-    internalGetValue: () => ({ strategyId: "strategy-42" }),
+    getValue: () => ({ value: true, strategyId: "strategy-42" }),
   });
   h.holders.set("json-flag", {
     exists: true,
-    getRawJson: () => '{"a":1}',
+    getValue: () => ({ value: '{"a":1}' }),
     getType: () => "JSON",
     getVersion: () => 1,
   });
@@ -126,6 +125,12 @@ describe("FeatureHubWebProvider", () => {
 
   it("throws without host/apiKey", () => {
     expect(() => new FeatureHubWebProvider({ host: "", apiKey: "" })).toThrow();
+  });
+  it("throws on server-evaluated keys (fail fast, no silent mis-resolution)", () => {
+    expect(
+      () =>
+        new FeatureHubWebProvider({ host: "http://edge.test", apiKey: "default/env/server-key" }),
+    ).toThrow(/client-evaluated/);
   });
 
   it("resolves flags synchronously from the local repository", async () => {

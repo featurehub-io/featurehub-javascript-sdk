@@ -64,10 +64,11 @@ export class FeatureHubWebProvider implements Provider {
       throw new Error("FeatureHubWebProvider requires `host` and `apiKey`.");
     }
     if (!options.apiKey.includes("*")) {
-      // soft warning: browsers should use client-evaluated keys
-      console.warn(
-        "FeatureHubWebProvider: this looks like a server-evaluated API key. " +
-          "Browsers should use a client-evaluated key (containing '*').",
+      // fail fast: this provider evaluates synchronously from a locally held
+      // repository, which only client-evaluated keys can populate correctly.
+      throw new Error(
+        "FeatureHubWebProvider requires a client-evaluated API key (containing '*'). " +
+          "Server-evaluated keys cannot be resolved synchronously in a browser.",
       );
     }
     this.options = options;
@@ -267,14 +268,11 @@ export class FeatureHubWebProvider implements Provider {
       };
     }
 
-    const rawValue =
-      kind === "boolean"
-        ? holder.getBoolean()
-        : kind === "string"
-          ? holder.getString()
-          : kind === "number"
-            ? holder.getNumber()
-            : holder.getRawJson();
+    // one evaluation gives both the value and the id of the rollout strategy
+    // that matched it (see FeatureStateHolder.getValue)
+    const evaluated = holder.getValue();
+    const rawValue = evaluated?.value;
+    const strategyId = evaluated?.strategyId;
 
     if (rawValue === undefined || rawValue === null) {
       return {
@@ -297,20 +295,6 @@ export class FeatureHubWebProvider implements Provider {
           flagMetadata: metadata,
         };
       }
-    }
-
-    // client-evaluated repositories expose the matched rollout strategy via
-    // the evaluated feature
-    let strategyId: string | undefined;
-    try {
-      const evaluated = (
-        holder as unknown as {
-          internalGetValue?: (triggerUsage: boolean) => { strategyId?: string };
-        }
-      ).internalGetValue?.(false);
-      strategyId = evaluated?.strategyId;
-    } catch {
-      strategyId = undefined;
     }
 
     return {

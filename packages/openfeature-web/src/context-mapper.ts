@@ -1,16 +1,7 @@
 import type { EvaluationContext } from "@openfeature/web-sdk";
+import type { ContextAttribute } from "featurehub-javascript-client-sdk";
 
-/**
- * FeatureHub context attributes may be a primitive or an array of primitives.
- * Anything else (objects, arrays of objects) cannot be represented.
- */
-export type ContextAttribute =
-  | string
-  | number
-  | boolean
-  | Array<string>
-  | Array<number>
-  | Array<boolean>;
+export type { ContextAttribute } from "featurehub-javascript-client-sdk";
 
 export interface MappedContext {
   /** FeatureHub's user key (OpenFeature `targetingKey`). */

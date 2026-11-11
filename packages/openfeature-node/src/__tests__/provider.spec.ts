@@ -1,11 +1,25 @@
-import { beforeEach,describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---- hoisted shared state for the SDK mock ----
+//
+// The mock deliberately reproduces the REAL core-SDK semantics that the
+// provider depends on:
+//   * `attributes = record` MERGES into the existing attribute map
+//     (BaseClientContext set attributes never clears), and `clear()` empties
+//     the attribute map but does NOT reset the user key.
+//   * server-evaluated keys share ONE ServerEvalFeatureContext per config;
+//     every `newContext()` (context()/feature()) calls addClient(); only when
+//     removeClient() brings the count to 0 does forceClose() actually run.
+type Attrs = Record<string, string | undefined>;
+
 const h = vi.hoisted(() => {
   const state = {
     readiness: "Ready" as "NotReady" | "Ready" | "Failed",
-    buildCount: 0,
-    lastContextRecord: undefined as Record<string, unknown> | undefined,
+    buildSnapshots: [] as Array<Attrs & { userkey?: string }>,
+    currentContext: {} as Attrs & { userkey?: string },
+    addClientCount: 0,
+    removeClientCount: 0,
+    forceClosed: false,
   };
   const holders = new Map<
     string,
@@ -17,7 +31,7 @@ const h = vi.hoisted(() => {
       getRawJson?: () => string | undefined;
       getType?: () => string | undefined;
       getVersion?: () => number | undefined;
-      internalGetValue?: (triggerUsage: boolean) => { strategyId?: string } | undefined;
+      getValue?: () => { value?: unknown; strategyId?: string } | undefined;
     }
   >();
   return { state, holders };
@@ -25,20 +39,61 @@ const h = vi.hoisted(() => {
 
 vi.mock("featurehub-javascript-node-sdk", () => {
   class StubContext {
-    attributes: Record<string, unknown> = {};
+    _attributes = new Map<string, string>();
+    _userKey: string | undefined = undefined;
+
+    // faithful to BaseClientContext: MERGES, never clears
+    set attributes(record: Record<string, unknown>) {
+      for (const [key, val] of Object.entries(record)) {
+        if (val === undefined) continue;
+        if (key.toLowerCase() === "userkey") {
+          this._userKey = String(val);
+        } else {
+          this._attributes.set(key, String(val));
+        }
+      }
+    }
+
+    // faithful to BaseClientContext: empties attributes, does NOT reset user key
+    clear() {
+      this._attributes.clear();
+    }
+
+    userKey(value: string | undefined) {
+      this._userKey = value;
+    }
+
+    close() {
+      /* overridden by the config for shared server-eval contexts */
+    }
+
     feature(key: string) {
-      h.state.lastContextRecord = this.attributes;
       const holder = h.holders.get(key);
       return holder ?? { exists: false };
     }
+
+    effectiveContext(): Record<string, string> {
+      const eff: Record<string, string> = {};
+      for (const [k, v] of this._attributes) eff[k] = v;
+      if (this._userKey !== undefined) eff["userkey"] = this._userKey;
+      return eff;
+    }
+
     async build() {
-      h.state.buildCount += 1;
+      h.state.buildSnapshots.push(this.effectiveContext());
+      h.state.currentContext = this.effectiveContext();
     }
   }
 
   class StubConfig {
     initialized = true;
+    isClientEval: boolean;
+    private shared: StubContext | undefined;
     readinessListeners: Array<(r: string) => void> = [];
+
+    constructor(apiKey: string) {
+      this.isClientEval = apiKey.includes("*");
+    }
 
     addReadinessListener(listener: (r: string) => void) {
       this.readinessListeners.push(listener);
@@ -62,36 +117,75 @@ vi.mock("featurehub-javascript-node-sdk", () => {
     async waitForReady() {
       return h.state.readiness;
     }
-    close() {}
+
     context(record?: Record<string, unknown>) {
-      const ctx = new StubContext();
-      if (record) {
-        ctx.attributes = record;
-        h.state.lastContextRecord = record;
+      if (this.isClientEval) {
+        // fresh local context per call — no shared state, no reference counting
+        const ctx = new StubContext();
+        if (record) ctx.attributes = record;
+        return ctx;
       }
-      return ctx;
+      // server-evaluated: ONE shared context, reference-counted via addClient
+      if (!this.shared) this.shared = new StubContext();
+      h.state.addClientCount += 1;
+      if (record) this.shared.attributes = record; // merges — faithful to the SDK
+      // faithful to ServerEvalFeatureContext.close(): with a single remaining
+      // reference it cascades into config.close() (decrement → forceClose)
+      this.shared.close = () => {
+        this.close();
+      };
+      return this.shared;
     }
+
     feature(key: string) {
+      if (this.shared) return this.shared.feature(key);
       const holder = h.holders.get(key);
       return holder ?? { exists: false };
+    }
+
+    forceClose() {
+      h.state.forceClosed = true;
+    }
+
+    close() {
+      if (this.shared) {
+        h.state.removeClientCount += 1;
+        if (h.state.removeClientCount >= h.state.addClientCount) {
+          h.state.forceClosed = true; // forceClose only fires at refcount 0
+        }
+      } else {
+        h.state.forceClosed = true;
+      }
     }
   }
 
   return {
-    EdgeFeatureHubConfig: StubConfig,
+    EdgeFeatureHubConfig: class extends StubConfig {
+      constructor(_host: string, apiKey: string) {
+        super(apiKey);
+      }
+    },
+    // faithful to the core SDK's export
+    caToString: (value: unknown, joinSep = ","): string | undefined => {
+      if (value === undefined) return undefined;
+      return Array.isArray(value) ? value.map((v) => String(v)).join(joinSep) : String(value);
+    },
     Readyness: { NotReady: "NotReady", Ready: "Ready", Failed: "Failed" },
   };
 });
 
-import { InvalidContextError,mapEvaluationContext, toContextRecord } from "../context-mapper";
+import { InvalidContextError, mapEvaluationContext, toContextRecord } from "../context-mapper";
 import { FeatureHubProvider } from "../provider";
 
 const noopLogger = { error: () => {}, warn: () => {}, info: () => {}, debug: () => {} };
 
 function resetFixtures() {
   h.state.readiness = "Ready";
-  h.state.buildCount = 0;
-  h.state.lastContextRecord = undefined;
+  h.state.buildSnapshots = [];
+  h.state.currentContext = {};
+  h.state.addClientCount = 0;
+  h.state.removeClientCount = 0;
+  h.state.forceClosed = false;
   h.holders.clear();
   h.holders.set("bool-flag", {
     exists: true,
@@ -123,13 +217,31 @@ function resetFixtures() {
     getType: () => "STRING",
     getVersion: () => 4,
   });
+  // every holder defines ALL getters (like the real FeatureStateHolder);
+  // getValue() is derived from the typed getter the fixture defines
+  const defaults = {
+    getBoolean: () => undefined,
+    getString: () => undefined,
+    getNumber: () => undefined,
+    getRawJson: () => undefined,
+  };
+  for (const [key, holder] of h.holders) {
+    const merged = { ...defaults, ...holder };
+    h.holders.set(key, {
+      ...merged,
+      getValue: () => ({
+        value:
+          merged.getBoolean() ?? merged.getString() ?? merged.getNumber() ?? merged.getRawJson(),
+      }),
+    });
+  }
   h.holders.set("pct-flag", {
     exists: true,
     getBoolean: () => true,
     getType: () => "BOOLEAN",
     getVersion: () => 2,
-    // client-evaluated repositories expose the matched strategy like this
-    internalGetValue: () => ({ strategyId: "strategy-42" }),
+    // the evaluated feature carries the matched rollout strategy id
+    getValue: () => ({ value: true, strategyId: "strategy-42" }),
   });
 }
 
@@ -143,7 +255,7 @@ async function readyProvider(apiKey: string) {
 }
 
 describe("context mapping", () => {
-  it("maps targetingKey to userkey; session stays session for client-eval", () => {
+  it("maps targetingKey to userkey; session stays session unless server-eval mapping is requested", () => {
     expect(toContextRecord({ targetingKey: "u1", session: "s1", plan: "pro" })).toEqual({
       userkey: "u1",
       session: "s1",
@@ -151,10 +263,7 @@ describe("context mapping", () => {
     });
     expect(
       toContextRecord({ targetingKey: "u1", session: "s1" }, { sessionAsSessionKey: true }),
-    ).toEqual({
-      userkey: "u1",
-      sessionkey: "s1",
-    });
+    ).toEqual({ userkey: "u1", sessionkey: "s1" });
   });
 
   it("rejects nested objects", () => {
@@ -209,12 +318,12 @@ describe("FeatureHubProvider (client-evaluated key)", () => {
     expect(details.variant).toBe("strategy-42");
   });
 
-  it("never performs per-resolution network calls (no context rebuilds for a stable context)", async () => {
+  it("never performs context rebuilds for client-evaluated keys", async () => {
     const provider = await readyProvider(CLIENT_KEY);
     const ctx = { targetingKey: "u1" };
     await provider.resolveBooleanEvaluation("bool-flag", false, ctx, noopLogger);
     await provider.resolveStringEvaluation("str-flag", "x", ctx, noopLogger);
-    expect(h.state.buildCount).toBe(0);
+    expect(h.state.buildSnapshots).toHaveLength(0);
   });
 
   it("reports FLAG_NOT_FOUND for unknown flags", async () => {
@@ -258,6 +367,13 @@ describe("FeatureHubProvider (client-evaluated key)", () => {
     const details = await provider.resolveBooleanEvaluation("bool-flag", false, {}, noopLogger);
     expect(details.errorCode).toBe("PROVIDER_NOT_READY");
   });
+
+  it("force-closes on shutdown (no reference-count leak)", async () => {
+    const provider = await readyProvider(CLIENT_KEY);
+    await provider.resolveBooleanEvaluation("bool-flag", false, {}, noopLogger);
+    await provider.onClose();
+    expect(h.state.forceClosed).toBe(true);
+  });
 });
 
 describe("FeatureHubProvider (server-evaluated key)", () => {
@@ -265,29 +381,74 @@ describe("FeatureHubProvider (server-evaluated key)", () => {
 
   it("re-fetches the bundle only when the context actually changes", async () => {
     const provider = await readyProvider(SERVER_KEY);
-    expect(h.state.buildCount).toBe(0); // no initial context supplied
+    expect(h.state.buildSnapshots).toHaveLength(1); // initial fetch (empty context)
 
     await provider.resolveBooleanEvaluation("bool-flag", false, { targetingKey: "u1" }, noopLogger);
-    expect(h.state.buildCount).toBe(1);
+    expect(h.state.buildSnapshots).toHaveLength(2);
 
-    // same context: served from the local repository
     await provider.resolveStringEvaluation("str-flag", "x", { targetingKey: "u1" }, noopLogger);
-    expect(h.state.buildCount).toBe(1);
+    expect(h.state.buildSnapshots).toHaveLength(2); // same context: served locally
 
-    // different context: one rebuild
     await provider.resolveBooleanEvaluation("bool-flag", false, { targetingKey: "u2" }, noopLogger);
-    expect(h.state.buildCount).toBe(2);
+    expect(h.state.buildSnapshots).toHaveLength(3);
   });
 
-  it("applies the OpenFeature context (session mapped to sessionkey) for server-eval", async () => {
+  it("does not leak attributes from one context into the next", async () => {
     const provider = await readyProvider(SERVER_KEY);
+
     await provider.resolveBooleanEvaluation(
       "bool-flag",
       false,
-      { targetingKey: "u1", country: "NZ", session: "s1" },
+      { targetingKey: "u1", country: "NZ" },
       noopLogger,
     );
-    expect(h.state.lastContextRecord).toEqual({ userkey: "u1", country: "NZ", sessionkey: "s1" });
+    expect(h.state.buildSnapshots.at(-1)).toEqual({ country: "NZ", userkey: "u1" });
+
+    // user u2 has no attributes — u1's country must not leak into u2's bundle
+    await provider.resolveBooleanEvaluation("bool-flag", false, { targetingKey: "u2" }, noopLogger);
+    expect(h.state.buildSnapshots.at(-1)).toEqual({ userkey: "u2" });
+  });
+
+  it("serialises concurrent resolutions so users never see each other's bundle", async () => {
+    const provider = await readyProvider(SERVER_KEY);
+
+    // make evaluation results context-dependent: the flag is true for u1, false for u2
+    h.holders.set("ctx-flag", {
+      exists: true,
+      getType: () => "BOOLEAN",
+      getVersion: () => 1,
+      getValue: () => ({ value: h.state.currentContext["userkey"] === "u1" }),
+    });
+
+    const r1 = provider.resolveBooleanEvaluation(
+      "ctx-flag",
+      false,
+      { targetingKey: "u1" },
+      noopLogger,
+    );
+    const r2 = provider.resolveBooleanEvaluation(
+      "ctx-flag",
+      false,
+      { targetingKey: "u2" },
+      noopLogger,
+    );
+    const [v1, v2] = await Promise.all([r1, r2]);
+
+    expect(v1.value).toBe(true); // u1's evaluation
+    expect(v2.value).toBe(false); // u2's evaluation — not u1's leaked bundle
+  });
+
+  it("force-closes on shutdown even with a shared server-eval context (no connection leak)", async () => {
+    const provider = await readyProvider(SERVER_KEY);
+    await provider.resolveBooleanEvaluation("bool-flag", false, { targetingKey: "u1" }, noopLogger);
+    await provider.resolveStringEvaluation("str-flag", "x", { targetingKey: "u2" }, noopLogger);
+
+    expect(h.state.addClientCount).toBe(1); // shared context created once in initialize
+
+    // onClose calls config.forceClose() directly, so teardown does not depend
+    // on the reference count returning to zero
+    await provider.onClose();
+    expect(h.state.forceClosed).toBe(true);
   });
 
   it("resolves flags from the refreshed bundle", async () => {
@@ -300,5 +461,19 @@ describe("FeatureHubProvider (server-evaluated key)", () => {
     );
     expect(details.value).toBe("blue");
     expect(details.flagMetadata?.["featureVersion"]).toBe(5);
+  });
+
+  it("surfaces the matched strategy id carried on server-evaluated bundles", async () => {
+    h.holders.set("sv-flag", {
+      exists: true,
+      getType: () => "BOOLEAN",
+      getVersion: () => 2,
+      // the evaluated feature (client and server) carries the matched strategy id
+      getValue: () => ({ value: true, strategyId: "strategy-7" }),
+    });
+    const provider = await readyProvider(SERVER_KEY);
+    const details = await provider.resolveBooleanEvaluation("sv-flag", false, {}, noopLogger);
+    expect(details.reason).toBe("TARGETING_MATCH");
+    expect(details.variant).toBe("strategy-7");
   });
 });
