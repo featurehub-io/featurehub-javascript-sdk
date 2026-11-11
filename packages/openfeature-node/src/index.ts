@@ -24,7 +24,7 @@
  * });
  * ```
  */
-export type { ContextAttribute,MappedContext } from "./context-mapper";
+export type { ContextAttribute, MappedContext } from "./context-mapper";
 export {
   buildFeatureHubHeader,
   contextSignature,
