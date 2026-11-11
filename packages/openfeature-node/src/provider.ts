@@ -341,11 +341,12 @@ export class FeatureHubProvider implements Provider {
   ): Promise<FeatureStateHolder | undefined> {
     const cfg = this.config!;
     const record = toContextRecord(context, { sessionAsSessionKey: !this.clientEval });
-    const signature = contextSignature(context);
 
     if (this.clientEval) {
       return cfg.context(record).feature(flagKey);
     }
+
+    const signature = contextSignature(context);
 
     if (signature !== this.lastContextSignature) {
       const ctx = cfg.context(record);
