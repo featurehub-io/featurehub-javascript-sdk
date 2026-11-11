@@ -335,6 +335,10 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     }
   }
 
+  getValue(triggerUsage = true): EvaluatedFeature | undefined {
+    return this.internalGetValue(triggerUsage);
+  }
+
   get value(): FeatureValue {
     return this.internalGetValue(true)?.value;
   }

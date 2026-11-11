@@ -1,16 +1,8 @@
 import type { EvaluationContext } from "@openfeature/server-sdk";
+import type { ContextAttribute } from "featurehub-javascript-node-sdk";
+import { caToString } from "featurehub-javascript-node-sdk";
 
-/**
- * FeatureHub context attributes may be a primitive or an array of primitives.
- * Anything else (objects, arrays of objects) cannot be represented.
- */
-export type ContextAttribute =
-  | string
-  | number
-  | boolean
-  | Array<string>
-  | Array<number>
-  | Array<boolean>;
+export type { ContextAttribute } from "featurehub-javascript-node-sdk";
 
 export interface MappedContext {
   /** FeatureHub's user key (OpenFeature `targetingKey`). */
@@ -85,11 +77,6 @@ export function mapEvaluationContext(context: EvaluationContext | undefined): Ma
   }
 
   return { userkey, attributes };
-}
-
-/** FeatureHub's caToString: arrays join with ",", everything else String(). */
-function caToString(value: ContextAttribute): string {
-  return Array.isArray(value) ? value.map((v) => v.toString()).join(",") : value.toString();
 }
 
 /**

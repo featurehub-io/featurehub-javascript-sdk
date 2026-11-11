@@ -17,7 +17,7 @@
  * const enabled = client.getBooleanValue("checkout-v2", false, { targetingKey: "user-123" });
  * ```
  */
-export type { ContextAttribute,MappedContext } from "./context-mapper";
+export type { ContextAttribute, MappedContext } from "./context-mapper";
 export { InvalidContextError, mapEvaluationContext, toContextRecord } from "./context-mapper";
 export type { FeatureHubWebProviderOptions } from "./provider";
 export { FeatureHubWebProvider } from "./provider";
