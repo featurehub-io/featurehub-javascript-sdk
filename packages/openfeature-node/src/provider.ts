@@ -12,10 +12,16 @@ import {
   ProviderEvents,
   StandardResolutionReasons,
 } from "@openfeature/server-sdk";
-import type { FeatureHubConfig, FeatureStateHolder } from "featurehub-javascript-node-sdk";
+import type {
+  ClientContext,
+  FeatureHubConfig,
+  FeatureStateHolder,
+} from "featurehub-javascript-node-sdk";
 import { EdgeFeatureHubConfig, Readyness } from "featurehub-javascript-node-sdk";
 
-import { contextSignature, InvalidContextError, toContextRecord } from "./context-mapper.js";
+import { contextSignature, InvalidContextError, toContextRecord } from "./context-mapper";
+
+type Reason = NonNullable<ResolutionDetails<unknown>["reason"]>;
 
 export interface FeatureHubProviderOptions {
   /** Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io` or `http://localhost:8553`. */
@@ -27,11 +33,12 @@ export interface FeatureHubProviderOptions {
    *   rollout strategies) is streamed/polled to the provider and every
    *   evaluation is performed locally against the supplied context. This is
    *   the recommended mode for Node servers handling many different users.
-   * - **server-evaluated keys** (`default/...`): the provider maintains a
-   *   single shared evaluation context; when the OpenFeature context changes,
-   *   the bundle is re-fetched from Edge evaluated for that context (the SDK
-   *   pools concurrent requests and honours ETag/304). Recommended when the
-   *   criteria must not leave the server.
+   * - **server-evaluated keys** (`default/...`): the provider holds a single
+   *   shared evaluation context for its lifetime; when the OpenFeature context
+   *   changes, the bundle is re-fetched from Edge evaluated for that context
+   *   (the SDK pools concurrent refreshes and honours ETag/304). Because the
+   *   context is shared, evaluations for different users must not run
+   *   concurrently in this mode — use a client-evaluated key for that.
    */
   apiKey: string;
   /** Poll Edge every N milliseconds (REST active). Overrides streaming. */
@@ -48,7 +55,13 @@ export interface FeatureHubProviderOptions {
   configFactory?: (options: FeatureHubProviderOptions) => FeatureHubConfig;
 }
 
-type EvaluatedFeatureLike = { strategyId?: string | undefined };
+interface LocalEvaluation {
+  exists: boolean;
+  value: unknown;
+  featureType: string | undefined;
+  version: number | undefined;
+  strategyId: string | undefined;
+}
 
 /**
  * Official OpenFeature provider for FeatureHub (Node.js).
@@ -70,6 +83,14 @@ export class FeatureHubProvider implements Provider {
   private readonly waitForReadyMs: number;
 
   private config?: FeatureHubConfig;
+  /**
+   * Server-evaluated keys only: the single shared evaluation context, held for
+   * the provider's lifetime. Holding exactly one keeps the SDK's internal
+   * reference count at 1, so `config.close()` tears everything down correctly.
+   */
+  private sharedContext?: ClientContext;
+  /** Serialises server-eval context rebuilds + reads (holders are live objects on a shared repository). */
+  private lock: Promise<unknown> = Promise.resolve();
   private ready = false;
   private lastContextSignature: string | undefined;
 
@@ -137,12 +158,17 @@ export class FeatureHubProvider implements Provider {
     cfg.init();
 
     const record = toContextRecord(context, { sessionAsSessionKey: !this.clientEval });
-    if (Object.keys(record).length > 0) {
-      const ctx = cfg.context(record);
-      if (!this.clientEval) {
-        // server-evaluated keys: the context change triggers a bundle fetch
-        await ctx.build();
+    if (this.clientEval) {
+      // client-evaluated keys evaluate locally; nothing to pre-fetch
+      if (Object.keys(record).length > 0) {
+        cfg.context(record);
       }
+    } else {
+      // server-evaluated keys: create the ONE shared context for the provider's
+      // lifetime and fetch the initial bundle (even for an empty context, so
+      // readiness reflects a real fetch)
+      this.sharedContext = cfg.context(record);
+      await this.sharedContext.build();
     }
 
     const readiness = await cfg.waitForReady(this.waitForReadyMs);
@@ -157,8 +183,21 @@ export class FeatureHubProvider implements Provider {
 
   async onClose(): Promise<void> {
     this.ready = false;
-    this.config?.close();
+    const cfg = this.config;
     this.config = undefined;
+    if (!cfg) {
+      return;
+    }
+    try {
+      // forceClose tears down the SSE/polling edge, repository and usage
+      // adapter regardless of the shared context's reference count. A plain
+      // close() only decrements once and (with server-evaluated keys, whose
+      // shared context is reference-counted) may never reach zero.
+      cfg.forceClose();
+    } catch {
+      // already closed
+    }
+    this.sharedContext = undefined;
   }
 
   async resolveBooleanEvaluation(
@@ -221,9 +260,9 @@ export class FeatureHubProvider implements Provider {
       };
     }
 
-    let holder: FeatureStateHolder | undefined;
+    let evaluation: LocalEvaluation;
     try {
-      holder = await this.holderFor(flagKey, context);
+      evaluation = await this.evaluate(flagKey, context);
     } catch (err) {
       if (err instanceof InvalidContextError) {
         return {
@@ -242,7 +281,7 @@ export class FeatureHubProvider implements Provider {
       };
     }
 
-    if (holder === undefined || !holder.exists) {
+    if (!evaluation.exists) {
       return {
         value: defaultValue,
         reason: StandardResolutionReasons.ERROR,
@@ -252,13 +291,11 @@ export class FeatureHubProvider implements Provider {
     }
 
     const metadata: Record<string, string | number | boolean> = {};
-    const version = holder.getVersion();
-    if (typeof version === "number" && version >= 0) {
-      metadata["featureVersion"] = version;
+    if (typeof evaluation.version === "number" && evaluation.version >= 0) {
+      metadata["featureVersion"] = evaluation.version;
     }
-    const featureType = holder.getType();
-    if (featureType) {
-      metadata["featureType"] = featureType.toString();
+    if (evaluation.featureType) {
+      metadata["featureType"] = evaluation.featureType;
     }
 
     // mismatched feature type (e.g. boolean resolution against a string flag)
@@ -270,28 +307,19 @@ export class FeatureHubProvider implements Provider {
           : kind === "number"
             ? "NUMBER"
             : "JSON";
-    if (featureType && featureType.toString() !== expected) {
+    if (evaluation.featureType && evaluation.featureType !== expected) {
       return {
         value: defaultValue,
         reason: StandardResolutionReasons.ERROR,
         errorCode: ErrorCode.TYPE_MISMATCH,
-        errorMessage: `Flag '${flagKey}' is of type ${featureType.toString()} and cannot be resolved as ${kind}.`,
+        errorMessage: `Flag '${flagKey}' is of type ${evaluation.featureType} and cannot be resolved as ${kind}.`,
         flagMetadata: metadata,
       };
     }
 
-    const rawValue =
-      kind === "boolean"
-        ? holder.getBoolean()
-        : kind === "string"
-          ? holder.getString()
-          : kind === "number"
-            ? holder.getNumber()
-            : holder.getRawJson();
-
-    // value-less features (strings/numbers/json can be value-less) resolve to
-    // the code default
-    if (rawValue === undefined || rawValue === null) {
+    if (evaluation.value === undefined || evaluation.value === null) {
+      // value-less features (strings/numbers/json can be value-less) resolve
+      // to the code default
       return {
         value: defaultValue,
         reason: StandardResolutionReasons.DEFAULT,
@@ -299,10 +327,10 @@ export class FeatureHubProvider implements Provider {
       };
     }
 
-    let value: unknown = rawValue;
-    if (kind === "object" && typeof rawValue === "string") {
+    let value: unknown = evaluation.value;
+    if (kind === "object" && typeof value === "string") {
       try {
-        value = JSON.parse(rawValue) as JsonValue;
+        value = JSON.parse(value) as JsonValue;
       } catch {
         return {
           value: defaultValue,
@@ -314,74 +342,86 @@ export class FeatureHubProvider implements Provider {
       }
     }
 
-    const strategyId = this.strategyIdFor(holder);
     return {
       value,
-      reason: strategyId
+      reason: (evaluation.strategyId
         ? StandardResolutionReasons.TARGETING_MATCH
-        : StandardResolutionReasons.STATIC,
-      variant: strategyId,
+        : StandardResolutionReasons.STATIC) as Reason,
+      variant: evaluation.strategyId,
       flagMetadata: metadata,
     };
   }
 
   /**
-   * Locates the feature holder for a flag.
+   * Produces a consistent snapshot of a flag evaluation.
    *
-   * - client-evaluated keys: the context is applied locally and the flag is
-   *   evaluated in-memory per call.
-   * - server-evaluated keys: the provider keeps a single shared context; only
-   *   when the OpenFeature context actually changes does it ask the SDK to
-   *   re-fetch the bundle evaluated for the new context (the SDK pools
-   *   concurrent refreshes and honours ETag/304).
+   * - client-evaluated keys: a fresh local context is created per resolution
+   *   (no shared state) and the flag is evaluated in-memory.
+   * - server-evaluated keys: the single shared context is fully reset and
+   *   re-applied when the OpenFeature context changes, the refreshed bundle is
+   *   awaited, and the values are extracted — all inside a mutex, because the
+   *   context and its repository are shared, mutable, and process-wide.
    */
-  private async holderFor(
-    flagKey: string,
-    context: EvaluationContext,
-  ): Promise<FeatureStateHolder | undefined> {
-    const cfg = this.config!;
-    const record = toContextRecord(context, { sessionAsSessionKey: !this.clientEval });
-
+  private async evaluate(flagKey: string, context: EvaluationContext): Promise<LocalEvaluation> {
     if (this.clientEval) {
-      return cfg.context(record).feature(flagKey);
+      const ctx = this.config!.context(toContextRecord(context));
+      return this.snapshot(ctx.feature(flagKey));
     }
 
-    const signature = contextSignature(context);
+    const run = async (): Promise<LocalEvaluation> => {
+      const cfg = this.config!;
+      const signature = contextSignature(context);
 
-    if (signature !== this.lastContextSignature) {
-      const ctx = cfg.context(record);
-      await ctx.build();
-      const readiness = await cfg.waitForReady(this.waitForReadyMs);
-      if (readiness === Readyness.Failed) {
-        throw new Error("FeatureHub repository failed to refresh for the new context.");
+      if (signature !== this.lastContextSignature) {
+        const ctx = this.sharedContext ?? cfg.context({});
+        this.sharedContext = ctx;
+        // the SDK's attributes setter MERGES into the existing attribute map
+        // and clear() does not reset the user key — reset both, then apply
+        ctx.userKey(undefined);
+        ctx.clear();
+        ctx.attributes = toContextRecord(context, { sessionAsSessionKey: true });
+        await ctx.build();
+        const readiness = await cfg.waitForReady(this.waitForReadyMs);
+        if (readiness === Readyness.Failed) {
+          throw new Error("FeatureHub repository failed to refresh for the new context.");
+        }
+        this.lastContextSignature = signature;
       }
-      this.lastContextSignature = signature;
-    }
-    return cfg.feature(flagKey);
+
+      // read through the shared context itself (config.feature would create
+      // another reference-counted context per resolution)
+      return this.snapshot(this.sharedContext!.feature(flagKey));
+    };
+
+    const run1 = this.lock.then(run, run);
+    this.lock = run1.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run1;
   }
 
-  /**
-   * Best-effort retrieval of the matched rollout strategy id.
-   *
-   * For client-evaluated keys the repository evaluates strategies and exposes
-   * the match; for server-evaluated keys the evaluated bundle carries the
-   * matched strategy id on the feature state itself.
-   */
-  private strategyIdFor(holder: FeatureStateHolder): string | undefined {
-    try {
-      const evaluated = (
-        holder as unknown as { internalGetValue?: (triggerUsage: boolean) => EvaluatedFeatureLike }
-      ).internalGetValue?.(false);
-      if (evaluated?.strategyId) {
-        return evaluated.strategyId;
-      }
-      // server-evaluated bundles carry the matched strategy id on the state
-      const fs = (
-        holder as unknown as { featureState?: () => { v?: string } | undefined }
-      ).featureState?.();
-      return fs?.v ?? undefined;
-    } catch {
-      return undefined;
+  /** Extracts a plain snapshot from a (live) feature state holder. */
+  private snapshot(holder: FeatureStateHolder | undefined): LocalEvaluation {
+    if (holder === undefined || !holder.exists) {
+      return {
+        exists: false,
+        value: undefined,
+        featureType: undefined,
+        version: undefined,
+        strategyId: undefined,
+      };
     }
+
+    const featureType = holder.getType()?.toString();
+    const version = holder.getVersion();
+
+    // one evaluation gives both the value and the id of the rollout strategy
+    // that matched it (see FeatureStateHolder.getValue)
+    const evaluated = holder.getValue();
+    const rawValue = evaluated?.value;
+    const strategyId = evaluated?.strategyId;
+
+    return { exists: true, value: rawValue, featureType, version, strategyId };
   }
 }
