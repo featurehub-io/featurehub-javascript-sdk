@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "featurehub-tsconfig/base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "noEmitOnError": true,
+    "verbatimModuleSyntax": false,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "paths": {
+      "featurehub-javascript-client-sdk": ["../js/src"],
+      "featurehub-javascript-core-sdk": ["../core/src"]
+    }
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
