@@ -54,6 +54,7 @@
     "@openfeature/server-sdk": ">=1.23.0 <2"
   },
   "dependencies": {
+    "featurehub-openfeature-common": "workspace:^",
     "featurehub-javascript-node-sdk": "workspace:^"
   },
   "devDependencies": {
