@@ -1,0 +1,71 @@
+{
+  "name": "featurehub-openfeature-common",
+  "version": "1.0.0",
+  "description": "Shared context mapping and resolution helpers for the official FeatureHub OpenFeature providers (Node.js and Web). Not intended to be used directly.",
+  "author": "info@featurehub.io",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "lib/index.js",
+  "homepage": "https://featurehub.io",
+  "repository": "github:featurehub-io/featurehub-javascript-sdk",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "feature-flag-api",
+    "feature-flag-sdk",
+    "feature-experimentation",
+    "feature-flag",
+    "flag",
+    "toggle",
+    "feature-toggle-api",
+    "remote-configuration",
+    "ab-testing",
+    "openfeature",
+    "openfeature-provider",
+    "featurehub"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "clean": "rimraf node_modules dist",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "prepublishOnly": "cp ../../README.md . && pnpm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "peerDependencies": {
+    "@openfeature/core": ">=1.12.0 <2"
+  },
+  "dependencies": {
+    "featurehub-javascript-core-sdk": "workspace:^"
+  },
+  "devDependencies": {
+    "@openfeature/core": "^1.12.0",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "tsup": "catalog:tsup",
+    "typescript": "catalog:typescript",
+    "vite": "catalog:vite",
+    "vitest": "catalog:vitest"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

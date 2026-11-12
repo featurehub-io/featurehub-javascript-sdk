@@ -1,8 +1,8 @@
-import type { EvaluationContext } from "@openfeature/server-sdk";
-import type { ContextAttribute } from "featurehub-javascript-node-sdk";
-import { caToString } from "featurehub-javascript-node-sdk";
+import type { EvaluationContext } from "@openfeature/core";
+import type { ContextAttribute } from "featurehub-javascript-core-sdk";
+import { caToString } from "featurehub-javascript-core-sdk";
 
-export type { ContextAttribute } from "featurehub-javascript-node-sdk";
+export type { ContextAttribute } from "featurehub-javascript-core-sdk";
 
 export interface MappedContext {
   /** FeatureHub's user key (OpenFeature `targetingKey`). */
@@ -33,6 +33,11 @@ export class InvalidContextError extends Error {
     this.name = "InvalidContextError";
     this.key = key;
   }
+}
+
+/** True when the API key is client-evaluated (FeatureHub marks these with a `*`). */
+export function isClientEvaluatedKey(apiKey: string): boolean {
+  return apiKey.includes("*");
 }
 
 function isPrimitive(v: unknown): v is string | number | boolean {
@@ -105,6 +110,10 @@ export function buildFeatureHubHeader(context: EvaluationContext | undefined): s
 /**
  * Builds a FeatureHub `ContextRecord` (for the SDK's context API) from an
  * OpenFeature EvaluationContext.
+ *
+ * @param options.sessionAsSessionKey - map `session` to `sessionkey`, as
+ * required when the bundle is evaluated server-side (FeatureHub's server
+ * percentage key); leave false for client-evaluated keys.
  */
 export function toContextRecord(
   context: EvaluationContext | undefined,
@@ -113,8 +122,6 @@ export function toContextRecord(
   const { userkey, attributes } = mapEvaluationContext(context);
   const record = userkey === undefined ? { ...attributes } : { userkey, ...attributes };
   if (options?.sessionAsSessionKey && "session" in record) {
-    // FeatureHub's server-side percentage key is `sessionkey`; the client-side
-    // SDK uses `session`. Map when the bundle is evaluated server-side.
     record["sessionkey"] = record["session"];
     delete record["session"];
   }

@@ -174,7 +174,7 @@ vi.mock("featurehub-javascript-node-sdk", () => {
   };
 });
 
-import { InvalidContextError, mapEvaluationContext, toContextRecord } from "../context-mapper";
+import { InvalidContextError, mapEvaluationContext, toContextRecord } from "../index";
 import { FeatureHubProvider } from "../provider";
 
 const noopLogger = { error: () => {}, warn: () => {}, info: () => {}, debug: () => {} };

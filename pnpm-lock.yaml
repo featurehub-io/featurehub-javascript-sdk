@@ -606,11 +606,42 @@ importers:
         specifier: catalog:vitest
         version: 3.2.4(@types/node@22.18.10)(jiti@2.6.1)(jsdom@27.1.0)(yaml@2.9.0)
 
+  packages/openfeature-common:
+    dependencies:
+      featurehub-javascript-core-sdk:
+        specifier: workspace:^
+        version: link:../core
+    devDependencies:
+      '@openfeature/core':
+        specifier: ^1.12.0
+        version: 1.12.0
+      featurehub-tsconfig:
+        specifier: workspace:*
+        version: link:../tsconfig
+      rimraf:
+        specifier: catalog:rimraf
+        version: 6.1.3
+      tsup:
+        specifier: catalog:tsup
+        version: 8.5.0(@swc/core@1.13.5)(jiti@2.6.1)(postcss@8.5.15)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+      vite:
+        specifier: catalog:vite
+        version: 7.3.2(@types/node@22.18.11)(jiti@2.6.1)(yaml@2.9.0)
+      vitest:
+        specifier: catalog:vitest
+        version: 3.2.4(@types/node@22.18.11)(jiti@2.6.1)(jsdom@27.1.0)(yaml@2.9.0)
+
   packages/openfeature-node:
     dependencies:
       featurehub-javascript-node-sdk:
         specifier: workspace:^
         version: link:../node
+      featurehub-openfeature-common:
+        specifier: workspace:^
+        version: link:../openfeature-common
     devDependencies:
       '@openfeature/server-sdk':
         specifier: ^1.23.0
@@ -642,6 +673,9 @@ importers:
       featurehub-javascript-client-sdk:
         specifier: workspace:^
         version: link:../js
+      featurehub-openfeature-common:
+        specifier: workspace:^
+        version: link:../openfeature-common
     devDependencies:
       '@openfeature/web-sdk':
         specifier: ^1.10.0

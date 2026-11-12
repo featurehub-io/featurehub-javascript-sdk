@@ -10,6 +10,7 @@
     "lib": ["ESNext"],
     "types": ["node"],
     "paths": {
+      "featurehub-openfeature-common": ["../openfeature-common/src"],
       "featurehub-javascript-node-sdk": ["../node/src"],
       "featurehub-javascript-core-sdk": ["../core/src"]
     }

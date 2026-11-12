@@ -54,6 +54,7 @@
     "@openfeature/web-sdk": ">=1.10.0 <2"
   },
   "dependencies": {
+    "featurehub-openfeature-common": "workspace:^",
     "featurehub-javascript-client-sdk": "workspace:^"
   },
   "devDependencies": {
