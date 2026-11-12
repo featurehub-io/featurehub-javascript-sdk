@@ -6,24 +6,22 @@ import type {
   ProviderMetadata,
   ResolutionDetails,
 } from "@openfeature/server-sdk";
-import { OpenFeatureEventEmitter, ProviderEvents } from "@openfeature/server-sdk";
+import { OpenFeatureEventEmitter } from "@openfeature/server-sdk";
 import type { ClientContext, FeatureHubConfig } from "featurehub-javascript-node-sdk";
-import { EdgeFeatureHubConfig, Readyness } from "featurehub-javascript-node-sdk";
+import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
 import {
+  type BaseProviderOptions,
   contextSignature,
+  FeatureHubProviderCore,
   type FeatureKind,
   type FeatureSnapshot,
-  generalErrorResolution,
-  InvalidContextError,
-  invalidContextResolution,
-  isClientEvaluatedKey,
-  notReadyResolution,
-  resolveFromEvaluation,
+  type ProviderEventSink,
   snapshotFeature,
   toContextRecord,
+  type Transport,
 } from "featurehub-openfeature-common";
 
-export interface FeatureHubProviderOptions {
+export interface FeatureHubProviderOptions extends BaseProviderOptions<FeatureHubProviderOptions> {
   /** Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io` or `http://localhost:8553`. */
   host: string;
   /**
@@ -41,17 +39,9 @@ export interface FeatureHubProviderOptions {
    *   key for concurrent multi-user workloads.
    */
   apiKey: string;
-  /** Poll Edge every N milliseconds (REST active). Overrides streaming. */
-  pollIntervalMs?: number;
-  /**
-   * Passive refresh: only contact Edge when an evaluation happens after the
-   * cache age exceeds this many milliseconds (REST passive). Overrides
-   * `pollIntervalMs` and streaming.
-   */
-  cacheTimeToLiveMs?: number;
   /** How long `initialize` (and context changes) wait for readiness. Default 10s. */
   waitForReadyMs?: number;
-  /** Supply a pre-built config (used by tests). */
+  /** Supply a pre-built config, or build the platform one yourself (used by tests). */
   configFactory?: (options: FeatureHubProviderOptions) => FeatureHubConfig;
 }
 
@@ -64,131 +54,61 @@ export interface FeatureHubProviderOptions {
  * refresh), and every OpenFeature resolution is served from that local
  * repository — never with a per-flag network call.
  */
-export class FeatureHubProvider implements Provider {
+export class FeatureHubProvider
+  extends FeatureHubProviderCore<FeatureHubProviderOptions>
+  implements Provider
+{
   public readonly metadata: ProviderMetadata = { name: "featurehub" };
   public readonly runsOn = "server" as const;
 
   public readonly events = new OpenFeatureEventEmitter();
 
-  private readonly options: FeatureHubProviderOptions;
-  private readonly clientEval: boolean;
-  private readonly waitForReadyMs: number;
-
-  private config?: FeatureHubConfig;
   /**
    * Server-evaluated keys only: the single shared evaluation context, held for
    * the provider's lifetime. Holding exactly one keeps the SDK's internal
-   * reference count at 1, so `config.close()` tears everything down correctly.
+   * reference count at 1 and lets the SDK reuse its evaluated bundle.
    */
   private sharedContext?: ClientContext;
   /** Serialises server-eval context rebuilds + reads (holders are live objects on a shared repository). */
   private lock: Promise<unknown> = Promise.resolve();
-  private ready = false;
   private lastContextSignature: string | undefined;
 
   constructor(options: FeatureHubProviderOptions) {
-    if (!options?.host || !options?.apiKey) {
-      throw new Error("FeatureHubProvider requires `host` and `apiKey`.");
-    }
-    this.options = options;
-    this.clientEval = isClientEvaluatedKey(options.apiKey);
-    this.waitForReadyMs = options.waitForReadyMs ?? 10_000;
+    super("FeatureHubProvider", options);
+  }
+
+  protected get eventSink(): ProviderEventSink {
+    // the SDK emitter is typed with its own event enum; the string values are
+    // identical across the server and web SDKs
+    return this.events as unknown as ProviderEventSink;
+  }
+
+  protected get defaultTransport(): Transport {
+    return "streaming";
+  }
+
+  protected createConfig(): FeatureHubConfig {
+    return new EdgeFeatureHubConfig(this.options.host, this.options.apiKey);
   }
 
   async initialize(context?: EvaluationContext): Promise<void> {
-    const cfg = this.options.configFactory
-      ? this.options.configFactory(this.options)
-      : new EdgeFeatureHubConfig(this.options.host, this.options.apiKey);
-    this.config = cfg;
+    const cfg = this.startConfig();
 
-    cfg.addReadinessListener((readiness) => {
-      if (readiness === Readyness.Ready) {
-        this.ready = true;
-        this.events.emit(ProviderEvents.Ready, { message: "FeatureHub repository is ready" });
-      } else if (readiness === Readyness.Failed) {
-        this.ready = false;
-        this.events.emit(ProviderEvents.Error, { message: "FeatureHub repository failed" });
-      }
-    });
-
-    cfg.registerRawUpdateFeatureListener({
-      get connected(): boolean {
-        return cfg.initialized;
-      },
-      processUpdate: (feature) => {
-        if (feature?.key) {
-          this.events.emit(ProviderEvents.ConfigurationChanged, { flagsChanged: [feature.key] });
-        }
-      },
-      processUpdates: (features) => {
-        const keys = features.map((f) => f.key).filter((k): k is string => !!k);
-        if (keys.length > 0) {
-          this.events.emit(ProviderEvents.ConfigurationChanged, { flagsChanged: keys });
-        }
-      },
-      deleteFeature: (feature) => {
-        if (feature?.key) {
-          this.events.emit(ProviderEvents.ConfigurationChanged, { flagsChanged: [feature.key] });
-        }
-      },
-      close: () => {
-        /* lifecycle handled via config.close() in onClose */
-      },
-      configChanged: () => {
-        /* configuration-level change; individual features emit above */
-      },
-    });
-
-    if (this.options.cacheTimeToLiveMs !== undefined) {
-      cfg.restPassive(this.options.cacheTimeToLiveMs);
-    } else if (this.options.pollIntervalMs !== undefined) {
-      cfg.restActive(this.options.pollIntervalMs);
-    } else {
-      cfg.streaming();
-    }
-
-    cfg.init();
-
-    const record = toContextRecord(context, { sessionAsSessionKey: !this.clientEval });
-    if (this.clientEval) {
-      // client-evaluated keys evaluate locally; nothing to pre-fetch
-      if (Object.keys(record).length > 0) {
-        cfg.context(record);
-      }
-    } else {
-      // server-evaluated keys: create the ONE shared context for the provider's
-      // lifetime and fetch the initial bundle (even for an empty context, so
-      // readiness reflects a real fetch)
-      this.sharedContext = cfg.context(record);
+    if (!this.clientEval) {
+      // server-evaluated keys: one shared context for the provider's lifetime;
+      // fetch the initial evaluated bundle so readiness reflects a real fetch
+      this.sharedContext = cfg.context(toContextRecord(context, { sessionAsSessionKey: true }));
       await this.sharedContext.build();
+      this.lastContextSignature = contextSignature(context);
     }
+    // client-evaluated keys evaluate locally per resolution; there is nothing
+    // to pre-fetch and the context is created per call
 
-    const readiness = await cfg.waitForReady(this.waitForReadyMs);
-    if (readiness !== Readyness.Ready) {
-      throw new Error(
-        `FeatureHub did not become ready within ${this.waitForReadyMs}ms (readiness: ${readiness}).`,
-      );
-    }
-    this.ready = true;
-    this.lastContextSignature = contextSignature(context);
+    await this.awaitReady(cfg);
   }
 
-  async onClose(): Promise<void> {
-    this.ready = false;
-    const cfg = this.config;
-    this.config = undefined;
-    if (!cfg) {
-      return;
-    }
-    try {
-      // forceClose tears down the SSE/polling edge, repository and usage
-      // adapter regardless of the shared context's reference count. A plain
-      // close() only decrements once and (with server-evaluated keys, whose
-      // shared context is reference-counted) may never reach zero.
-      cfg.forceClose();
-    } catch {
-      // already closed
-    }
+  override async onClose(): Promise<void> {
+    await super.onClose();
     this.sharedContext = undefined;
   }
 
@@ -236,29 +156,16 @@ export class FeatureHubProvider implements Provider {
     >;
   }
 
-  private async resolve(
+  private resolve(
     flagKey: string,
     context: EvaluationContext,
     kind: FeatureKind,
     defaultValue: unknown,
     logger: Logger,
   ): Promise<ResolutionDetails<unknown>> {
-    if (!this.ready || !this.config) {
-      return notReadyResolution(defaultValue);
-    }
-
-    let evaluation: FeatureSnapshot;
-    try {
-      evaluation = await this.evaluate(flagKey, context);
-    } catch (err) {
-      if (err instanceof InvalidContextError) {
-        return invalidContextResolution(defaultValue, err);
-      }
-      logger.error(`FeatureHub evaluation of '${flagKey}' failed`, err);
-      return generalErrorResolution(defaultValue, err);
-    }
-
-    return resolveFromEvaluation(flagKey, kind, defaultValue, evaluation);
+    return this.resolveAsync(flagKey, kind, defaultValue, logger, () =>
+      this.evaluate(flagKey, context),
+    );
   }
 
   /**
@@ -290,10 +197,6 @@ export class FeatureHubProvider implements Provider {
         ctx.clear();
         ctx.attributes = toContextRecord(context, { sessionAsSessionKey: true });
         await ctx.build();
-        const readiness = await cfg.waitForReady(this.waitForReadyMs);
-        if (readiness === Readyness.Failed) {
-          throw new Error("FeatureHub repository failed to refresh for the new context.");
-        }
         this.lastContextSignature = signature;
       }
 

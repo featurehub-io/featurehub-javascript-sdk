@@ -28,7 +28,6 @@ export type { FeatureHubProviderOptions } from "./provider";
 export { FeatureHubProvider } from "./provider";
 export type { ContextAttribute, MappedContext } from "featurehub-openfeature-common";
 export {
-  buildFeatureHubHeader,
   contextSignature,
   InvalidContextError,
   mapEvaluationContext,

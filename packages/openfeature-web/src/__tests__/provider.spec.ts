@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => {
   const state = {
     readiness: "Ready" as "NotReady" | "Ready" | "Failed",
+    transports: [] as string[],
   };
   const holders = new Map<
     string,
@@ -36,9 +37,15 @@ vi.mock("featurehub-javascript-client-sdk", () => {
       return undefined;
     }
     streaming() {
+      h.state.transports.push("streaming");
       return this;
     }
     restActive() {
+      h.state.transports.push("polling");
+      return this;
+    }
+    restPassive() {
+      h.state.transports.push("passive");
       return this;
     }
     init() {}
@@ -46,6 +53,7 @@ vi.mock("featurehub-javascript-client-sdk", () => {
       return h.state.readiness;
     }
     close() {}
+    forceClose() {}
     context(record?: Record<string, unknown>) {
       h.appliedContexts.push(record ?? {});
       return {
@@ -71,6 +79,7 @@ const noopLogger = { error: () => {}, warn: () => {}, info: () => {}, debug: () 
 
 function resetFixtures() {
   h.state.readiness = "Ready";
+  h.state.transports.length = 0;
   h.appliedContexts.length = 0;
   h.holders.clear();
   h.holders.set("bool-flag", {
@@ -164,10 +173,57 @@ describe("FeatureHubWebProvider", () => {
     expect(details.variant).toBe("strategy-42");
   });
 
-  it("applies the OpenFeature context to the SDK context", async () => {
-    const provider = await readyProvider();
+  it("creates one evaluation context at initialize and reuses it across resolutions", async () => {
+    const provider = new FeatureHubWebProvider({ host: "http://edge.test", apiKey: "*client-key" });
+    await provider.initialize({ targetingKey: "u1" });
+
+    expect(h.appliedContexts).toEqual([{ userkey: "u1" }]);
+
     provider.resolveBooleanEvaluation("bool-flag", false, { targetingKey: "u1" }, noopLogger);
-    expect(h.appliedContexts[h.appliedContexts.length - 1]).toEqual({ userkey: "u1" });
+    provider.resolveStringEvaluation("str-flag", "x", { targetingKey: "u1" }, noopLogger);
+    expect(h.appliedContexts).toHaveLength(1);
+  });
+
+  it("rebuilds the evaluation context when the OpenFeature context changes", async () => {
+    const provider = await readyProvider();
+    const before = h.appliedContexts.length;
+
+    provider.onContextChange({}, { targetingKey: "u2", country: "NZ" });
+    expect(h.appliedContexts.at(-1)).toEqual({ userkey: "u2", country: "NZ" });
+    expect(h.appliedContexts).toHaveLength(before + 1);
+
+    provider.resolveBooleanEvaluation(
+      "bool-flag",
+      false,
+      { targetingKey: "u2", country: "NZ" },
+      noopLogger,
+    );
+    expect(h.appliedContexts).toHaveLength(before + 1);
+  });
+
+  it("defaults to the passive transport (no SSE connection per tab)", async () => {
+    await readyProvider();
+    expect(h.state.transports).toContain("passive");
+    expect(h.state.transports).not.toContain("streaming");
+  });
+
+  it("supports explicit streaming and polling transports", async () => {
+    const streaming = new FeatureHubWebProvider({
+      host: "http://edge.test",
+      apiKey: "*client-key",
+      transport: "streaming",
+    });
+    await streaming.initialize();
+    expect(h.state.transports).toContain("streaming");
+
+    h.state.transports.length = 0;
+    const polling = new FeatureHubWebProvider({
+      host: "http://edge.test",
+      apiKey: "*client-key",
+      pollIntervalMs: 1000,
+    });
+    await polling.initialize();
+    expect(h.state.transports).toContain("polling");
   });
 
   it("reports FLAG_NOT_FOUND for unknown flags", async () => {
