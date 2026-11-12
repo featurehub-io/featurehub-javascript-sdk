@@ -9,6 +9,7 @@
     "verbatimModuleSyntax": false,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
+      "featurehub-openfeature-common": ["../openfeature-common/src"],
       "featurehub-javascript-client-sdk": ["../js/src"],
       "featurehub-javascript-core-sdk": ["../core/src"]
     }

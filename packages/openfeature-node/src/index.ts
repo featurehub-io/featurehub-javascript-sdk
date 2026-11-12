@@ -24,13 +24,13 @@
  * });
  * ```
  */
-export type { ContextAttribute, MappedContext } from "./context-mapper";
+export type { FeatureHubProviderOptions } from "./provider";
+export { FeatureHubProvider } from "./provider";
+export type { ContextAttribute, MappedContext } from "featurehub-openfeature-common";
 export {
   buildFeatureHubHeader,
   contextSignature,
   InvalidContextError,
   mapEvaluationContext,
   toContextRecord,
-} from "./context-mapper";
-export type { FeatureHubProviderOptions } from "./provider";
-export { FeatureHubProvider } from "./provider";
+} from "featurehub-openfeature-common";
