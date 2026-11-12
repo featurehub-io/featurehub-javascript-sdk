@@ -1,6 +1,5 @@
 import type { EvaluationContext } from "@openfeature/core";
 import type { ContextAttribute } from "featurehub-javascript-core-sdk";
-import { caToString } from "featurehub-javascript-core-sdk";
 
 export type { ContextAttribute } from "featurehub-javascript-core-sdk";
 
@@ -85,29 +84,6 @@ export function mapEvaluationContext(context: EvaluationContext | undefined): Ma
 }
 
 /**
- * Builds the value of FeatureHub's `x-featurehub` header from a mapped
- * context (sorted `key=encodeURIComponent(value)` pairs joined by commas) —
- * the same format the FeatureHub SDKs produce.
- */
-export function buildFeatureHubHeader(context: EvaluationContext | undefined): string {
-  const { userkey, attributes } = mapEvaluationContext(context);
-
-  const entries: Array<[string, string]> = [];
-  if (userkey !== undefined) {
-    entries.push(["userkey", encodeURIComponent(userkey)]);
-  }
-  for (const [key, value] of Object.entries(attributes)) {
-    const wireKey = key.toLowerCase() === "session" ? "sessionkey" : key;
-    entries.push([wireKey, encodeURIComponent(caToString(value) ?? "")]);
-  }
-
-  return entries
-    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
-    .map(([k, v]) => `${k}=${v}`)
-    .join(",");
-}
-
-/**
  * Builds a FeatureHub `ContextRecord` (for the SDK's context API) from an
  * OpenFeature EvaluationContext.
  *
@@ -128,7 +104,21 @@ export function toContextRecord(
   return record;
 }
 
-/** A stable string signature of a mapped context, used to detect context changes. */
+/**
+ * A stable signature of a mapped context, used only to detect context changes
+ * (it is never sent anywhere, so it deliberately does not reproduce the
+ * `x-featurehub` wire format — the SDK builds that from the context itself).
+ */
 export function contextSignature(context: EvaluationContext | undefined): string {
-  return buildFeatureHubHeader(context);
+  const { userkey, attributes } = mapEvaluationContext(context);
+
+  const entries: Array<[string, string]> = Object.entries(attributes).map(([key, value]) => [
+    key,
+    Array.isArray(value) ? value.join(",") : String(value),
+  ]);
+  if (userkey !== undefined) {
+    entries.push(["userkey", userkey]);
+  }
+
+  return JSON.stringify(entries.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)));
 }
