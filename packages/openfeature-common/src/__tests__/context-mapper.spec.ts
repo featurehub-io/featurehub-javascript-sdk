@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildFeatureHubHeader,
   contextSignature,
   InvalidContextError,
   isClientEvaluatedKey,
@@ -22,6 +21,15 @@ describe("context mapping", () => {
     expect(
       toContextRecord({ targetingKey: "u1", session: "s1" }, { sessionAsSessionKey: true }),
     ).toEqual({ userkey: "u1", sessionkey: "s1" });
+  });
+
+  it("maps a camelCase sessionKey to sessionkey under server-eval mapping", () => {
+    // keys are lower-cased before the well-known-key lookup, so sessionKey
+    // arrives as the recognised "sessionkey" attribute either way
+    expect(
+      toContextRecord({ targetingKey: "u1", sessionKey: "s1" }, { sessionAsSessionKey: true }),
+    ).toEqual({ userkey: "u1", sessionkey: "s1" });
+    expect(toContextRecord({ sessionKey: "s1" })).toEqual({ sessionkey: "s1" });
   });
 
   it("recognises well-known FeatureHub keys case-insensitively", () => {
@@ -47,18 +55,23 @@ describe("context mapping", () => {
   });
 });
 
-describe("header + signature", () => {
-  it("builds the sorted, URI-encoded x-featurehub header and uses it as the signature", () => {
-    const context = { targetingKey: "u 1", country: "NZ", session: "s1" };
-    const header = buildFeatureHubHeader(context);
-    expect(header).toBe("country=NZ,sessionkey=s1,userkey=u%201");
-    expect(contextSignature(context)).toBe(header);
+describe("context signature", () => {
+  it("is stable for equal contexts regardless of key order", () => {
+    expect(contextSignature({ targetingKey: "u1", country: "NZ" })).toBe(
+      contextSignature({ country: "NZ", targetingKey: "u1" }),
+    );
   });
 
-  it("joins array attributes with commas, matching caToString", () => {
-    expect(buildFeatureHubHeader({ targetingKey: "u1", tags: ["a", "b"] })).toBe(
-      "tags=a%2Cb,userkey=u1",
-    );
+  it("changes when an attribute or the targeting key changes", () => {
+    const base = contextSignature({ targetingKey: "u1", country: "NZ" });
+    expect(contextSignature({ targetingKey: "u1", country: "AU" })).not.toBe(base);
+    expect(contextSignature({ targetingKey: "u2", country: "NZ" })).not.toBe(base);
+    expect(contextSignature({ targetingKey: "u1", country: "NZ", plan: "pro" })).not.toBe(base);
+  });
+
+  it("distinguishes an empty context from one with attributes", () => {
+    expect(contextSignature(undefined)).not.toBe(contextSignature({ targetingKey: "u1" }));
+    expect(contextSignature(undefined)).toBe(contextSignature({}));
   });
 });
 
