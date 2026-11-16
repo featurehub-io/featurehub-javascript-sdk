@@ -10,6 +10,7 @@
   "homepage": "https://featurehub.io",
   "repository": "github:featurehub-io/featurehub-javascript-sdk",
   "license": "MIT",
+  "private": true,
   "files": [
     "dist"
   ],
