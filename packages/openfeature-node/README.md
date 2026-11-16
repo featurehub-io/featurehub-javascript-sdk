@@ -30,6 +30,8 @@ const enabled = await client.getBooleanValue("checkout-v2", false, {
 });
 ```
 
+If your service evaluates with a single application-wide context, set it **before** registering the provider (via `OpenFeature.setContext`, or by passing it to `setProviderAndWait`): changing the context after registration re-requests the feature bundle for the changed context. Per-request contexts (the normal case for client-evaluated keys) are evaluated locally and are unaffected.
+
 ## API keys
 
 - **Client-evaluated keys** (contain a `*`): the bundle — including rollout strategies — is delivered to the provider and every evaluation runs locally against the supplied context. Use this for services handling many different users; contexts are evaluated per call with no shared state.
