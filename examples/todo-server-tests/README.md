@@ -29,3 +29,20 @@ Example:
 `pnpm run generate:specs`
 
 `APP_SERVER_URL='your-server-url' FEATUREHUB_EDGE_URL='fh-edge-url' FEATUREHUB_CLIENT_API_KEY='fh-api-key' pnpm run test`
+
+## Scenario tags
+
+These tests are meant to check a todo server written in any language with any FeatureHub SDK. The server under test is whatever is running at `APP_SERVER_URL`. Every scenario has exactly one of these tags:
+
+- `@todo-api` - changes a feature in FeatureHub, then calls the todo server API and checks that the server picked up the new value. These scenarios test the implementation under test and its SDK.
+- `@featurehub-only` - talks only to FeatureHub (the admin API, plus the JavaScript SDK inside this test harness), for example checking feature locking and value validation. These never call the todo server, so they tell you nothing about the implementation under test.
+
+To check a todo server implementation, run only the `@todo-api` scenarios, e.g. from the repository root:
+
+`make test-server-tags TAGS=@todo-api`
+
+or directly:
+
+`pnpm run test -- --tags @todo-api`
+
+FeatureHub must still be running for `@todo-api` scenarios, because their hooks set feature values through the FeatureHub admin API.
