@@ -58,12 +58,12 @@
     "sinon": "catalog:sinon",
     "tsup": "catalog:tsup",
     "typescript": "catalog:typescript",
-    "vitest": "catalog:vitest",
-    "vite": "catalog:vite"
+    "vite": "catalog:vite",
+    "vitest": "catalog:vitest"
   },
   "dependencies": {
     "featurehub-javascript-core-sdk": "workspace:^",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.3.2"
   },
   "engines": {
     "node": ">=20.0.0"
