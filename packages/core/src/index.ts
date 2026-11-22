@@ -4,6 +4,7 @@ export * from "./context_impl";
 export * from "./crypto/types";
 export * from "./edge_featurehub_config";
 export * from "./edge_service";
+export * from "./evaluated_feature";
 export * from "./feature_hub_config";
 export * from "./feature_state";
 export * from "./feature_state_holders";
