@@ -55,9 +55,19 @@ defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
 );
 // streaming doesn't use a timeout
 
-// we need to know how to construct a NodeJS EventSource
+// we need to know how to construct a NodeJS EventSource. eventsource v3+ ignores a headers option, so the
+// headers (x-featurehub, the context of a server-evaluated key) are added by the fetch it uses
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
-  return new EventSource(url, dict);
+  const headers = { ...((dict?.headers ?? {}) as Record<string, string>) };
+
+  return new EventSource(url, {
+    withCredentials: dict?.withCredentials ?? false,
+    fetch: (input, init) =>
+      fetch(input, {
+        ...init,
+        headers: { ...(init?.headers ?? {}), ...headers },
+      }),
+  }) as unknown as ReturnType<typeof FeatureHubEventSourceClient.eventSourceProvider>;
 };
 
 // when a Polling Service is actually created, we need to pass the hash generator for node

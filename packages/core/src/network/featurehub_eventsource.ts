@@ -3,7 +3,6 @@ import type { EdgeService } from "../edge_service";
 import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureState, SSEResultState } from "../models";
-import { Readyness } from "../featurehub_repository";
 import { contextSha } from "../context_header";
 
 export declare class EventSource {
@@ -53,6 +52,26 @@ export type EventSourceProvider = (
   eventSourceInitDict?: EventSource.EventSourceInitDict,
 ) => EventSource;
 
+/**
+ * How long to wait before reconnecting after a streaming connection fails (featurehub-protocol.yaml
+ * featurehub_edge.streaming.connection_errors): delay = base * backoffMultiplier^(failures - 1), capped at
+ * maxDelayMs. Only used where the SDK can see the failure (the Node client); a browser's EventSource
+ * reconnects by itself.
+ */
+export interface SseReconnectPolicy {
+  /** the base delay after a network error, a dropped stream or a response that is not an event stream */
+  networkErrorDelayMs: number;
+  /** the base delay after a 5xx (or 1xx/3xx) response */
+  serverErrorDelayMs: number;
+  backoffMultiplier: number;
+  maxDelayMs: number;
+}
+
+/** no reconnection is ever scheduled sooner than this */
+export const minimumReconnectDelayMs = 100;
+
+const EVENT_SOURCE_CLOSED = 2;
+
 export class FeatureHubEventSourceClient implements EdgeService {
   private eventSource: EventSource | undefined;
   private readonly _config: FeatureHubConfig;
@@ -62,6 +81,18 @@ export class FeatureHubEventSourceClient implements EdgeService {
   // FeatureHub has said this environment will never change again (edge.stale): we never reconnect
   private _environmentStale = false;
   private _stopped: boolean = false;
+  // the connection has failed for good (a 4xx, a failure event, or a browser EventSource closing)
+  private _failed = false;
+  // consecutive failed connections, reset by any FeatureHub event showing the connection works
+  private _failures = 0;
+  private _reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+
+  public static reconnectPolicy: SseReconnectPolicy = {
+    networkErrorDelayMs: 3000,
+    serverErrorDelayMs: 30000,
+    backoffMultiplier: 2,
+    maxDelayMs: 5 * 60 * 1000,
+  };
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
     // a browser EventSource cannot send headers, so the context goes in the query string, after the
@@ -86,8 +117,8 @@ export class FeatureHubEventSourceClient implements EdgeService {
   }
 
   init() {
-    // if this environment is stale, we reject any requests to connect again
-    if (this._environmentStale) {
+    // if this environment is stale, or the connection has failed for good, we never connect again
+    if (this._environmentStale || this._failed) {
       return;
     }
 
@@ -116,8 +147,16 @@ export class FeatureHubEventSourceClient implements EdgeService {
       const fName = name.toString();
       this.eventSource.addEventListener(fName, (e) => {
         try {
+          // any FeatureHub event shows the connection works
+          if (fName !== SSEResultState.Failure) {
+            this._failures = 0;
+          }
+
           const data = JSON.parse((e as any).data);
-          if (fName === SSEResultState.Config) {
+          if (fName === SSEResultState.Failure) {
+            // FeatureHub will never give us features on this connection
+            this.permanentFailure("FeatureHub sent a failure event");
+          } else if (fName === SSEResultState.Config) {
             this.processConfig(data);
           } else {
             // ensure the environment id is set as its required in usage
@@ -137,28 +176,82 @@ export class FeatureHubEventSourceClient implements EdgeService {
       });
     }
 
-    this.eventSource.onerror = (e: Event) => {
-      if (!this._stopped) {
-        // node eventsource library gives us a proper status code when the connection fails, so we should pick that up.
-        const status = (e as { status?: number }).status;
-        if (
-          this._repository.readyness !== Readyness.Ready ||
-          (status && (status > 504 || (status >= 400 && status < 500)))
-        ) {
-          fhLog.error(
-            "Connection failed and repository not in ready state indicating persistent failure",
-            e,
-          );
-          this._repository.notify(SSEResultState.Failure, null, "streaming-service");
-          this.close();
-        } else {
-          fhLog.trace("refreshing connection in case of staleness", e);
-        }
+    this.eventSource.onerror = (e: Event) => this.connectionError(e);
+  }
+
+  /**
+   * featurehub-protocol.yaml featurehub_edge.streaming.connection_errors: a 4xx means the key or environment
+   * is rejected, for good. A browser's EventSource closing hides the status, so it is final too. Anything
+   * else (a 5xx, a response that is not an event stream, a network error) is temporary: the provider stays
+   * ready and we reconnect, with a backoff where we have to do it ourselves.
+   */
+  private connectionError(e: Event) {
+    if (this._stopped || this._failed) {
+      return;
+    }
+
+    // the node eventsource library gives the HTTP status as code (older versions as status)
+    const status = (e as { code?: number }).code ?? (e as { status?: number }).status;
+    const readyState = this.eventSource?.readyState;
+
+    if (status !== undefined && status >= 400 && status < 500) {
+      this.permanentFailure(`FeatureHub rejected the connection (${status})`);
+    } else if (readyState === EVENT_SOURCE_CLOSED) {
+      if (status === undefined) {
+        // a browser EventSource that has given up: it does not tell us why, so it could be a 4xx
+        this.permanentFailure("the event source closed");
+      } else {
+        // the event source will not reconnect by itself after an HTTP error, so we do
+        this._repository.notify(SSEResultState.Bye, null, "streaming-service");
+        this.scheduleReconnect(status);
       }
-    };
+    } else {
+      // the event source is reconnecting by itself: the features we hold are still the latest known
+      fhLog.trace("streaming connection lost, reconnecting", e);
+      this._repository.notify(SSEResultState.Bye, null, "streaming-service");
+    }
+  }
+
+  private permanentFailure(reason: string) {
+    fhLog.error(`[featurehubsdk] ${reason}, stopping streaming.`);
+    this._failed = true;
+    this._repository.notify(SSEResultState.Failure, null, "streaming-service");
+    this.close();
+  }
+
+  public get failed(): boolean {
+    return this._failed;
+  }
+
+  /** the delay before reconnecting after the given number of consecutive failures */
+  public static reconnectDelay(status: number | undefined, failures: number): number {
+    const policy = FeatureHubEventSourceClient.reconnectPolicy;
+    const serverError = status !== undefined && status !== 200;
+    const base = serverError ? policy.serverErrorDelayMs : policy.networkErrorDelayMs;
+    const delay = base * Math.pow(Math.max(policy.backoffMultiplier, 1), Math.max(failures - 1, 0));
+
+    return Math.max(Math.min(delay, policy.maxDelayMs), minimumReconnectDelayMs);
+  }
+
+  private scheduleReconnect(status: number | undefined) {
+    this.close();
+    this._failures++;
+
+    const delay = FeatureHubEventSourceClient.reconnectDelay(status, this._failures);
+    fhLog.trace(`streaming failed (${status}), reconnecting in ${delay}ms`);
+
+    this._reconnectTimer = setTimeout(() => {
+      this._reconnectTimer = undefined;
+      this.init();
+    }, delay);
   }
 
   close() {
+    if (this._reconnectTimer !== undefined) {
+      clearTimeout(this._reconnectTimer);
+      this._reconnectTimer = undefined;
+    }
+
     if (this.eventSource != null) {
       const es = this.eventSource;
       this.eventSource = undefined;
