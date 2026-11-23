@@ -4,6 +4,7 @@ import {
   FHLog,
   NodejsPollingService,
   FeatureEnvironmentCollection,
+  pollingIntervalFromEnvironment,
 } from "featurehub-javascript-node-sdk";
 import { SegmentUsagePlugin } from "featurehub-usage-segment";
 import { Analytics } from "@segment/analytics-node";
@@ -57,9 +58,9 @@ function getFhConfig(): EdgeFeatureHubConfig {
       options.headers["cuke-req-id"] = `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}`;
     };
 
-    if (process.env["FEATUREHUB_POLLING_INTERVAL"]) {
-      const timeout = parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]);
-      opt.timeout = timeout < 3000 ? 3000 : timeout;
+    const pollingInterval = pollingIntervalFromEnvironment(process.env);
+    if (pollingInterval) {
+      opt.timeout = pollingInterval < 3000 ? 3000 : pollingInterval;
     }
     // we are overriding the provider here so we can modify the request function
     return new NodejsPollingService(opt, url, freq, cb);

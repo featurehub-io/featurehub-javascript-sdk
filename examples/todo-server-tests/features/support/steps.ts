@@ -1,6 +1,10 @@
 import { Given, Then, When } from "@cucumber/cucumber";
 import { expect } from "chai";
-import { FeatureValueType, fhLog } from "featurehub-javascript-node-sdk";
+import {
+  FeatureValueType,
+  fhLog,
+  pollingIntervalFromEnvironment,
+} from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
 import { Configuration, Todo, TodoServiceApi } from "../../src/client-axios";
@@ -89,9 +93,8 @@ Then(
     const ctx = await Config.fhConfig.newContext().build();
 
     // has to be longer than the polling interval
-    const timeout = process.env["FEATUREHUB_POLLING_INTERVAL"]
-      ? parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]) + 4000
-      : 7000;
+    const pollingInterval = pollingIntervalFromEnvironment(process.env);
+    const timeout = pollingInterval ? pollingInterval + 4000 : 7000;
     let counter = 0;
 
     const self = this;
@@ -138,9 +141,8 @@ Given(
     const ctx = await Config.fhConfig.newContext().build();
 
     // has to be longer than the polling interval
-    const timeout = process.env["FEATUREHUB_POLLING_INTERVAL"]
-      ? parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]) + 2000
-      : 4000;
+    const pollingInterval = pollingIntervalFromEnvironment(process.env);
+    const timeout = pollingInterval ? pollingInterval + 2000 : 4000;
 
     await waitForExpect(
       () => {

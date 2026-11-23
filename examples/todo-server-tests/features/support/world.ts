@@ -6,6 +6,7 @@ import {
   FeatureStateHolder,
   FeatureStateUpdate,
   fhLog,
+  pollingIntervalFromEnvironment,
 } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
@@ -125,7 +126,7 @@ export class CustomWorld extends World<any> {
   }
 
   async lockFeature(name: string, locked: boolean = true) {
-    const pollingInterval = parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"] || "0");
+    const pollingInterval = pollingIntervalFromEnvironment(process.env) ?? 0;
     const timeout = pollingInterval > 0 ? pollingInterval + 4000 : 7000;
     const interval = pollingInterval > 0 && pollingInterval < 1000 ? 500 : 1000;
     let counter = 0;

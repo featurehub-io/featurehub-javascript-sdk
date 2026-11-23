@@ -96,3 +96,34 @@ export function nodeEnvironment(env: Environment): NodeEnvironmentSettings {
 
   return settings;
 }
+
+/**
+ * The legacy FEATUREHUB_POLLING_INTERVAL: a bare number is milliseconds, as it always has been, and a value
+ * with a unit (3s, 1.5m) is that duration. Returns undefined when it is not set, and NaN when it is neither.
+ */
+export function legacyPollingIntervalMs(raw: string | undefined): number | undefined {
+  const trimmed = raw?.trim();
+  if (trimmed === undefined || trimmed.length === 0) {
+    return undefined;
+  }
+
+  if (/^[0-9]+$/.test(trimmed)) {
+    return parseInt(trimmed, 10);
+  }
+
+  return parseDuration(trimmed) ?? Number.NaN;
+}
+
+/**
+ * The polling interval the environment gives, in milliseconds: FEATUREHUB_CONNECT_INTERVAL, or else the
+ * legacy FEATUREHUB_POLLING_INTERVAL. Undefined when neither is set or the value cannot be read.
+ */
+export function pollingIntervalFromEnvironment(env: Environment): number | undefined {
+  const connect = value(env, "FEATUREHUB_CONNECT_INTERVAL");
+  const interval =
+    connect !== undefined
+      ? parseDuration(connect)
+      : legacyPollingIntervalMs(env["FEATUREHUB_POLLING_INTERVAL"]);
+
+  return interval === undefined || Number.isNaN(interval) ? undefined : interval;
+}

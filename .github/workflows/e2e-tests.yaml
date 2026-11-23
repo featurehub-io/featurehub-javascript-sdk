@@ -135,7 +135,7 @@ jobs:
           docker stop todo-server && docker rm -f todo-server && \
           docker run -d \
             --network ${{ job.container.network }} \
-            -e FEATUREHUB_POLLING_INTERVAL=3s \
+            -e FEATUREHUB_POLLING_INTERVAL=5s \
             --name todo-server \
             -p 8099:8099 \
             --workdir /sdk/examples/todo-backend-typescript \
@@ -166,7 +166,7 @@ jobs:
           docker run --rm \
             --network ${{ job.container.network }} \
             -v $PWD/adk-env:/opt/e2e \
-            -e FEATUREHUB_POLLING_INTERVAL=3s \
+            -e FEATUREHUB_POLLING_INTERVAL=5s \
             -e APP_SERVER_URL=http://todo-server:8099 \
             --env-file adk-env/server.env \
             --workdir /sdk/examples/todo-server-tests \

@@ -375,7 +375,7 @@ example `fhConfig.restActive(30000)`) takes precedence over them.
 - `FEATUREHUB_CONNECT_INTERVAL` on its own means active polling at that interval.
 - `active` or `passive` need an interval, either from `FEATUREHUB_CONNECT_INTERVAL` or in code.
 - With neither variable set, the Node SDK streams.
-- The older `FEATUREHUB_POLLING_INTERVAL` (milliseconds) and `FEATUREHUB_POLLING_PASSIVE` still work, but only when
+- The older `FEATUREHUB_POLLING_INTERVAL` (a number of milliseconds, or a duration such as `5s`) and `FEATUREHUB_POLLING_PASSIVE` still work, but only when
   neither of the new variables is set. They are deprecated.
 
 The Node SDK also reads these, each only when your code does not set the same thing:
