@@ -361,6 +361,23 @@ example `fhConfig.restActive(30000)`) takes precedence over them.
 - The older `FEATUREHUB_POLLING_INTERVAL` (milliseconds) and `FEATUREHUB_POLLING_PASSIVE` still work, but only when
   neither of the new variables is set. They are deprecated.
 
+The Node SDK also reads these, each only when your code does not set the same thing:
+
+| Variable | Meaning |
+|---|---|
+| `FEATUREHUB_EDGE_URL` | the Edge URL, when `EdgeFeatureHubConfig` is given none |
+| `FEATUREHUB_CLIENT_API_KEY` | a client-evaluated API key, when `EdgeFeatureHubConfig` is given none |
+| `FEATUREHUB_SERVER_API_KEY` | a server-evaluated API key, used when there is no `FEATUREHUB_CLIENT_API_KEY` |
+| `FEATUREHUB_POLLING_REQ_TIMEOUT` | how long a polling request may take, e.g. `10s` |
+| `FEATUREHUB_SSE_CONNECT_TIMEOUT` | how long opening a streaming connection may take |
+| `FEATUREHUB_SSE_READ_TIMEOUT` | how long an open stream may go without data before it is reconnected. Edge can be silent for up to 5 minutes on a healthy stream, so keep this above `5m` |
+| `FEATUREHUB_SSE_INITIAL_RETRY_DELAY` | the wait before reconnecting after a dropped stream (default `3s`) |
+| `FEATUREHUB_SSE_MAX_RETRY_DELAY` | the longest wait between reconnection attempts (default `5m`) |
+| `FEATUREHUB_SSE_BACKOFF_MULTIPLIER` | how much the wait grows after each failed attempt, a number of at least 1 (default `2`) |
+
+Durations take the same form as `FEATUREHUB_CONNECT_INTERVAL`. A value that is not valid is ignored, with a warning,
+and the default is used.
+
 ## General Documentation
 
 #### Supported feature state requests
