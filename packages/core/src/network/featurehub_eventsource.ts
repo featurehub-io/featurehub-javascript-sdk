@@ -59,7 +59,8 @@ export class FeatureHubEventSourceClient implements EdgeService {
   private readonly _repository: InternalFeatureRepository;
   private _header: string | undefined;
   private _contextSha = "0";
-  private _staleEnvironmentTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  // FeatureHub has said this environment will never change again (edge.stale): we never reconnect
+  private _environmentStale = false;
   private _stopped: boolean = false;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
@@ -86,7 +87,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
 
   init() {
     // if this environment is stale, we reject any requests to connect again
-    if (this._staleEnvironmentTimeoutId) {
+    if (this._environmentStale) {
       return;
     }
 
@@ -195,20 +196,30 @@ export class FeatureHubEventSourceClient implements EdgeService {
     return true;
   }
 
+  public get environmentStale(): boolean {
+    return this._environmentStale;
+  }
+
+  /**
+   * A config event holding an edge.stale key, whatever its value, means the environment will never change
+   * again: close the stream and never reconnect. A config without one, or whose data is not an object, is
+   * ignored.
+   */
   private processConfig(data: unknown) {
-    const config = data as Record<string, unknown>;
-    const stale = config["edge.stale"] as number | undefined;
-
-    if (stale) {
-      this._stopped = true;
-      this.close();
-
-      this._staleEnvironmentTimeoutId = setTimeout(() => {
-        clearTimeout(this._staleEnvironmentTimeoutId);
-        this._staleEnvironmentTimeoutId = undefined;
-        this._stopped = false;
-        this.init();
-      }, stale * 1000);
+    if (
+      data === null ||
+      typeof data !== "object" ||
+      Array.isArray(data) ||
+      !("edge.stale" in data)
+    ) {
+      return;
     }
+
+    fhLog.warn(
+      "[featurehubsdk] FeatureHub says this environment is stale, you will not get any more updates.",
+    );
+    this._environmentStale = true;
+    this._stopped = true;
+    this.close();
   }
 }

@@ -32,6 +32,8 @@ export type RejectLikeFunction = (response?: unknown) => void;
 export interface PromiseLikeData {
   resolve: PromiseLikeFunction;
   reject: RejectLikeFunction;
+  // the context a caller was waiting for, so a request for an earlier context does not answer it
+  contextGeneration?: number;
 }
 
 export interface RestOptions {
@@ -120,8 +122,13 @@ export class PollingBase implements PollingService {
 
   public async poll(): Promise<void> {
     if (this._busy) {
+      // the request in flight answers this caller too, unless the context changes before it returns
       return new Promise<void>((resolve, reject) => {
-        this._outstandingPromises.push({ resolve: resolve, reject: reject } as PromiseLikeData);
+        this._outstandingPromises.push({
+          resolve: resolve,
+          reject: reject,
+          contextGeneration: this._contextGeneration,
+        });
       });
     }
 
@@ -156,6 +163,7 @@ export class PollingBase implements PollingService {
     const url = `${req.protocol}//${req.host}${req.path}${req.search}`;
 
     if (await this.preload(req, url)) {
+      this.resolveOutstanding(requestGeneration);
       return;
     }
 
@@ -172,45 +180,45 @@ export class PollingBase implements PollingService {
       clearTimeout(timeoutId);
 
       if (await this.postload(response)) {
+        this.resolveOutstanding(requestGeneration);
         return;
       }
 
       if (!response.ok && response.status !== 304) {
-        this.rejectOutstanding(response.status);
-        throw new Error(`Failed to fetch features: ${response.statusText}`, {
-          cause: response.status,
-        });
+        throw new PollingError(response.status, response.statusText);
       }
 
-      this.parseCacheControl(response.headers.get("cache-control"));
-
       if (response.status === 304) {
+        // a max-age is only read from a response whose body we apply (200 or 236)
         fhLog.trace("304 - no updates");
-        this.resolveOutstanding();
+        this.resolveOutstanding(requestGeneration);
         return;
       }
 
-      const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
+      const environments = PollingBase.decodeEnvironments(await response.text());
 
-      // only keep the ETag of a body we decoded (otherwise the server could answer 304 for good), and only
-      // if the context has not changed while the request was in flight
+      // the context changed while this request was in flight: its features (and ETag) are for the old
+      // context, and the callers waiting on it are answered by a request for the new one
       if (requestGeneration === this._contextGeneration) {
-        this._etag = response.headers.get("etag");
-      }
+        this.parseCacheControl(response.headers.get("cache-control"));
 
-      if (!(await this.postdecode(environments))) {
-        this._callback(environments);
+        // only keep the ETag of a body we decoded (otherwise the server could answer 304 for good)
+        this._etag = response.headers.get("etag");
+
+        if (!(await this.postdecode(environments))) {
+          this._callback(environments);
+        }
       }
 
       if (!this._stopped) this._stopped = response.status === 236;
       if (response.status === 236) {
         fhLog.warn(
-          "[featurehubsdk] SaaS warning, your account has hit its maximum usage for the month, you will not get any more updates unless you increase it.",
+          "[featurehubsdk] FeatureHub says this environment is stale, you will not get any more updates.",
         );
       }
-      this.resolveOutstanding();
+      this.resolveOutstanding(requestGeneration);
     } catch (e) {
-      this.rejectOutstanding(e);
+      this.rejectOutstanding(e, requestGeneration);
       throw e;
     } finally {
       // if this has already been done, it is fine
@@ -221,23 +229,57 @@ export class PollingBase implements PollingService {
   }
 
   /**
-   * Allow the cache control settings on the server override this polling _frequency
+   * Decodes a 200 or 236 body, which FeatureHub always sends as an array of environments, each with an
+   * array of features (absent or null meaning none). Anything else came from something between us and Edge
+   * (a proxy, a gateway) and is an error, as a network error is: nothing is applied and the next poll retries.
+   */
+  public static decodeEnvironments(body: string): FeatureEnvironmentCollection[] {
+    const decoded: unknown = JSON.parse(body);
+
+    if (!Array.isArray(decoded)) {
+      throw new Error("FeatureHub responded with something other than an array of environments");
+    }
+
+    return decoded
+      .filter((e) => e !== null && e !== undefined)
+      .map((e) => {
+        if (typeof e !== "object" || Array.isArray(e)) {
+          throw new Error("FeatureHub responded with an environment that is not an object");
+        }
+
+        const env = e as FeatureEnvironmentCollection;
+        if (env.features !== undefined && env.features !== null && !Array.isArray(env.features)) {
+          throw new Error(
+            "FeatureHub responded with an environment whose features are not an array",
+          );
+        }
+
+        return { ...env, features: env.features ?? [] };
+      });
+  }
+
+  /**
+   * Allow the cache control settings on the server override this polling _frequency. A max-age below the
+   * minimum interval is raised to it, and with an interval of 0 (poll once) it never starts polling.
    * @param cacheHeader
    */
   public parseCacheControl(cacheHeader: string | undefined | null) {
     fhLog.trace(`cache header is ${cacheHeader}`);
-    if (cacheHeader) {
+    if (cacheHeader && this._frequency !== 0) {
       const maxAge = cacheHeader.match(/max-age=(\d+)/);
       fhLog.trace(`max age is ${maxAge}`);
       if (maxAge) {
         const newFreq = parseInt(maxAge[1]!, 10);
         fhLog.trace(`cache header tried to set new freq to ${newFreq}`);
         if (newFreq > 0) {
-          this._frequency = newFreq * 1000;
+          this._frequency = Math.max(newFreq * 1000, PollingBase.minimumIntervalMs);
         }
       }
     }
   }
+
+  /** no FeatureHub Cache-Control max-age makes us poll more often than this */
+  public static minimumIntervalMs = 5000;
 
   public get busy() {
     return this._busy;
@@ -247,20 +289,63 @@ export class PollingBase implements PollingService {
     return this._awaitingFirstPollResult;
   }
 
-  protected resolveOutstanding(): void {
-    const outstanding = [...this._outstandingPromises];
+  /**
+   * Answers the callers waiting on the request made for requestGeneration. Callers that arrived after the
+   * context changed are given a fresh request for the new context instead.
+   */
+  protected resolveOutstanding(requestGeneration?: number): void {
+    const [answered, later] = this.takeOutstanding(requestGeneration);
+    answered.forEach((e) => e.resolve());
+    this.repollFor(later);
+  }
+
+  public rejectOutstanding(result?: unknown, requestGeneration?: number) {
+    const [answered, later] = this.takeOutstanding(requestGeneration);
+    answered.forEach((e) => e.reject(result));
+    this.repollFor(later);
+  }
+
+  private takeOutstanding(
+    requestGeneration?: number,
+  ): [Array<PromiseLikeData>, Array<PromiseLikeData>] {
+    const outstanding = this._outstandingPromises;
     this._outstandingPromises = [];
     this._busy = false;
 
-    outstanding.forEach((e) => e.resolve());
+    if (requestGeneration === undefined || this._stopped) {
+      return [outstanding, []];
+    }
+
+    const isLater = (p: PromiseLikeData) =>
+      p.contextGeneration !== undefined && p.contextGeneration !== requestGeneration;
+
+    return [outstanding.filter((p) => !isLater(p)), outstanding.filter(isLater)];
   }
 
-  public rejectOutstanding(result?: unknown) {
-    const outstanding = [...this._outstandingPromises];
-    this._outstandingPromises = [];
-    this._busy = false;
-    outstanding.forEach((e) => e.reject(result));
+  private repollFor(later: Array<PromiseLikeData>) {
+    if (later.length > 0) {
+      const next = this.poll();
+      later.forEach((p) => next.then(p.resolve, p.reject));
+    }
   }
+}
+
+/** a poll that FeatureHub (or something in front of it) answered with an HTTP error status */
+export class PollingError extends Error {
+  public readonly status: number;
+
+  constructor(status: number, statusText?: string) {
+    super(`Failed to fetch features: ${status} ${statusText ?? ""}`.trim(), { cause: status });
+    this.status = status;
+  }
+}
+
+/** the HTTP status a poll failed with, whether it was rejected with a PollingError or a bare status */
+export function pollingFailureStatus(failure: unknown): number | undefined {
+  if (typeof failure === "number") return failure;
+  if (failure instanceof PollingError) return failure.status;
+  if (failure instanceof Error && typeof failure.cause === "number") return failure.cause;
+  return undefined;
 }
 
 export type PollingClientProvider = (
@@ -272,6 +357,8 @@ export type PollingClientProvider = (
 
 export class FeatureHubPollingClient implements EdgeService {
   private _frequency: number;
+  // 0 means poll once and stop, in both modes (a max-age never changes that)
+  private readonly _configuredFrequency: number;
   private readonly _url: string;
   private _repository: InternalFeatureRepository;
   private _pollingService: PollingService | undefined;
@@ -293,6 +380,7 @@ export class FeatureHubPollingClient implements EdgeService {
   ) {
     this._startable = true;
     this._frequency = frequency;
+    this._configuredFrequency = frequency;
     this._repository = repository;
     this._options = options;
     if (this._options.active === undefined) {
@@ -468,12 +556,12 @@ export class FeatureHubPollingClient implements EdgeService {
           }
         }
       })
-      .catch((status) => {
-        fhLog.trace("poll failed", status);
-        if (status === 404 || status == 400) {
-          if (status == 404) {
-            fhLog.error("The API Key provided does not exist, stopping polling.");
-          }
+      .catch((failure) => {
+        fhLog.trace("poll failed", failure);
+        const status = pollingFailureStatus(failure);
+        // every 4xx (429 included) means the key or environment is rejected: it will never succeed
+        if (status !== undefined && status >= 400 && status < 500) {
+          fhLog.error(`FeatureHub rejected the request (${status}), stopping polling.`);
 
           this._repository.notify(SSEResultState.Failure, null, "polling-service");
           this._startable = false;
@@ -489,7 +577,7 @@ export class FeatureHubPollingClient implements EdgeService {
           }
         } else {
           if (!pollingBusy) {
-            this._readyNextPoll(resolve, reject);
+            this._readyNextPoll(resolve, reject, failure);
           }
 
           if (status == 503) {
@@ -499,15 +587,28 @@ export class FeatureHubPollingClient implements EdgeService {
       });
   }
 
+  /**
+   * Schedules the next poll. After a failed poll the caller waiting on it (resolve/reject) is handed to the
+   * next poll; if there is none (an interval of 0, passive polling, or no more polls), the caller is told it
+   * failed, rather than waiting for ever.
+   */
   private _readyNextPoll(
     resolve?: (value: void | PromiseLike<void>) => void,
     reject?: (reason?: unknown) => void,
+    failure?: unknown,
   ) {
-    if (this._closed) return;
+    if (this._closed) {
+      reject?.(failure);
+      return;
+    }
 
-    const frequency = this._pollingService?.frequency || this._frequency;
+    const frequency =
+      this._configuredFrequency === 0 ? 0 : this._pollingService?.frequency || this._frequency;
 
-    if (frequency > 0 && this._options.active) {
+    if (this._pollingService?.stopped === true) {
+      // FeatureHub has told us the environment will not change again (a 236)
+      fhLog.trace("polling service has stopped, no further polls");
+    } else if (frequency > 0 && this._options.active) {
       // in case we got a 404, and it was shut down
       fhLog.trace("starting timer for poll", frequency);
       this._currentTimer = setTimeout(() => this._pollFunc(resolve, reject), frequency);
@@ -516,34 +617,32 @@ export class FeatureHubPollingClient implements EdgeService {
         `no polling service or 0 frequency, stopping polling. defined? ${this._pollingService} frequency: ${frequency}`,
       );
     } else {
-      // passive polling
-      this._whenPollingCacheExpires = Date.now() + frequency;
+      // passive polling: with an interval of 0 we polled once, and the cache never expires
+      this._whenPollingCacheExpires =
+        frequency === 0 ? Number.POSITIVE_INFINITY : Date.now() + frequency;
       fhLog.trace(`passive polling means cache will expire in ${frequency}ms`);
+    }
+
+    if (this._currentTimer === undefined) {
+      reject?.(failure);
     }
 
     this._frequency = frequency;
   }
 
-  private response(environments: Array<FeatureEnvironmentCollection>, source?: string): void {
-    if (environments.length === 0) {
-      fhLog.trace(`There are no environments for this apikey, stopping polling.`);
-      this._startable = false;
-      this.stop();
-      this._repository.notify(SSEResultState.Failure, null, source || "polling-service");
-    } else {
-      const features = new Array<FeatureState>();
+  private response(environments: Array<FeatureEnvironmentCollection>, _source?: string): void {
+    // the features of every environment together are one full set (an empty list of environments is a
+    // set with no features in it)
+    const features = new Array<FeatureState>();
 
-      environments.forEach((e) => {
-        if (e.features!.length > 0) {
-          // set the environment id so each feature knows which environment it comes from
-          e.features!.forEach((f) => {
-            f.environmentId = e.id;
-          });
-          features.push(...e.features!);
-        }
+    environments.forEach((e) => {
+      (e.features ?? []).forEach((f) => {
+        // set the environment id so each feature knows which environment it comes from
+        f.environmentId = e.id;
+        features.push(f);
       });
+    });
 
-      this._repository.notify(SSEResultState.Features, features, "polling-service");
-    }
+    this._repository.notify(SSEResultState.Features, features, "polling-service");
   }
 }
