@@ -289,7 +289,13 @@ export class PollingBase implements PollingService {
     }
   }
 
-  /** no FeatureHub Cache-Control max-age makes us poll more often than this */
+  /**
+   * No FeatureHub Cache-Control max-age makes us poll more often than this.
+   *
+   * Decision: this is deliberately a public static that an application can change. The protocol says
+   * applications must not be able to lower it (featurehub-protocol.yaml polling_transport.interval.minimum);
+   * this SDK accepts that deviation, as anyone changing it has chosen to.
+   */
   public static minimumIntervalMs = 5000;
 
   public get busy() {

@@ -114,9 +114,10 @@ export class FeatureHubEventSourceClient implements EdgeService {
 
   /**
    * A connection that ends sooner than this after its request did not come from Edge working normally
-   * (featurehub-protocol.yaml featurehub_edge.streaming.last_event_id.short_connections). Lowered only by
-   * the SDK's own tests: applications must not change it.
-   * @internal
+   * (featurehub-protocol.yaml featurehub_edge.streaming.last_event_id.short_connections).
+   *
+   * Decision: this is deliberately a public static that an application can change. The protocol says only
+   * the SDK's own tests may lower it; this SDK accepts that deviation, as anyone changing it has chosen to.
    */
   public static shortConnectionThresholdMs = 10000;
 
