@@ -18,6 +18,7 @@ import { NodejsPollingService } from "./polling_sdk";
 
 export * from "./environment";
 export * from "./polling_sdk";
+export * from "./snapshot_server";
 export * from "featurehub-javascript-core-sdk";
 
 // FEATUREHUB_EDGE_URL, the API keys, and the polling and streaming timeouts and delays
