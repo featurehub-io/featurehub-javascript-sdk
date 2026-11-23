@@ -20,6 +20,9 @@ export interface PollingService {
   busy: boolean;
 
   awaitingFirstPollResult: boolean;
+
+  // FeatureHub answered 236: the environment is stale and nothing more will arrive
+  readonly environmentStale: boolean;
 }
 
 export type FeaturesFunction = (
@@ -49,6 +52,7 @@ export class PollingBase implements PollingService {
   protected _frequency: number;
   protected _callback: FeaturesFunction;
   protected _stopped = false;
+  protected _environmentStale = false;
   protected _header?: string;
   protected _shaHeader: string;
   protected _etag: string | undefined | null;
@@ -210,8 +214,9 @@ export class PollingBase implements PollingService {
         }
       }
 
-      if (!this._stopped) this._stopped = response.status === 236;
       if (response.status === 236) {
+        this._stopped = true;
+        this._environmentStale = true;
         fhLog.warn(
           "[featurehubsdk] FeatureHub says this environment is stale, you will not get any more updates.",
         );
@@ -283,6 +288,10 @@ export class PollingBase implements PollingService {
 
   public get busy() {
     return this._busy;
+  }
+
+  public get environmentStale(): boolean {
+    return this._environmentStale;
   }
 
   public get awaitingFirstPollResult() {
@@ -542,6 +551,11 @@ export class FeatureHubPollingClient implements EdgeService {
     this._pollingService!.poll()
       .then(() => {
         fhLog.trace("poll successful");
+
+        if (this._pollingService?.environmentStale === true) {
+          // the features of the 236 have been applied: nothing more will arrive
+          this._repository.markEnvironmentStale();
+        }
 
         // set the next one going before we resolve as otherwise the test will fail
         if (!pollingBusy) {

@@ -11,9 +11,18 @@ import type { InternalFeatureRepository } from "./internal_feature_repository";
 import type { FeatureState } from "./models";
 import type { UsageEvent, UsageEventListener, UsageProvider } from "./usage/usage";
 
+/**
+ * featurehub-protocol.yaml repository.readiness:
+ * - NotReady: no features are held
+ * - Ready: features are held and are current
+ * - Stale: features are held and keep being resolved, but may not be current (a context change is in
+ *   progress, or the connection has failed or the environment is stale after features were received)
+ * - Failed: final - the connection failed before any features were received
+ */
 export enum Readyness {
   NotReady = "NotReady",
   Ready = "Ready",
+  Stale = "Stale",
   Failed = "Failed",
 }
 

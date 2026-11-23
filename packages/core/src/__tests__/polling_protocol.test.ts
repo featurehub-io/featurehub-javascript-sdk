@@ -266,3 +266,37 @@ describe("polling follows the FeatureHub protocol", () => {
     });
   });
 });
+
+describe("a 236 marks the environment stale", () => {
+  const originalProvider = FeatureHubPollingClient.pollingClientProvider;
+  let fetchSpy: any;
+
+  afterEach(() => {
+    FeatureHubPollingClient.pollingClientProvider = originalProvider;
+    fetchSpy?.mockRestore();
+  });
+
+  it("applies the 236's features, marks the environment stale and polls no more", async () => {
+    const repo = Substitute.for<InternalFeatureRepository>();
+    const config = Substitute.for<FeatureHubConfig>();
+    config.getHost().returns("http://localhost/");
+    config.getApiKeys().returns(["ling"]);
+    FeatureHubPollingClient.pollingClientProvider = (opt, _url, freq, cb) =>
+      new TestPoller(freq, cb, opt);
+    fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(response(236, [{ id: "e1", features: [orm] }]));
+
+    const client = new FeatureHubPollingClient(repo, config, 10);
+    await client.poll();
+    await new Promise((r) => setTimeout(r, 50));
+
+    repo
+      .received(1)
+      .notify(SSEResultState.Features, [{ ...orm, environmentId: "e1" }], "polling-service");
+    repo.received(1).markEnvironmentStale();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(client.isTimerSet).toBe(false);
+    client.close();
+  });
+});

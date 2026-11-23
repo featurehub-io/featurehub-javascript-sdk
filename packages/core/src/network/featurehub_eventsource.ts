@@ -314,5 +314,6 @@ export class FeatureHubEventSourceClient implements EdgeService {
     this._environmentStale = true;
     this._stopped = true;
     this.close();
+    this._repository.markEnvironmentStale();
   }
 }

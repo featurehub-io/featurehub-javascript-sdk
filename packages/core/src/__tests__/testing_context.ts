@@ -38,6 +38,16 @@ export class TestingContext extends BaseClientContext {
 }
 
 export class FakeInternalRepository implements InternalFeatureRepository {
+  markEnvironmentStale(): void {}
+
+  get connectionFailed(): boolean {
+    return false;
+  }
+
+  get environmentStale(): boolean {
+    return false;
+  }
+
   addFeatureUpdateAvailableListener(_callback: (fs: FeatureState) => void): number {
     return 0;
   }

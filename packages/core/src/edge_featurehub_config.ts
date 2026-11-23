@@ -351,6 +351,15 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
     while (this.readiness !== Readyness.Ready) {
       if (Date.now() >= deadline) break;
+      // nothing will make it ready: it failed before any features, or it holds the last features it will get
+      if (this.readiness === Readyness.Failed) break;
+      if (
+        this.readiness === Readyness.Stale &&
+        !this._isClosed &&
+        (this.repository().connectionFailed || this.repository().environmentStale)
+      ) {
+        break;
+      }
       await new Promise<void>((resolve) => setTimeout(resolve, 200));
     }
 

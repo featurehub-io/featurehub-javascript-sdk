@@ -5,9 +5,21 @@ import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "
 import { Applied } from "./strategy_matcher";
 
 export interface InternalFeatureRepository extends FeatureHubRepository {
-  // called when it is ready, but has changed important state (e.g. server eval and the client
-  // change the context
+  // called when the context of a server-evaluated key changes: the features held are for the old
+  // context, so readiness goes from Ready to Stale until the new context's features arrive
   notReady(): void;
+
+  /**
+   * The source says the environment is stale and will send no further updates (a 236 when polling,
+   * edge.stale when streaming). Readiness goes from Ready to Stale and stays there.
+   */
+  markEnvironmentStale(): void;
+
+  /** the connection updating the repository has permanently failed and will send nothing more */
+  get connectionFailed(): boolean;
+
+  /** the source has said the environment is stale and will send nothing more */
+  get environmentStale(): boolean;
 
   /**
    * Close all registered value interceptors.

@@ -62,6 +62,7 @@ describe("streaming treats edge.stale as permanent", () => {
 
       expect(FakeEventSource.created[0]!.closed).toBe(true);
       expect(client.environmentStale).toBe(true);
+      repo.received(1).markEnvironmentStale();
 
       await client.poll();
       expect(FakeEventSource.created).toHaveLength(1);

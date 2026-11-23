@@ -41,14 +41,14 @@ describe("Readiness listeners should fire on appropriate events", () => {
 
     fhConfig.removeReadinessListener(triggerHandler);
     repo.notReady();
-    // real readiness updates
-    expect(fhConfig.readyness).toBe(Readyness.NotReady);
+    // real readiness updates: a context change keeps the old features, so it is Stale, not NotReady
+    expect(fhConfig.readyness).toBe(Readyness.Stale);
     // but the trigger does not fire
     expect(readinessTrigger).toBe(2);
     expect(lastReadiness).toBe(Readyness.Ready);
   });
 
-  it("should start not ready, receive a list of features and become ready and on failure be failed", () => {
+  it("should start not ready, receive a list of features and become ready and on failure be stale", () => {
     let readinessTrigger = 0;
     let lastReadiness: Readyness | undefined = undefined;
     repo.addReadinessListener((state) => {
@@ -75,9 +75,11 @@ describe("Readiness listeners should fire on appropriate events", () => {
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(2);
 
+    // a failure after features keeps resolving them: Stale, never Failed
     repo.notify(SSEResultState.Failure, null, "test");
-    expect(repo.readyness).toBe(Readyness.Failed);
-    expect(lastReadiness).toBe(Readyness.Failed);
+    expect(repo.readyness).toBe(Readyness.Stale);
+    expect(lastReadiness).toBe(Readyness.Stale);
+    expect(repo.connectionFailed).toBe(true);
     expect(readinessTrigger).toBe(3);
   });
 
@@ -129,9 +131,9 @@ describe("Readiness listeners should fire on appropriate events", () => {
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(2); // initial NotReady + Ready
 
-    // Context changes (e.g. userKey), repo goes NotReady
+    // Context changes (e.g. userKey), repo goes Stale (it still holds the old context's features)
     repo.notReady();
-    expect(lastReadiness).toBe(Readyness.NotReady);
+    expect(lastReadiness).toBe(Readyness.Stale);
     expect(readinessTrigger).toBe(3);
 
     // Second poll completes with features → must re-broadcast Ready
@@ -170,9 +172,9 @@ describe("Readiness listeners should fire on appropriate events", () => {
     expect(lastReadiness).toBe(Readyness.Ready);
     expect(readinessTrigger).toBe(1);
     repo.notReady();
-    expect(lastReadiness).toBe(Readyness.NotReady);
+    expect(lastReadiness).toBe(Readyness.Stale);
     repo.removeReadinessListener(listener);
     repo.notify(SSEResultState.Features, features, "test");
-    expect(lastReadiness).toBe(Readyness.NotReady);
+    expect(lastReadiness).toBe(Readyness.Stale);
   });
 });
