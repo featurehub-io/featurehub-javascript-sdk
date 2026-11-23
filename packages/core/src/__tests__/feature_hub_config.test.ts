@@ -1,4 +1,4 @@
-import { Arg, Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
+import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -92,7 +92,7 @@ describe("We can initialize the config", () => {
     it("should allow for the creation of a new context which on building should poll the edge repo", async () => {
       expect(fc.clientEvaluated()).toBe(false);
       await fc.newContext().build();
-      edge.received(1).contextChange("", Arg.any());
+      edge.received(1).contextChange("");
     });
 
     it("should return the same context each time i ask for a server evaluated key", () => {

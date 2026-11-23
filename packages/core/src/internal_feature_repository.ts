@@ -1,6 +1,5 @@
 import type { ClientContext, ContextRecord } from "./client_context";
 import type { EvaluatedFeature } from "./evaluated_feature";
-import type { FeatureSnapshot } from "./feature_snapshot";
 import type { FeatureHubRepository } from "./featurehub_repository";
 import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "./models";
 import { Applied } from "./strategy_matcher";
@@ -21,22 +20,6 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
 
   /** the source has said the environment is stale and will send nothing more */
   get environmentStale(): boolean;
-
-  /**
-   * featurehub-protocol.yaml encoding.sha of the features held (applied, not held back by catch-and-release),
-   * kept current on every applied change.
-   */
-  get featuresSha(): string;
-
-  /** copies of the features held, as they were delivered (strategies included) */
-  featureStates(): Array<FeatureState>;
-
-  /**
-   * Loads a feature snapshot, its JSON, or a bare array of features as a full set, as notify(features)
-   * does, and returns the snapshot. Data that is not a snapshot throws a FeatureSnapshotFormatError and
-   * leaves the repository unchanged.
-   */
-  loadFeatureSnapshot(data: unknown, source?: string): FeatureSnapshot;
 
   /**
    * Close all registered value interceptors.

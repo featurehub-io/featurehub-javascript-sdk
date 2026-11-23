@@ -40,18 +40,6 @@ export class TestingContext extends BaseClientContext {
 export class FakeInternalRepository implements InternalFeatureRepository {
   markEnvironmentStale(): void {}
 
-  get featuresSha(): string {
-    return "0";
-  }
-
-  featureStates(): Array<FeatureState> {
-    return [];
-  }
-
-  loadFeatureSnapshot(): any {
-    return { sha: "0", features: [] };
-  }
-
   get connectionFailed(): boolean {
     return false;
   }

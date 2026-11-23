@@ -5,7 +5,6 @@ import {
   fhLog,
   type ReadinessListenerHandle,
 } from "./feature_hub_config";
-import { decodeFeatureSnapshot, type FeatureSnapshot, featuresSha } from "./feature_snapshot";
 import type { FeatureStateHolder } from "./feature_state";
 import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
@@ -334,29 +333,6 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
 
   public get environmentStale(): boolean {
     return this._environmentStale;
-  }
-
-  public get featuresSha(): string {
-    return featuresSha(this.heldFeatureStates());
-  }
-
-  public featureStates(): Array<FeatureState> {
-    return this.heldFeatureStates().map((fs) => structuredClone(fs));
-  }
-
-  public loadFeatureSnapshot(data: unknown, source = "feature-snapshot"): FeatureSnapshot {
-    const snapshot = decodeFeatureSnapshot(data);
-    this.notify(SSEResultState.Features, snapshot.features, source);
-    return snapshot;
-  }
-
-  // the features held (keys only asked for by code, with no feature, are left out)
-  private heldFeatureStates(): Array<FeatureState> {
-    return this.features
-      .values()
-      .map((holder) => holder.getFeatureState())
-      .filter((fs): fs is FeatureState => fs !== undefined)
-      .toArray();
   }
 
   public markEnvironmentStale(): void {

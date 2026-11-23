@@ -11,7 +11,6 @@ import {
 import { BrowserPollingService } from "./polling_sdk";
 
 export * from "./polling_sdk";
-export * from "./snapshot_client";
 export * from "featurehub-javascript-core-sdk";
 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>

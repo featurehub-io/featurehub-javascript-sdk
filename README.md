@@ -897,60 +897,6 @@ Call `store.close()` on shutdown. See the
 [package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor
 variants and configuration options.
 
-## Re-serving features from your own server (feature snapshots)
-
-Your own Node server can re-serve the features it gets from FeatureHub to its own clients, evaluated for each
-client's context, so those clients never talk to FeatureHub directly. The server connects to FeatureHub as usual,
-with a **client-evaluated** API key (one containing `*`), so it holds every feature's rollout strategies; with a
-server-evaluated key it refuses to serve, as every client would get the server's own context's values.
-
-### The server (Node)
-
-```typescript
-import express from "express";
-import { EdgeFeatureHubConfig, featureSnapshotHandler } from "featurehub-javascript-node-sdk";
-
-const fhConfig = new EdgeFeatureHubConfig(edgeUrl, clientEvaluatedApiKey);
-fhConfig.init();
-
-const app = express();
-// the query parameters are the context: /features?userkey=user-123&country=nz
-app.get("/features", featureSnapshotHandler(fhConfig));
-```
-
-The handler answers with the features as JSON and their SHA as the `ETag`, `304 Not Modified` when the client
-already has them, `400` for an invalid context, and `503` until the server has its own features. Options:
-
-- `serveStrategiesWithoutContext`: a request with no query parameters gets the features **with their rollout
-  strategies**, for clients that evaluate locally. The default (`false`) evaluates them as for an empty context, so
-  such clients would get every feature's default value. Strategies expose all their values: only serve them to
-  trusted clients.
-- `allowOrigin`: answer CORS preflights and allow this origin (`"*"` for any), for browsers on another origin.
-
-`featureSnapshot(fhConfig, { context, includeStrategies })` gives the same snapshot as a value, for your own
-handler. Value interceptors are never applied to what is served.
-
-### The client (browser)
-
-```typescript
-import { featureSnapshotConfig } from "featurehub-javascript-client-sdk";
-
-const fhConfig = featureSnapshotConfig({ url: "https://my.app/features" });
-const context = await fhConfig.newContext().userKey("user-123").country("nz").build();
-```
-
-The client polls every 30 seconds by default, sending its context as query parameters and the last `ETag` it got
-for that context. Its options:
-
-- `sendContext: false`: send no context and evaluate locally. The server must use `serveStrategiesWithoutContext`.
-- `intervalMs`: how often to poll, and how long a response stays fresh. `0` fetches once; otherwise at least 5 seconds.
-- `passive: true`: fetch only when a feature is evaluated and the last response is older than the interval.
-- `headers`: extra headers for every request.
-- `requestTimeoutMs`: abandon a request that takes longer.
-
-A `4xx` response (other than `429`) stops the client for good; anything else is retried. To load a snapshot you
-already have, for example one saved earlier, pass it to `fhConfig.repository().loadFeatureSnapshot(data)`.
-
 ## FeatureHub Test API
 
 When writing automated integration tests, it is often desirable to update your feature values, particularly flags.

@@ -310,7 +310,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
       }
 
       if (this._currentEdge !== undefined) {
-        await this._currentEdge.contextChange(this._xHeader, this.attributes);
+        await this._currentEdge.contextChange(this._xHeader);
       }
     } catch (e) {
       if (e) {
