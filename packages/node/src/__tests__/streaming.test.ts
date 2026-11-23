@@ -4,6 +4,7 @@ import type { AddressInfo } from "net";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  EdgeFeatureHubConfig,
   type FeatureHubConfig,
   FeatureHubEventSourceClient,
   fhLog,
@@ -365,5 +366,54 @@ describe("node streaming, protocol generation 2", () => {
 
     expect(requests[1]!.headers["last-event-id"]).toBeUndefined();
     expect(requests[1]!.headers["x-featurehub"]).toBe("userkey=ling");
+  });
+});
+
+describe("node streaming sends extra headers", () => {
+  let server: Server;
+  let requests: IncomingMessage[];
+  const originalPolicy: SseReconnectPolicy = { ...FeatureHubEventSourceClient.reconnectPolicy };
+
+  beforeEach(async () => {
+    requests = [];
+    server = createServer((req, res) => {
+      requests.push(req);
+      res.writeHead(503);
+      res.end();
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      networkErrorDelayMs: 20,
+      serverErrorDelayMs: 20,
+      backoffMultiplier: 1,
+      maxDelayMs: 20,
+    };
+  });
+
+  afterEach(async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = originalPolicy;
+    server.closeAllConnections();
+    await new Promise((r) => server.close(r));
+  });
+
+  it("on the first connection and on every reconnection", async () => {
+    const port = (server.address() as AddressInfo).port;
+    let n = 0;
+    const config = new EdgeFeatureHubConfig(`http://127.0.0.1:${port}`, "ling*orm").headers(() => ({
+      "x-gateway-key": `kornaphat-${++n}`,
+    }));
+
+    const client = new FeatureHubEventSourceClient(config, {
+      notify: () => {},
+    } as unknown as InternalFeatureRepository);
+    await client.poll();
+    await until(() => requests.length >= 3);
+    client.close();
+
+    expect(requests.slice(0, 3).map((r) => r.headers["x-gateway-key"])).toEqual([
+      "kornaphat-1",
+      "kornaphat-2",
+      "kornaphat-3",
+    ]);
   });
 });

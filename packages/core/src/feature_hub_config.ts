@@ -91,6 +91,36 @@ export function validatePollInterval(intervalMs: number, what = "the poll interv
   return intervalMs;
 }
 
+/**
+ * Headers an application sends to FeatureHub Edge with every poll and every streaming connection (for an API
+ * gateway, a proxy, extra authentication or tracing). A function is called for each request and connection,
+ * so a header such as a rotating token stays current.
+ */
+export type ExtraHeaders = Record<string, string> | (() => Record<string, string>);
+
+// headers the SDK itself sends: an application's header of the same name (in any case) is never sent
+const PROTOCOL_HEADERS = ["x-featurehub", "if-none-match", "last-event-id"];
+
+/**
+ * The extra headers a config has, without any that would clash with the SDK's own protocol headers
+ * (featurehub-protocol.yaml featurehub_edge.extra_headers.precedence). Header names are case-insensitive,
+ * so a clash is found whatever its case.
+ */
+export function configExtraHeaders(config: FeatureHubConfig): Record<string, string> {
+  const headers = typeof config.extraHeaders === "function" ? config.extraHeaders() : undefined;
+
+  if (headers === null || typeof headers !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(headers).filter(
+      ([name, value]) =>
+        typeof value === "string" && !PROTOCOL_HEADERS.includes(name.toLowerCase()),
+    ),
+  );
+}
+
 /** the query string a config's host was given with, if it has one */
 export function configHostQuery(config: FeatureHubConfig): string {
   const query = typeof config.hostQuery === "function" ? config.hostQuery() : undefined;
@@ -225,6 +255,16 @@ export interface FeatureHubConfig {
   restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig;
 
   streaming(): FeatureHubConfig;
+
+  /**
+   * Headers to send to FeatureHub Edge with every poll and every streaming connection and reconnection. The
+   * SDK's own protocol headers (x-featurehub, If-None-Match, Last-Event-ID) always win over one of the same
+   * name. A browser's EventSource cannot send headers, so in a browser they are only sent when polling.
+   */
+  headers(headers: ExtraHeaders | undefined): FeatureHubConfig;
+
+  /** the extra headers to send now */
+  extraHeaders?(): Record<string, string>;
 
   // internal APIs
   get edgeType(): EdgeType;

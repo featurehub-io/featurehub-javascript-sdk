@@ -1,6 +1,7 @@
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
+  type ExtraHeaders,
   FeatureHub as fh,
   type FeatureHubConfig,
   fhLog,
@@ -37,6 +38,12 @@ type Props = {
   readonly pollInterval?: number;
   /** rest-active, rest-passive, streaming, defaults to rest-active */
   readonly connectionType?: string;
+  /**
+   * Headers to send to FeatureHub Edge with every request (an API gateway's, say). Read when the config is
+   * created; pass a function for values that change, as it is called for each request. A browser cannot send
+   * headers when streaming, so they are only sent when polling.
+   */
+  readonly headers?: ExtraHeaders;
   /** wait until the repository becomes ready before rendering the children */
   readonly waitForReady?: boolean;
   /** The React application tree to inject the FeatureHub client into */
@@ -64,6 +71,7 @@ const FeatureHub: FC<Props> = ({
   pollInterval = 60000,
   connectionType = "rest-active",
   waitForReady = true,
+  headers,
   children,
 }: Props) => {
   const useSharedConfiguration = fh.isCompletelyConfigured();
@@ -85,7 +93,12 @@ const FeatureHub: FC<Props> = ({
       config.restActive(pollInterval);
     }
 
+    if (headers) {
+      config.headers(headers);
+    }
+
     return { config, client: config.newContext() };
+    // headers is read once (an object prop is new on every render): pass a function for values that change
   }, [url, apiKey, pollInterval, connectionType, useSharedConfiguration]); // removed userKey from dependencies to prevent excessive config recreation
 
   // features are held and resolved while Ready and while Stale (a context change in progress, or a

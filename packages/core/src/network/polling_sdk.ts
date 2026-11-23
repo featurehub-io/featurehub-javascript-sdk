@@ -1,6 +1,11 @@
 import { contextSha, type CryptoProvider } from "../context_header";
 import type { EdgeService } from "../edge_service";
-import { configHostQuery, type FeatureHubConfig, fhLog } from "../feature_hub_config";
+import {
+  configExtraHeaders,
+  configHostQuery,
+  type FeatureHubConfig,
+  fhLog,
+} from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "../models";
 import { type FetchRequestOptions, type ModifyRequestFunction, SDK_VERSION } from "./common";
@@ -43,6 +48,8 @@ export interface RestOptions {
   timeout?: number;
   active?: boolean;
   modifyRequestFunction?: ModifyRequestFunction;
+  // the application's extra headers, fetched for each poll (without any clashing with the SDK's own)
+  extraHeaders?: () => Record<string, string>;
 }
 
 export type { CryptoProvider };
@@ -143,10 +150,9 @@ export class PollingBase implements PollingService {
     this._busy = true;
 
     const requestGeneration = this._contextGeneration;
-    const headers: Record<string, string> = this._header
-      ? ({ "x-featurehub": this._header } as Record<string, string>)
-      : {};
-
+    // the application's headers first, so the SDK's own protocol headers win
+    const headers: Record<string, string> = { ...(this._options.extraHeaders?.() ?? {}) };
+    if (this._header) headers["x-featurehub"] = this._header;
     if (this._etag) headers["if-none-match"] = this._etag;
 
     // we are not specifying the type as it forces us to bring in one of http or https
@@ -407,6 +413,7 @@ export class FeatureHubPollingClient implements EdgeService {
     if (this._options.active === undefined) {
       this._options.active = true;
     }
+    this._options.extraHeaders = () => configExtraHeaders(config);
     this._config = config;
     // a host's own query string comes first, then apiKey for each key in order
     // (featurehub-protocol.yaml featurehub_edge.query_parameters)

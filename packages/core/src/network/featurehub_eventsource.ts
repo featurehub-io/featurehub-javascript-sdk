@@ -1,7 +1,12 @@
 /* eslint-disable */
 import type { EdgeService } from "../edge_service";
 import { SDK_VERSION } from "./common";
-import { configHostQuery, type FeatureHubConfig, fhLog } from "../feature_hub_config";
+import {
+  configExtraHeaders,
+  configHostQuery,
+  type FeatureHubConfig,
+  fhLog,
+} from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureState, SSEResultState } from "../models";
 import { contextSha } from "../context_header";
@@ -153,7 +158,11 @@ export class FeatureHubEventSourceClient implements EdgeService {
       return;
     }
 
-    const headers: Record<string, string> = {};
+    // the application's headers first, so the SDK's own protocol headers win
+    const headers: Record<string, string> = configExtraHeaders(this._config);
+    if (!FeatureHubEventSourceClient.sdkManagesReconnection && Object.keys(headers).length > 0) {
+      this.warnHeadersNotSent();
+    }
     if (this._header) {
       headers["x-featurehub"] = this._header;
     }
@@ -230,6 +239,18 @@ export class FeatureHubEventSourceClient implements EdgeService {
     }
 
     this.eventSource.onerror = (e: Event) => this.connectionError(e);
+  }
+
+  private _warnedHeadersNotSent = false;
+
+  private warnHeadersNotSent() {
+    if (!this._warnedHeadersNotSent) {
+      this._warnedHeadersNotSent = true;
+      fhLog.warn(
+        "[featurehubsdk] extra headers are configured, but a browser's EventSource cannot send headers: they " +
+          "are only sent when polling",
+      );
+    }
   }
 
   /** a request for a new connection (ours, or the browser's own reconnection) has just been made */

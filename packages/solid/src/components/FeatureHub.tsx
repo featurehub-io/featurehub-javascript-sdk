@@ -1,6 +1,7 @@
 import {
   type ClientContext,
   EdgeFeatureHubConfig,
+  type ExtraHeaders,
   FeatureHub as fh,
   type FeatureHubConfig,
   fhLog,
@@ -17,6 +18,7 @@ import {
   on,
   onCleanup,
   Show,
+  untrack,
 } from "solid-js";
 
 export type UseFeatureHub = {
@@ -45,6 +47,12 @@ type Props = {
   readonly pollInterval?: number;
   /** Connection type (rest-active, rest-passive, streaming). Defaults to rest-active */
   readonly connectionType?: string;
+  /**
+   * Headers to send to FeatureHub Edge with every request (an API gateway's, say). Read when the config is
+   * created; pass a function for values that change, as it is called for each request. A browser cannot send
+   * headers when streaming, so they are only sent when polling.
+   */
+  readonly headers?: ExtraHeaders;
   /** Wait until the repository becomes ready before rendering the children. [default: true] */
   readonly waitForReady?: boolean;
   /** The Solid application tree to inject the FeatureHub client into */
@@ -70,6 +78,12 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
       cfg.streaming();
     } else {
       cfg.restActive(props.pollInterval ?? 60000);
+    }
+
+    // read once, without tracking it: pass a function for values that change
+    const headers = untrack(() => props.headers);
+    if (headers) {
+      cfg.headers(headers);
     }
 
     return cfg;

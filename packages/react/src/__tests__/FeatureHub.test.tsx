@@ -57,6 +57,7 @@ function buildOwnConfigMocks() {
     restActive: vi.fn().mockReturnThis(),
     restPassive: vi.fn().mockReturnThis(),
     streaming: vi.fn().mockReturnThis(),
+    headers: vi.fn().mockReturnThis(),
     context: vi.fn().mockReturnValue(mockContext),
     newContext: vi.fn().mockReturnValue(mockContext),
     addReadinessListener: vi.fn().mockImplementation((listener: any) => {
@@ -327,6 +328,28 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     expect(mockConfig.newContext).toHaveBeenCalled();
     expect(mockContext.build).toHaveBeenCalled();
 
+    configSpy.mockRestore();
+  });
+
+  it("gives the headers prop to the config it creates", () => {
+    const { mockConfig } = buildOwnConfigMocks();
+    const configSpy = vi
+      .spyOn(EdgeFeatureHubConfig, "config")
+      .mockReturnValue(mockConfig as unknown as EdgeFeatureHubConfig);
+    const headers = { "x-gateway-key": "lingling-kwong" };
+
+    render(
+      <FeatureHub
+        url="http://localhost:8085"
+        apiKey="abc123"
+        headers={headers}
+        waitForReady={false}
+      >
+        <div>test</div>
+      </FeatureHub>,
+    );
+
+    expect(mockConfig.headers).toHaveBeenCalledWith(headers);
     configSpy.mockRestore();
   });
 

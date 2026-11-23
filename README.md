@@ -345,6 +345,23 @@ A polling interval must be `0` or at least 5 seconds (5000 ms): anything else th
 An interval of `0` polls once and then stops, which suits short-lived processes. A cache-control `max-age` from the
 server is never allowed to make the SDK poll more often than every 5 seconds.
 
+#### Sending extra headers
+
+If FeatureHub Edge sits behind an API gateway or proxy that needs its own headers, give them to the config. They are
+sent with every poll, and with every streaming connection and reconnection:
+
+```typescript
+fhConfig.headers({ "x-api-gateway-key": "my-gateway-key" });
+
+// or a function, called for each request, for a value that changes such as a short-lived token
+fhConfig.headers(() => ({ authorization: `Bearer ${currentToken()}` }));
+```
+
+The SDK's own protocol headers (`x-featurehub`, `If-None-Match` and `Last-Event-ID`) always take precedence over a
+header of the same name. A browser's `EventSource` cannot send headers, so in a browser they are only sent when
+polling (a warning is logged if they are configured for streaming). The React and Solid `FeatureHub` components take
+them as a `headers` prop.
+
 #### Configuring the connection mode from the environment (Node)
 
 The Node SDK reads its default connection mode from two environment variables. Anything you set in code (for

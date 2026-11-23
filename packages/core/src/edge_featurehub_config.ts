@@ -5,6 +5,7 @@ import type { EdgeService } from "./edge_service";
 import {
   ConfigurationClosedError,
   EdgeType,
+  type ExtraHeaders,
   type FeatureHubConfig,
   fhLog,
   InvalidConfigurationError,
@@ -103,6 +104,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _noopMode: boolean;
 
   private _isClosed = false;
+  private _extraHeaders: ExtraHeaders | undefined;
 
   private static _singleton: EdgeFeatureHubConfig | undefined;
 
@@ -513,6 +515,24 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     if (this._isClosed) return this;
     this._edgeType = EdgeType.STREAMING;
     return this;
+  }
+
+  headers(headers: ExtraHeaders | undefined): FeatureHubConfig {
+    this._extraHeaders = headers;
+    return this;
+  }
+
+  extraHeaders(): Record<string, string> {
+    if (typeof this._extraHeaders === "function") {
+      try {
+        return this._extraHeaders() ?? {};
+      } catch (e) {
+        fhLog.error("[featurehubsdk] the extra headers function failed, sending none", e);
+        return {};
+      }
+    }
+
+    return this._extraHeaders ?? {};
   }
 
   get edgeSupplierTimeout(): number {
