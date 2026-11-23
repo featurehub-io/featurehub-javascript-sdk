@@ -300,3 +300,58 @@ describe("a 236 marks the environment stale", () => {
     client.close();
   });
 });
+
+// featurehub-protocol.yaml conformance polling-context-change-after-close
+describe("a context change on a closed polling client", () => {
+  const originalProvider = FeatureHubPollingClient.pollingClientProvider;
+  let fetchSpy: any;
+
+  afterEach(() => {
+    FeatureHubPollingClient.pollingClientProvider = originalProvider;
+    fetchSpy?.mockRestore();
+  });
+
+  const setup = (repoState: { connectionFailed?: boolean; environmentStale?: boolean } = {}) => {
+    const repo = Substitute.for<InternalFeatureRepository>();
+    repo.connectionFailed.returns!(repoState.connectionFailed ?? false);
+    repo.environmentStale.returns!(repoState.environmentStale ?? false);
+    const config = Substitute.for<FeatureHubConfig>();
+    config.getHost().returns("http://localhost/");
+    config.getApiKeys().returns(["kwong"]);
+    config.clientEvaluated().returns(false);
+    FeatureHubPollingClient.pollingClientProvider = (opt, _url, freq, cb) =>
+      new TestPoller(freq, cb, opt);
+    return { repo, client: new FeatureHubPollingClient(repo, config, 5000) };
+  };
+
+  it("makes exactly one request, applies its features and does not start polling again", async () => {
+    const { repo, client } = setup();
+    fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(response(200, [{ id: "e1", features: [ling] }]));
+
+    client.close();
+    await client.contextChange("userkey=lingling");
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0][1].headers["x-featurehub"]).toBe("userkey=lingling");
+    repo
+      .received(1)
+      .notify(SSEResultState.Features, [{ ...ling, environmentId: "e1" }], "polling-service");
+    expect(client.isTimerSet).toBe(false);
+  });
+
+  it.each([{ connectionFailed: true }, { environmentStale: true }])(
+    "makes no request once nothing more can be fetched (%o)",
+    async (state) => {
+      const { client } = setup(state);
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(response(200, []));
+
+      client.close();
+      await client.contextChange("userkey=orm");
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+});

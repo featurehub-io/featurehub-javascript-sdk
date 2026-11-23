@@ -448,6 +448,10 @@ export class FeatureHubPollingClient implements EdgeService {
       if (this._xHeader !== header) {
         this._xHeader = header;
 
+        if (this._closed) {
+          return this.fetchOnceWhileClosed(header);
+        }
+
         this._initService();
 
         if (this._pollingService) {
@@ -461,6 +465,46 @@ export class FeatureHubPollingClient implements EdgeService {
     }
 
     return new Promise<void>((resolve) => resolve());
+  }
+
+  /**
+   * featurehub-protocol.yaml polling_transport.context_changed: a context change on a closed transport makes
+   * that one request, so the new context's features arrive, and stays closed. Once the connection has failed
+   * or the environment is stale nothing can be fetched, so it makes no request at all.
+   */
+  private async fetchOnceWhileClosed(header: string): Promise<void> {
+    if (
+      !this._startable ||
+      this._repository.connectionFailed === true ||
+      this._repository.environmentStale === true
+    ) {
+      return;
+    }
+
+    const service = FeatureHubPollingClient.pollingClientProvider(
+      this._options,
+      this._url,
+      0,
+      (e, source) => this.response(e, source),
+    );
+
+    try {
+      await service.attributeHeader(header);
+      await service.poll();
+
+      if (service.environmentStale === true) {
+        this._repository.markEnvironmentStale();
+      }
+    } catch (failure) {
+      const status = pollingFailureStatus(failure);
+      if (status !== undefined && status >= 400 && status < 500) {
+        fhLog.error(`FeatureHub rejected the request (${status}).`);
+        this._startable = false;
+        this._repository.notify(SSEResultState.Failure, null, "polling-service");
+      }
+    } finally {
+      service.stop();
+    }
   }
 
   private _cancelTimer() {

@@ -380,7 +380,15 @@ export class ApplyFeature {
       const basePercentage = new Map<string, number>();
       const defaultPercentageKey = context.defaultPercentageKey();
 
-      for (const rsi of strategies) {
+      for (const strategy of strategies) {
+        // a null percentage or attributes means the same as an absent one (rollout-strategies.yaml
+        // decoding: null, absent and empty all mean none), so treat them alike
+        const rsi = {
+          ...strategy,
+          percentage: strategy.percentage ?? undefined,
+          attributes: strategy.attributes ?? undefined,
+        };
+
         if (rsi.percentage !== 0 && (defaultPercentageKey || rsi.percentageAttributes?.length)) {
           const newPercentageKey = ApplyFeature.determinePercentageKey(
             context,
