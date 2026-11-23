@@ -4,6 +4,7 @@ import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureState, SSEResultState } from "../models";
 import { Readyness } from "../featurehub_repository";
+import { contextSha } from "../context_header";
 
 export declare class EventSource {
   static readonly CLOSED: number;
@@ -57,13 +58,19 @@ export class FeatureHubEventSourceClient implements EdgeService {
   private readonly _config: FeatureHubConfig;
   private readonly _repository: InternalFeatureRepository;
   private _header: string | undefined;
+  private _contextSha = "0";
   private _staleEnvironmentTimeoutId: ReturnType<typeof setTimeout> | undefined;
   private _stopped: boolean = false;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
+    // a browser EventSource cannot send headers, so the context goes in the query string, after the
+    // contextSha (featurehub-protocol.yaml featurehub_edge.query_parameters)
     const realUrl =
       dict?.headers && "x-featurehub" in dict.headers && dict.headers["x-featurehub"]
-        ? url + "?xfeaturehub=" + encodeURI(dict.headers["x-featurehub"] as string)
+        ? url +
+          (url.includes("?") ? "&" : "?") +
+          "xfeaturehub=" +
+          encodeURIComponent(dict.headers["x-featurehub"] as string)
         : url;
     return new EventSource(realUrl, dict);
   };
@@ -90,9 +97,11 @@ export class FeatureHubEventSourceClient implements EdgeService {
       };
     }
 
-    fhLog.trace("listening at ", this._config.url());
+    const url = `${this._config.url()}?contextSha=${this._contextSha}`;
 
-    this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(this._config.url(), options);
+    fhLog.trace("listening at ", url);
+
+    this.eventSource = FeatureHubEventSourceClient.eventSourceProvider(url, options);
 
     for (const name of [
       SSEResultState.Features,
@@ -160,10 +169,11 @@ export class FeatureHubEventSourceClient implements EdgeService {
     return this._config.clientEvaluated();
   }
 
-  contextChange(header: string): Promise<void> {
+  async contextChange(header: string): Promise<void> {
     // ignore if not client evaluated
     if (!this.clientEvaluated()) {
       this._header = header;
+      this._contextSha = await contextSha(header);
 
       if (this.eventSource !== undefined) {
         this.close();
@@ -171,8 +181,6 @@ export class FeatureHubEventSourceClient implements EdgeService {
 
       this.init();
     }
-
-    return Promise.resolve(undefined);
   }
 
   poll(): Promise<void> {

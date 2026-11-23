@@ -4,13 +4,10 @@
  */
 import { HashAlgorithm } from "featurehub-javascript-core-sdk";
 
-export const createBase64UrlSafeHash = async (
-  algorithm: HashAlgorithm,
-  data: string,
-): Promise<string> => {
+/**
+ * A lowercase hex digest, the encoding the protocol requires for the contextSha.
+ */
+export const createHexHash = async (algorithm: HashAlgorithm, data: string): Promise<string> => {
   const crypto = await import("crypto");
-  const hash = crypto.createHash(algorithm).update(data).digest("base64");
-
-  // Convert to base64 url encoding (no padding)
-  return hash.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return crypto.createHash(algorithm).update(data, "utf8").digest("hex");
 };

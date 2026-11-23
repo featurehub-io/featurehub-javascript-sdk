@@ -253,6 +253,98 @@ describe("Polling Base polls as expected", () => {
       );
     });
 
+    const ok200 = () =>
+      ({
+        text: () => Promise.resolve(JSON.stringify([])),
+        headers: headerMap,
+        status: 200,
+        ok: true,
+      }) as unknown as Response;
+
+    const sentIfNoneMatch = (call: number): string | undefined =>
+      (fetchSpy.mock.calls[call][1].headers as Record<string, string>)["if-none-match"];
+
+    it("keeps the etag after a 304 and sends it again", async () => {
+      headerMap.set("etag", "ling_etag");
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(ok200());
+      await poller.poll();
+
+      fetchSpy.mockResolvedValue({
+        headers: new Map<string, string>(),
+        status: 304,
+        ok: false,
+      } as unknown as Response);
+      await poller.poll();
+      await poller.poll();
+
+      expect(sentIfNoneMatch(1)).toBe("ling_etag");
+      expect(sentIfNoneMatch(2)).toBe("ling_etag");
+    });
+
+    it("clears the etag when the context changes", async () => {
+      headerMap.set("etag", "orm_etag");
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(ok200());
+
+      await poller.attributeHeader("userkey=orm");
+      await poller.poll();
+      await poller.poll();
+      expect(sentIfNoneMatch(1)).toBe("orm_etag");
+
+      await poller.attributeHeader("userkey=ling");
+      await poller.poll();
+      expect(sentIfNoneMatch(2)).toBeUndefined();
+    });
+
+    it("keeps the etag when the context is set again unchanged", async () => {
+      headerMap.set("etag", "orm_etag");
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(ok200());
+
+      await poller.attributeHeader("userkey=orm");
+      await poller.poll();
+      await poller.attributeHeader("userkey=orm");
+      await poller.poll();
+
+      expect(sentIfNoneMatch(1)).toBe("orm_etag");
+    });
+
+    it("does not keep an etag from a response whose context changed while it was in flight", async () => {
+      let hold: ((value: Response) => void) | undefined;
+      headerMap.set("etag", "kornaphat_etag");
+      fetchSpy = vi.spyOn(global, "fetch").mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            hold = resolve;
+          }),
+      );
+
+      await poller.attributeHeader("userkey=orm");
+      const inFlight = poller.poll();
+      await sleep(10);
+      await poller.attributeHeader("userkey=ling");
+      hold!(ok200());
+      await inFlight;
+
+      fetchSpy.mockResolvedValue(ok200());
+      await poller.poll();
+      expect(sentIfNoneMatch(1)).toBeUndefined();
+    });
+
+    it("does not keep the etag of a body that failed to decode", async () => {
+      headerMap.set("etag", "chago_etag");
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce({
+        text: () => Promise.resolve("<html>not json</html>"),
+        headers: headerMap,
+        status: 200,
+        ok: true,
+      } as unknown as Response);
+
+      await expect(poller.poll()).rejects.toThrow();
+
+      fetchSpy.mockResolvedValue(ok200());
+      await poller.poll();
+      expect(sentIfNoneMatch(1)).toBeUndefined();
+    });
+
     it("should change the contextSha when attributeValue is passed", async () => {
       await poller.attributeHeader("sausage");
 

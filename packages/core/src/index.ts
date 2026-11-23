@@ -1,5 +1,6 @@
 export * from "./client_context";
 export * from "./client_feature_repository";
+export * from "./context_header";
 export * from "./context_impl";
 export * from "./crypto/types";
 export * from "./edge_featurehub_config";

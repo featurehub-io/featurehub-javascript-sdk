@@ -1,4 +1,4 @@
-import type { HashAlgorithm } from "../crypto/types";
+import { contextSha, type CryptoProvider } from "../context_header";
 import type { EdgeService } from "../edge_service";
 import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
@@ -40,7 +40,7 @@ export interface RestOptions {
   modifyRequestFunction?: ModifyRequestFunction;
 }
 
-export type CryptoProvider = (algorithm: HashAlgorithm, data: string) => Promise<string>;
+export type { CryptoProvider };
 
 export class PollingBase implements PollingService {
   protected url: string;
@@ -50,6 +50,8 @@ export class PollingBase implements PollingService {
   protected _header?: string;
   protected _shaHeader: string;
   protected _etag: string | undefined | null;
+  // increases on every context change, so a response to a request made for an earlier context is recognised
+  protected _contextGeneration = 0;
   protected _busy = false;
   protected _awaitingFirstPollResult = true;
   protected _outstandingPromises: Array<PromiseLikeData> = [];
@@ -60,6 +62,7 @@ export class PollingBase implements PollingService {
   protected constructor(
     url: string,
     frequency: number,
+    // hashes the x-featurehub header into the contextSha; it MUST return lowercase hex
     createBase64UrlSafeHash: CryptoProvider,
     options: RestOptions,
     callback: FeaturesFunction,
@@ -76,11 +79,15 @@ export class PollingBase implements PollingService {
   }
 
   async attributeHeader(header: string): Promise<void> {
+    if (header !== this._header) {
+      // an ETag belongs to the context it was fetched for: a 304 for the old context's ETag would leave
+      // the repository holding the old context's features
+      this._etag = undefined;
+      this._contextGeneration++;
+    }
+
     this._header = header;
-    this._shaHeader =
-      header === undefined || header.length === 0
-        ? "0"
-        : await this._createBase64UrlSafeHash("sha256", header);
+    this._shaHeader = await contextSha(header, this._createBase64UrlSafeHash);
   }
 
   public stop(): void {
@@ -124,6 +131,7 @@ export class PollingBase implements PollingService {
 
     this._busy = true;
 
+    const requestGeneration = this._contextGeneration;
     const headers: Record<string, string> = this._header
       ? ({ "x-featurehub": this._header } as Record<string, string>)
       : {};
@@ -182,9 +190,14 @@ export class PollingBase implements PollingService {
         return;
       }
 
-      this._etag = response.headers.get("etag");
-
       const environments = JSON.parse(await response.text()) as FeatureEnvironmentCollection[];
+
+      // only keep the ETag of a body we decoded (otherwise the server could answer 304 for good), and only
+      // if the context has not changed while the request was in flight
+      if (requestGeneration === this._contextGeneration) {
+        this._etag = response.headers.get("etag");
+      }
+
       if (!(await this.postdecode(environments))) {
         this._callback(environments);
       }

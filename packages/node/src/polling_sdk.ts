@@ -5,10 +5,10 @@ import {
   RestOptions,
 } from "featurehub-javascript-core-sdk";
 
-import { createBase64UrlSafeHash } from "./crypto-node";
+import { createHexHash } from "./crypto-node";
 
 export class NodejsPollingService extends PollingBase implements PollingService {
   constructor(options: RestOptions, url: string, frequency: number, _callback: FeaturesFunction) {
-    super(url, frequency, createBase64UrlSafeHash, options, _callback);
+    super(url, frequency, createHexHash, options, _callback);
   }
 }
