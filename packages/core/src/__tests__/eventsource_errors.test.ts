@@ -52,6 +52,45 @@ describe("streaming connection errors in a browser", () => {
 
   afterEach(() => {
     FeatureHubEventSourceClient.eventSourceProvider = originalProvider;
+    FeatureHubEventSourceClient.reconnectPolicy = { ...originalPolicy };
+    FeatureHubEventSourceClient.shortConnectionThresholdMs = originalThreshold;
+  });
+
+  const originalPolicy = { ...FeatureHubEventSourceClient.reconnectPolicy };
+  const originalThreshold = FeatureHubEventSourceClient.shortConnectionThresholdMs;
+
+  it("closes the event source for good when short reconnections use up the maximum attempts", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = { ...originalPolicy, maxAttempts: 2 };
+    const client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+    const es = FakeEventSource.created[0]!;
+    es.readyState = 0; // CONNECTING: the browser reconnects at once, each time
+
+    es.onerror!({});
+    es.onerror!({});
+    expect(client.failed).toBe(false);
+
+    es.onerror!({});
+    expect(client.failed).toBe(true);
+    expect(es.closed).toBe(true);
+    expect(notified[notified.length - 1]).toBe(SSEResultState.Failure);
+  });
+
+  it("does not count a browser connection that lasted past the threshold and ended in a bye", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = { ...originalPolicy, maxAttempts: 1 };
+    FeatureHubEventSourceClient.shortConnectionThresholdMs = 20;
+    const client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+    const es = FakeEventSource.created[0]!;
+    es.readyState = 0;
+
+    for (let i = 0; i < 4; i++) {
+      await new Promise((r) => setTimeout(r, 30));
+      es.listeners.get("bye")!({ data: "{}" });
+      es.onerror!({});
+    }
+
+    expect(client.failed).toBe(false);
   });
 
   it("treats a connection the browser is re-establishing as a bye, not a failure", async () => {

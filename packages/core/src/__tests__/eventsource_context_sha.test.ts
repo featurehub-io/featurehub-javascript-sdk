@@ -47,7 +47,7 @@ describe("streaming sends the contextSha", () => {
 
     await new FeatureHubEventSourceClient(config, repo).poll();
 
-    expect(urls).toEqual([`${edgeUrl}?contextSha=0`]);
+    expect(urls).toEqual([`${edgeUrl}?contextSha=0&sdk_version=2`]);
   });
 
   it("sends the hex contextSha, then the encoded context, for a server-evaluated key", async () => {
@@ -57,7 +57,7 @@ describe("streaming sends the contextSha", () => {
     await new FeatureHubEventSourceClient(config, repo).contextChange(header);
 
     expect(urls).toEqual([
-      `${edgeUrl}?contextSha=${await contextSha(header)}&xfeaturehub=${encodeURIComponent(header)}`,
+      `${edgeUrl}?contextSha=${await contextSha(header)}&sdk_version=2&xfeaturehub=${encodeURIComponent(header)}`,
     ]);
     expect(await contextSha(header)).toMatch(/^[0-9a-f]{64}$/);
   });

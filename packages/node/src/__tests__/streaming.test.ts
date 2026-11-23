@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   type FeatureHubConfig,
   FeatureHubEventSourceClient,
+  fhLog,
   type InternalFeatureRepository,
   type SseReconnectPolicy,
   SSEResultState,
@@ -75,7 +76,7 @@ describe("node streaming", () => {
 
     await until(() => requests.length > 0);
     expect(requests[0]!.headers["x-featurehub"]).toBe("userkey=ormkorn");
-    expect(requests[0]!.url).toMatch(/\?contextSha=[0-9a-f]{64}$/);
+    expect(requests[0]!.url).toMatch(/\?contextSha=[0-9a-f]{64}&sdk_version=2$/);
   });
 
   it.each([401, 403, 404, 429])("fails for good on a %d and never reconnects", async (status) => {
@@ -168,5 +169,201 @@ describe("reconnect delays", () => {
     };
 
     expect(FeatureHubEventSourceClient.reconnectDelay(503, 1)).toBe(100);
+  });
+});
+
+describe("node streaming, protocol generation 2", () => {
+  let server: Server;
+  let requests: IncomingMessage[];
+  let respond: (req: IncomingMessage, res: ServerResponse, n: number) => void;
+  let config: SubstituteOf<FeatureHubConfig>;
+  let repo: InternalFeatureRepository;
+  let notified: SSEResultState[];
+  let client: FeatureHubEventSourceClient | undefined;
+  let warnings: unknown[][];
+  const originalPolicy: SseReconnectPolicy = { ...FeatureHubEventSourceClient.reconnectPolicy };
+  const originalThreshold = FeatureHubEventSourceClient.shortConnectionThresholdMs;
+  const originalWarn = fhLog.warn;
+  const threshold = 150;
+
+  beforeEach(async () => {
+    requests = [];
+    notified = [];
+    warnings = [];
+    fhLog.warn = (...args: unknown[]) => warnings.push(args);
+    server = createServer((req, res) => {
+      requests.push(req);
+      respond(req, res, requests.length);
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const port = (server.address() as AddressInfo).port;
+
+    config = Substitute.for<FeatureHubConfig>();
+    config.url().returns(`http://127.0.0.1:${port}/features/default/sirilak`);
+    config.clientEvaluated().returns(true);
+    repo = {
+      notify: (state: SSEResultState) => notified.push(state),
+    } as unknown as InternalFeatureRepository;
+
+    FeatureHubEventSourceClient.shortConnectionThresholdMs = threshold;
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      networkErrorDelayMs: 20,
+      serverErrorDelayMs: 20,
+      backoffMultiplier: 2,
+      maxDelayMs: 80,
+    };
+  });
+
+  afterEach(async () => {
+    client?.close();
+    client = undefined;
+    fhLog.warn = originalWarn;
+    FeatureHubEventSourceClient.reconnectPolicy = originalPolicy;
+    FeatureHubEventSourceClient.shortConnectionThresholdMs = originalThreshold;
+    server.closeAllConnections();
+    await new Promise((r) => server.close(r));
+  });
+
+  const open = (res: ServerResponse) => res.writeHead(200, { "content-type": "text/event-stream" });
+  const later = (ms: number, f: () => void) => setTimeout(f, ms);
+
+  it("sends sdk_version=2 after the contextSha", async () => {
+    respond = (_req, res) => open(res);
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    await until(() => requests.length > 0);
+    expect(requests[0]!.url).toBe("/features/default/sirilak?contextSha=0&sdk_version=2");
+  });
+
+  it("reconnects after a clean bye with the last event id, which a bye with no id does not change", async () => {
+    respond = (_req, res, n) => {
+      open(res);
+      if (n === 1) {
+        res.write(`id: 41\nevent: features\ndata: []\n\n`);
+        res.write(
+          `id: 42\nevent: feature\ndata: {"id":"1","key":"orm","version":1,"type":"BOOLEAN"}\n\n`,
+        );
+      }
+      // Edge holds a quiet connection, then says bye (with no id) and closes it
+      later(threshold + 50, () => {
+        res.write(`event: bye\ndata: {}\n\n`);
+        res.end();
+      });
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    await until(() => requests.length >= 4, 5000);
+    expect(requests[0]!.headers["last-event-id"]).toBeUndefined();
+    expect(requests.slice(1).map((r) => r.headers["last-event-id"])).toEqual(["42", "42", "42"]);
+    expect(client.lastEventId).toBe("42");
+    expect(client.failed).toBe(false);
+    expect(notified).not.toContain(SSEResultState.Failure);
+  });
+
+  it("never counts quiet connections that end in a bye as failures, however many there are", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      ...FeatureHubEventSourceClient.reconnectPolicy,
+      maxAttempts: 2,
+    };
+    respond = (_req, res) => {
+      open(res);
+      later(threshold + 30, () => {
+        res.write(`event: bye\ndata: {}\n\n`);
+        res.end();
+      });
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    await until(() => requests.length >= 5, 5000);
+    expect(client.failed).toBe(false);
+  });
+
+  it("counts short connections as failures even with a bye, and stops after the maximum attempts", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      ...FeatureHubEventSourceClient.reconnectPolicy,
+      maxAttempts: 3,
+    };
+    respond = (_req, res) => {
+      // a cache replaying a closed stream: features and bye at once
+      open(res);
+      res.write(`id: 7\nevent: features\ndata: []\n\n`);
+      res.write(`event: bye\ndata: {}\n\n`);
+      res.end();
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    // the first connection and 3 attempts to reconnect
+    await until(() => client!.failed, 5000);
+    expect(requests).toHaveLength(4);
+    // the features were still applied
+    expect(notified.filter((s) => s === SSEResultState.Features)).toHaveLength(4);
+    expect(notified[notified.length - 1]).toBe(SSEResultState.Failure);
+    expect(warnings.some((w) => String(w[0]).includes("ending its event streams early"))).toBe(
+      true,
+    );
+  });
+
+  it("stops after the maximum attempts when the server accepts and drops every connection with no events", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      ...FeatureHubEventSourceClient.reconnectPolicy,
+      maxAttempts: 3,
+    };
+    respond = (_req, res) => {
+      open(res);
+      later(threshold + 30, () => res.end());
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    await until(() => client!.failed, 5000);
+    expect(requests).toHaveLength(4);
+  });
+
+  it("keeps going when every third connection shows it works", async () => {
+    FeatureHubEventSourceClient.reconnectPolicy = {
+      ...FeatureHubEventSourceClient.reconnectPolicy,
+      maxAttempts: 3,
+    };
+    respond = (_req, res, n) => {
+      open(res);
+      if (n % 3 === 0) res.write(`event: ack\ndata: {}\n\n`);
+      later(threshold + 30, () => res.end());
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.poll();
+
+    await until(() => requests.length >= 7, 5000);
+    expect(client.failed).toBe(false);
+  });
+
+  it("does not send the old context's last event id after a context change", async () => {
+    const url = config.url();
+    config = Substitute.for<FeatureHubConfig>();
+    config.url().returns(url);
+    config.clientEvaluated().returns(false);
+    respond = (_req, res) => {
+      open(res);
+      res.write(`id: 99\nevent: features\ndata: []\n\n`);
+    };
+
+    client = new FeatureHubEventSourceClient(config, repo);
+    await client.contextChange("userkey=orm");
+    await until(() => client!.lastEventId === "99");
+
+    await client.contextChange("userkey=ling");
+    await until(() => requests.length >= 2);
+
+    expect(requests[1]!.headers["last-event-id"]).toBeUndefined();
+    expect(requests[1]!.headers["x-featurehub"]).toBe("userkey=ling");
   });
 });

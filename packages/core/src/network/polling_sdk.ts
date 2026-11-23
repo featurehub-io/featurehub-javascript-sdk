@@ -3,7 +3,7 @@ import type { EdgeService } from "../edge_service";
 import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "../models";
-import type { FetchRequestOptions, ModifyRequestFunction } from "./common";
+import { type FetchRequestOptions, type ModifyRequestFunction, SDK_VERSION } from "./common";
 
 export interface PollingService {
   get frequency(): number;
@@ -158,7 +158,8 @@ export class PollingBase implements PollingService {
       hostname: this.uri.hostname,
       port: this.uri.port,
       path: this.uri.pathname,
-      search: `${this.uri.search}&contextSha=${this._shaHeader}`,
+      // featurehub-protocol.yaml featurehub_edge.query_parameters: apiKey..., contextSha, sdk_version
+      search: `${this.uri.search}&contextSha=${this._shaHeader}&sdk_version=${SDK_VERSION}`,
       timeout: this._options.timeout || 8000,
     };
 

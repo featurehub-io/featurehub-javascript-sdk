@@ -55,6 +55,9 @@ defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
 );
 // streaming doesn't use a timeout
 
+// the SDK makes every streaming reconnection itself in Node, so it can back off and send Last-Event-ID
+FeatureHubEventSourceClient.sdkManagesReconnection = true;
+
 // we need to know how to construct a NodeJS EventSource. eventsource v3+ ignores a headers option, so the
 // headers (x-featurehub, the context of a server-evaluated key) are added by the fetch it uses
 FeatureHubEventSourceClient.eventSourceProvider = (url, dict) => {
