@@ -51,12 +51,17 @@ function wireValues(attribute: ContextAttribute): string[] {
  * by ordinal comparison and joined with ",". Returns an empty string when no attribute has a value.
  */
 export function xFeatureHubHeader(attributes: ContextRecord): string {
-  return Object.entries(attributes)
-    .map(([key, attribute]) => [key, wireValues(attribute)] as const)
-    .filter(([, values]) => values.length > 0)
-    .map(([key, values]) => `${encodeURIComponent(key)}=${encodeURIComponent(values.join(","))}`)
-    .sort()
-    .join(",");
+  return (
+    Object.entries(attributes)
+      // fhubWhenActive is a strategy-only name, never supplied by the application
+      // (featurehub-protocol.yaml encoding.evaluation_context)
+      .filter(([key]) => key.toLowerCase() !== "fhubwhenactive")
+      .map(([key, attribute]) => [key, wireValues(attribute)] as const)
+      .filter(([, values]) => values.length > 0)
+      .map(([key, values]) => `${encodeURIComponent(key)}=${encodeURIComponent(values.join(","))}`)
+      .sort()
+      .join(",")
+  );
 }
 
 /**

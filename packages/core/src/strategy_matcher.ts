@@ -304,7 +304,62 @@ export class MatcherRegistry implements MatcherRepository {
   }
 }
 
+// an ISO-8601 date-time with a UTC designator or an offset (rollout-strategies.yaml fhubWhenActive.value)
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i;
+
+function isoInstant(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined;
+
+  const text = String(value).trim();
+  if (!ISO_DATE_TIME.test(text)) return undefined;
+
+  const instant = Date.parse(text);
+  return Number.isNaN(instant) ? undefined : instant;
+}
+
+/**
+ * rollout-strategies.yaml algorithm.well_known_attributes.fhubWhenActive: compares the clock (`now`, on the
+ * left) with the attribute's date-times using its conditional, on instants. The type is ignored; INCLUDES,
+ * EXCLUDES, STARTS_WITH, ENDS_WITH and REGEX never match, nor do no valid values.
+ */
+export function fhubWhenActiveMatches(attr: FeatureRolloutStrategyAttribute, now: number): boolean {
+  const times = (attr.values ?? [])
+    .map((v) => isoInstant(v))
+    .filter((t): t is number => t !== undefined);
+
+  if (times.length === 0) {
+    return false;
+  }
+
+  switch (attr.conditional) {
+    case RolloutStrategyAttributeConditional.Equals:
+      return times.some((t) => now === t);
+    case RolloutStrategyAttributeConditional.NotEquals:
+      return times.every((t) => now !== t);
+    case RolloutStrategyAttributeConditional.Greater:
+      return times.some((t) => now > t);
+    case RolloutStrategyAttributeConditional.GreaterEquals:
+      return times.some((t) => now >= t);
+    case RolloutStrategyAttributeConditional.Less:
+      return times.some((t) => now < t);
+    case RolloutStrategyAttributeConditional.LessEquals:
+      return times.some((t) => now <= t);
+    default:
+      // a moment in time cannot be included, excluded, prefixed or pattern-matched
+      return false;
+  }
+}
+
+/** the strategy-only attribute name compared with the clock, never with the context */
+export const FHUB_WHEN_ACTIVE = "fhubwhenactive";
+
 export class ApplyFeature {
+  /**
+   * The clock fhubWhenActive strategies are compared with, in milliseconds since the epoch. Worked out on
+   * every evaluation, never cached. Tests may replace it.
+   */
+  public static clock: () => number = () => Date.now();
+
   private readonly _percentageCalculator: PercentageCalculator;
   private readonly _matcherRepository: MatcherRepository;
 
@@ -397,6 +452,15 @@ export class ApplyFeature {
 
   private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
     for (const attr of rsi.attributes || []) {
+      if (attr.fieldName?.toLowerCase() === FHUB_WHEN_ACTIVE) {
+        // the time comes from the clock, never the context, and is ANDed with the other attributes
+        if (!fhubWhenActiveMatches(attr, ApplyFeature.clock())) {
+          return false;
+        }
+
+        continue;
+      }
+
       let suppliedValues = context.getAttr(attr.fieldName!);
 
       if (

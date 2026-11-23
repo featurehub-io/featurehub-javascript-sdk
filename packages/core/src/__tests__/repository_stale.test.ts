@@ -148,6 +148,24 @@ describe("readiness follows the FeatureHub protocol", () => {
     expect(repo.readyness).toBe(Readyness.Ready);
   });
 
+  // featurehub-protocol.yaml conformance readiness-broadcast
+  it("broadcasts Ready only when it changes, and tells feature listeners of changes separately", () => {
+    let changes = 0;
+    repo.feature("orm").addListener(() => changes++);
+
+    repo.notify(SSEResultState.Features, [orm(1, true)], "test");
+    repo.notify(SSEResultState.Features, [orm(1, true)], "test");
+    repo.notify(SSEResultState.Features, [orm(2, false)], "test");
+
+    expect(seen).toEqual([Readyness.Ready]);
+    expect(changes).toBe(2); // the first value, then the change to false
+
+    repo.notReady();
+    repo.notify(SSEResultState.Features, [orm(2, true)], "test");
+    expect(seen).toEqual([Readyness.Ready, Readyness.Stale, Readyness.Ready]);
+    expect(changes).toBe(3);
+  });
+
   it("lets waitForReady return as soon as the repository has failed", async () => {
     const config = new EdgeFeatureHubConfig("http://localhost:8080", "123*abc");
     config.repository(repo);
