@@ -14,4 +14,6 @@ Readiness follows the FeatureHub protocol, with a new `Readyness.Stale` state: f
 - The repository exposes `connectionFailed` and `environmentStale`, and `waitForReady` returns as soon as nothing more can arrive.
 - A features notification that is not a list is ignored, and features without a version or a type are skipped.
 
+The React `FeatureHub` component renders its children while readiness is `Ready` or `Stale`, so a context change no longer unmounts the app until the new context's features arrive.
+
 If you check `readiness === Readyness.Failed` to detect a lost connection, also check for `Readyness.Stale` (with `connectionFailed`).

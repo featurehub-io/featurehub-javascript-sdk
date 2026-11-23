@@ -88,12 +88,14 @@ const FeatureHub: FC<Props> = ({
     return { config, client: config.newContext() };
   }, [url, apiKey, pollInterval, connectionType, useSharedConfiguration]); // removed userKey from dependencies to prevent excessive config recreation
 
+  // features are held and resolved while Ready and while Stale (a context change in progress, or a
+  // connection that has stopped after delivering features), so children keep rendering through both
   const isReady = useSyncExternalStore(
     (onStoreChange) => {
       const handle = config.addReadinessListener(onStoreChange);
       return () => config.removeReadinessListener(handle);
     },
-    () => config.readiness === Readyness.Ready,
+    () => config.readiness === Readyness.Ready || config.readiness === Readyness.Stale,
   );
 
   useEffect(() => {
