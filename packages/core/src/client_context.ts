@@ -12,21 +12,42 @@ export type ContextAttribute =
   | number
   | string
   | boolean
+  | Date
   | Array<number>
   | Array<string>
   | Array<boolean>
+  | Array<Date>
   | undefined;
 export type ContextRecord = Record<string, ContextAttribute>;
+
+/**
+ * A single context value as a string: a date-time is UTC ISO-8601 (featurehub-protocol.yaml
+ * encoding.evaluation_context.wire_value), so it reads the same in every SDK. An invalid Date is undefined.
+ */
+export function contextValueToString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  }
+
+  return String(value);
+}
 
 export function caToString(ca: ContextAttribute, joinSep = ","): string | undefined {
   if (ca === undefined) {
     return undefined;
   }
   if (Array.isArray(ca)) {
-    return (ca as Array<any>).map((c) => c.toString()).join(joinSep);
+    return (ca as Array<unknown>)
+      .map((c) => contextValueToString(c))
+      .filter((c) => c !== undefined)
+      .join(joinSep);
   }
 
-  return ca.toString();
+  return contextValueToString(ca);
 }
 
 export interface ClientContext {

@@ -1,4 +1,4 @@
-import type { ContextAttribute, ContextRecord } from "./client_context";
+import { type ContextAttribute, type ContextRecord, contextValueToString } from "./client_context";
 import type { HashAlgorithm } from "./crypto/types";
 
 /**
@@ -27,21 +27,16 @@ export const webCryptoHexHash: CryptoProvider = async (algorithm, data) => {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 };
 
-function wireValue(value: number | string | boolean): string {
-  // String() gives JavaScript's number formatting, which the protocol adopts for every SDK (3.0 -> "3")
-  return String(value);
-}
-
+// String() gives JavaScript's number formatting, which the protocol adopts for every SDK (3.0 -> "3"), and a
+// date-time is UTC ISO-8601; an invalid Date is left out
 function wireValues(attribute: ContextAttribute): string[] {
   if (attribute === undefined || attribute === null) {
     return [];
   }
 
-  const values: Array<number | string | boolean | null | undefined> = Array.isArray(attribute)
-    ? attribute
-    : [attribute];
+  const values: Array<unknown> = Array.isArray(attribute) ? attribute : [attribute];
 
-  return values.filter((v) => v !== undefined && v !== null).map((v) => wireValue(v!));
+  return values.map((v) => contextValueToString(v)).filter((v): v is string => v !== undefined);
 }
 
 /**

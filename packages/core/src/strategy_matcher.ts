@@ -2,7 +2,7 @@ import murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
-import { caToString, type ClientContext } from "./client_context";
+import { caToString, type ClientContext, contextValueToString } from "./client_context";
 import type { FeatureValue } from "./feature_state";
 import {
   type FeatureRolloutStrategy,
@@ -44,7 +44,7 @@ export interface MatcherRepository {
   findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher;
 }
 
-type BaseContextAttribute = string | number | boolean;
+type BaseContextAttribute = string | number | boolean | Date;
 
 // @ts-expect-error - This is a fallback matcher
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -126,9 +126,10 @@ class DateMatcher extends StringMatcher {
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
     try {
-      const parsedDate = new Date(suppliedValue.toString());
+      const parsedDate =
+        suppliedValue instanceof Date ? suppliedValue : new Date(suppliedValue.toString());
 
-      if (parsedDate == null) {
+      if (Number.isNaN(parsedDate.getTime())) {
         return false;
       }
 
@@ -151,9 +152,10 @@ class DateTimeMatcher extends StringMatcher {
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
     try {
-      const parsedDate = new Date(suppliedValue.toString());
+      const parsedDate =
+        suppliedValue instanceof Date ? suppliedValue : new Date(suppliedValue.toString());
 
-      if (parsedDate == null) {
+      if (Number.isNaN(parsedDate.getTime())) {
         return false;
       }
 
@@ -491,7 +493,18 @@ export class ApplyFeature {
         return false;
       }
 
-      const comparedValues = Array.isArray(suppliedValues) ? suppliedValues! : [suppliedValues!];
+      // a date-time keeps its Date for DATE and DATETIME attributes; every other matcher compares its UTC
+      // ISO-8601 string (Date.toString() would give a local, locale-dependent form)
+      const dateMatcher =
+        attr.type === RolloutStrategyFieldType.Date ||
+        attr.type === RolloutStrategyFieldType.Datetime;
+      const comparedValues = (
+        (Array.isArray(suppliedValues)
+          ? suppliedValues
+          : [suppliedValues]) as Array<BaseContextAttribute>
+      )
+        .map((sv) => (sv instanceof Date && !dateMatcher ? contextValueToString(sv) : sv))
+        .filter((sv): sv is BaseContextAttribute => sv !== undefined);
 
       if (attr.values == null && comparedValues.length == 0) {
         if (attr.conditional !== RolloutStrategyAttributeConditional.Equals) {

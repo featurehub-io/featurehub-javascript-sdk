@@ -1,4 +1,21 @@
-import type { ContextRecord } from "../client_context";
+import { type ContextRecord, contextValueToString } from "../client_context";
+
+/**
+ * Context attributes as usage plugins can record them: a date-time becomes its UTC ISO-8601 string, as
+ * analytics and tracing systems (OpenTelemetry among them) only take primitive values.
+ */
+function recordableAttributes(attributes: ContextRecord | undefined): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(attributes ?? {}).map(([key, value]) => [
+      key,
+      value instanceof Date
+        ? contextValueToString(value)
+        : Array.isArray(value)
+          ? (value as Array<unknown>).map((v) => (v instanceof Date ? contextValueToString(v) : v))
+          : value,
+    ]),
+  );
+}
 import type { EvaluatedFeature } from "../evaluated_feature";
 import type { FeatureValue } from "../feature_state";
 import { FeatureValueType } from "../models";
@@ -147,7 +164,11 @@ export class BaseUsageEventWithFeature extends BaseUsageEvent implements UsageEv
       environmentId: this._feature.environmentId,
     };
 
-    return Object.assign(super.collectUsageRecord(), this._contextAttributes || {}, featureData);
+    return Object.assign(
+      super.collectUsageRecord(),
+      recordableAttributes(this._contextAttributes),
+      featureData,
+    );
   }
 }
 
@@ -196,7 +217,7 @@ export class BaseUsageFeaturesCollectionContext
   }
 
   override collectUsageRecord(): Readonly<Record<string, any>> {
-    return Object.assign(super.collectUsageRecord(), this.contextAttributes);
+    return Object.assign(super.collectUsageRecord(), recordableAttributes(this.contextAttributes));
   }
 }
 
