@@ -7,6 +7,8 @@ import {
   EdgeType,
   type FeatureHubConfig,
   fhLog,
+  InvalidConfigurationError,
+  validatePollInterval,
 } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import {
@@ -26,10 +28,17 @@ import {
 } from "./usage/usage";
 import { UsageAdapter } from "./usage/usage_adapter";
 
-export const defaultEdgeTypeProviderConfig = {
+export const defaultEdgeTypeProviderConfig: {
+  // undefined: no default interval, so polling must be given one (FEATUREHUB_CONNECT_TYPE without an interval)
+  defaultTimeoutInMilliseconds: number | undefined;
+  defaultEdgeProvider: EdgeType;
+} = {
   defaultTimeoutInMilliseconds: 180000,
   defaultEdgeProvider: EdgeType.REST_ACTIVE,
 };
+
+// the SDK's own query parameters, which a host's query string may not repeat
+const sdkQueryParameters = ["apikey", "contextsha", "sdk_version", "xfeaturehub"];
 
 // this is an async plugin so the process of polling will become async
 class PassiveRestUsagePlugin extends DefaultUsagePlugin {
@@ -75,6 +84,7 @@ const noopEdgeServiceProvider: EdgeServiceProvider = () => new NoopEdgeService()
 
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _host: string;
+  private readonly _hostQuery: string;
   private readonly _originalUrl: string;
   private readonly _apiKey: string;
   private readonly _apiKeys: Array<string>;
@@ -122,6 +132,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       this._apiKey = "";
       this._originalUrl = "";
       this._host = "";
+      this._hostQuery = "";
       this._url = "";
       this._apiKeys = [];
       this._clientEval = false;
@@ -133,7 +144,23 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     this._noopMode = false;
     this._apiKey = apiKey;
     this._originalUrl = host;
-    this._host = host;
+
+    // a host that already carries a query string keeps it, ahead of the SDK's parameters, which it may not
+    // repeat (featurehub-protocol.yaml featurehub_edge.query_parameters.host_query)
+    const queryAt = host.indexOf("?");
+    this._host = queryAt === -1 ? host : host.substring(0, queryAt);
+    this._hostQuery =
+      queryAt === -1
+        ? ""
+        : host
+            .substring(queryAt + 1)
+            .split("&")
+            .filter((p) => p.length > 0)
+            .filter(
+              (p) =>
+                !sdkQueryParameters.includes(decodeURIComponent(p.split("=")[0]!).toLowerCase()),
+            )
+            .join("&");
 
     fhLog.trace(
       `creating new featurehub config with edge type ${this._edgeType} and timeout ${this._timeout}.`,
@@ -205,6 +232,10 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
     return this._host;
   }
 
+  hostQuery(): string {
+    return this._hostQuery;
+  }
+
   context(context?: ContextRecord): ClientContext {
     if (this._isClosed) throw new ConfigurationClosedError("context");
     const ctx = this.newContext();
@@ -273,13 +304,30 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
       repository || this.repository(),
       this,
       this._edgeType,
-      this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds,
+      this.pollInterval(),
     );
 
     this._initialized = true;
 
     this._edgeServices.push(es);
     return es;
+  }
+
+  /** the interval polling uses, which must have been given (in code or the environment) and be valid */
+  private pollInterval(): number {
+    const interval = this._timeout ?? defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
+
+    if (this._edgeType === EdgeType.STREAMING) {
+      return interval ?? 0;
+    }
+
+    if (interval === undefined) {
+      throw new InvalidConfigurationError(
+        "polling needs an interval: pass one to restActive() or restPassive(), or set FEATUREHUB_CONNECT_INTERVAL",
+      );
+    }
+
+    return validatePollInterval(interval);
   }
 
   close(): void {
@@ -419,10 +467,13 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   featureUrl(): string {
     if (this.edgeType === EdgeType.STREAMING) {
-      return `${this._url}/features/${this._apiKey}`;
+      return this._hostQuery ? `${this._url}?${this._hostQuery}` : this._url;
     }
 
-    return `${this._url}/features?${this._apiKeys.map((a) => "apiKey=" + a).join("&")}`;
+    const query = [this._hostQuery, ...this._apiKeys.map((a) => "apiKey=" + encodeURIComponent(a))]
+      .filter((p) => p.length > 0)
+      .join("&");
+    return `${this._host}features?${query}`;
   }
 
   addReadinessListener(listener: ReadynessListener, ignoreNotReadyOnRegister?: boolean): number {
@@ -437,8 +488,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   restActive(intervalInMilliseconds?: number): FeatureHubConfig {
     if (this._isClosed) return this;
-    if (intervalInMilliseconds) {
-      this._timeout = intervalInMilliseconds;
+    if (intervalInMilliseconds !== undefined) {
+      // 0 is a valid interval: poll once and stop
+      this._timeout = validatePollInterval(intervalInMilliseconds);
     }
 
     this._edgeType = EdgeType.REST_ACTIVE;
@@ -447,8 +499,9 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
 
   restPassive(cacheTimeoutInMilliseconds?: number): FeatureHubConfig {
     if (this._isClosed) return this;
-    if (cacheTimeoutInMilliseconds) {
-      this._timeout = cacheTimeoutInMilliseconds;
+    if (cacheTimeoutInMilliseconds !== undefined) {
+      // 0 is a valid interval: poll once and stop
+      this._timeout = validatePollInterval(cacheTimeoutInMilliseconds, "the cache timeout");
     }
 
     this._edgeType = EdgeType.REST_PASSIVE;
@@ -463,7 +516,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   }
 
   get edgeSupplierTimeout(): number {
-    return this._timeout || defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds;
+    return this._timeout ?? defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds ?? 0;
   }
 
   get edgeType(): EdgeType {

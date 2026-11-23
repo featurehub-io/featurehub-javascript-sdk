@@ -1,12 +1,14 @@
 import { EventSource } from "eventsource";
 import {
   ClientContext,
+  connectionFromEnvironment,
   defaultEdgeTypeProviderConfig,
   EdgeType,
   FeatureHubConfig,
   FeatureHubEventSourceClient,
   FeatureHubPollingClient,
   FeatureStateHolder,
+  fhLog,
 } from "featurehub-javascript-core-sdk";
 
 import { NodejsPollingService } from "./polling_sdk";
@@ -44,16 +46,33 @@ export class FeatureHub {
   }
 }
 
-// tell it what kind of client to create by default
-defaultEdgeTypeProviderConfig.defaultEdgeProvider = process.env["FEATUREHUB_POLLING_INTERVAL"]
-  ? process.env["FEATUREHUB_POLLING_PASSIVE"]
-    ? EdgeType.REST_PASSIVE
-    : EdgeType.REST_ACTIVE
-  : EdgeType.STREAMING;
-defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
-  process.env["FEATUREHUB_POLLING_INTERVAL"] || "0",
-);
-// streaming doesn't use a timeout
+// tell it what kind of client to create by default: FEATUREHUB_CONNECT_TYPE and FEATUREHUB_CONNECT_INTERVAL
+// (featurehub-protocol.yaml providers.environment_variables), or, when neither is set, the legacy variables
+// read as they always have been (FEATUREHUB_POLLING_INTERVAL in milliseconds, FEATUREHUB_POLLING_PASSIVE)
+const fromEnvironment = connectionFromEnvironment(process.env);
+
+if (fromEnvironment) {
+  fromEnvironment.warnings.forEach((w) => fhLog.warn(`[featurehubsdk] ${w}`));
+  defaultEdgeTypeProviderConfig.defaultEdgeProvider = fromEnvironment.edgeType;
+  // undefined: polling must then be given an interval in code
+  defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = fromEnvironment.intervalMs;
+} else {
+  if (process.env["FEATUREHUB_POLLING_INTERVAL"] || process.env["FEATUREHUB_POLLING_PASSIVE"]) {
+    fhLog.warn(
+      "[featurehubsdk] FEATUREHUB_POLLING_INTERVAL and FEATUREHUB_POLLING_PASSIVE are deprecated: use " +
+        "FEATUREHUB_CONNECT_TYPE and FEATUREHUB_CONNECT_INTERVAL",
+    );
+  }
+
+  defaultEdgeTypeProviderConfig.defaultEdgeProvider = process.env["FEATUREHUB_POLLING_INTERVAL"]
+    ? process.env["FEATUREHUB_POLLING_PASSIVE"]
+      ? EdgeType.REST_PASSIVE
+      : EdgeType.REST_ACTIVE
+    : EdgeType.STREAMING;
+  defaultEdgeTypeProviderConfig.defaultTimeoutInMilliseconds = parseInt(
+    process.env["FEATUREHUB_POLLING_INTERVAL"] || "0",
+  );
+}
 
 // the SDK makes every streaming reconnection itself in Node, so it can back off and send Last-Event-ID
 FeatureHubEventSourceClient.sdkManagesReconnection = true;

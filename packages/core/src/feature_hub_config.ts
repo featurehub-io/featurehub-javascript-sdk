@@ -60,6 +60,43 @@ export class ConfigurationClosedError extends Error {
   }
 }
 
+/** a configuration the FeatureHub protocol does not allow, such as a poll interval under 5 seconds */
+export class InvalidConfigurationError extends Error {
+  constructor(message: string) {
+    super(`FeatureHub configuration is invalid: ${message}`);
+    this.name = "InvalidConfigurationError";
+  }
+}
+
+/** no poll interval other than 0 (poll once) may be shorter than this */
+export const MINIMUM_POLL_INTERVAL_MS = 5000;
+
+/**
+ * featurehub-protocol.yaml polling_transport.interval: an interval is 0 (poll once and stop) or at least 5
+ * seconds; anything else is a validation error, never silently raised.
+ */
+export function validatePollInterval(intervalMs: number, what = "the poll interval"): number {
+  if (!Number.isFinite(intervalMs) || intervalMs < 0) {
+    throw new InvalidConfigurationError(
+      `${what} must be 0 or a positive number of milliseconds, not ${intervalMs}`,
+    );
+  }
+
+  if (intervalMs > 0 && intervalMs < MINIMUM_POLL_INTERVAL_MS) {
+    throw new InvalidConfigurationError(
+      `${what} is ${intervalMs}ms: it must be 0 (poll once) or at least ${MINIMUM_POLL_INTERVAL_MS}ms`,
+    );
+  }
+
+  return intervalMs;
+}
+
+/** the query string a config's host was given with, if it has one */
+export function configHostQuery(config: FeatureHubConfig): string {
+  const query = typeof config.hostQuery === "function" ? config.hostQuery() : undefined;
+  return typeof query === "string" ? query : "";
+}
+
 export interface FeatureHubConfig {
   /**
    * indicates the system is ready
@@ -110,6 +147,9 @@ export interface FeatureHubConfig {
 
   // what is the host?
   getHost(): string;
+
+  // the query string the host was given with (without the "?"), sent before the SDK's own parameters
+  hostQuery?(): string;
 
   // this is the fully constructed URL depending on if you are using polling or streaming
   featureUrl(): string;

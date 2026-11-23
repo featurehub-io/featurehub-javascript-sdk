@@ -1,7 +1,7 @@
 /* eslint-disable */
 import type { EdgeService } from "../edge_service";
 import { SDK_VERSION } from "./common";
-import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
+import { configHostQuery, type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureState, SSEResultState } from "../models";
 import { contextSha } from "../context_header";
@@ -166,7 +166,11 @@ export class FeatureHubEventSourceClient implements EdgeService {
       options.headers = headers;
     }
 
-    const url = `${this._config.url()}?contextSha=${this._contextSha}&sdk_version=${SDK_VERSION}`;
+    // a host's own query string comes first (featurehub-protocol.yaml featurehub_edge.query_parameters)
+    const hostQuery = configHostQuery(this._config);
+    const url =
+      `${this._config.url()}?${hostQuery ? hostQuery + "&" : ""}` +
+      `contextSha=${this._contextSha}&sdk_version=${SDK_VERSION}`;
 
     fhLog.trace("listening at ", url);
 

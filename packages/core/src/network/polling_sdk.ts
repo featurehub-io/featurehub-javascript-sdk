@@ -1,6 +1,6 @@
 import { contextSha, type CryptoProvider } from "../context_header";
 import type { EdgeService } from "../edge_service";
-import { type FeatureHubConfig, fhLog } from "../feature_hub_config";
+import { configHostQuery, type FeatureHubConfig, fhLog } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "../models";
 import { type FetchRequestOptions, type ModifyRequestFunction, SDK_VERSION } from "./common";
@@ -165,6 +165,11 @@ export class PollingBase implements PollingService {
 
     this._options.modifyRequestFunction?.(req);
 
+    // the SDK's own protocol header wins over an application's header of the same name
+    if (this._header) {
+      req.headers["x-featurehub"] = this._header;
+    }
+
     const url = `${req.protocol}//${req.host}${req.path}${req.search}`;
 
     if (await this.preload(req, url)) {
@@ -178,7 +183,7 @@ export class PollingBase implements PollingService {
 
     try {
       const response = await fetch(url, {
-        headers: headers,
+        headers: req.headers,
         signal: controller.signal,
       });
 
@@ -397,12 +402,16 @@ export class FeatureHubPollingClient implements EdgeService {
       this._options.active = true;
     }
     this._config = config;
+    // a host's own query string comes first, then apiKey for each key in order
+    // (featurehub-protocol.yaml featurehub_edge.query_parameters)
     this._url =
       config.getHost() +
       "features?" +
-      config
-        .getApiKeys()
-        .map((e) => "apiKey=" + encodeURIComponent(e))
+      [
+        configHostQuery(config),
+        ...config.getApiKeys().map((e) => "apiKey=" + encodeURIComponent(e)),
+      ]
+        .filter((p) => p.length > 0)
         .join("&");
 
     this._whenPollingCacheExpires = Date.now() - 100;

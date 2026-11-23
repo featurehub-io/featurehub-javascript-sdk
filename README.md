@@ -341,6 +341,26 @@ fhConfig.streaming();
 
 FeatureHub also has the ability for the server to override the polling interval via cache-control headers, either globally or per environment.
 
+A polling interval must be `0` or at least 5 seconds (5000 ms): anything else throws an `InvalidConfigurationError`.
+An interval of `0` polls once and then stops, which suits short-lived processes. A cache-control `max-age` from the
+server is never allowed to make the SDK poll more often than every 5 seconds.
+
+#### Configuring the connection mode from the environment (Node)
+
+The Node SDK reads its default connection mode from two environment variables. Anything you set in code (for
+example `fhConfig.restActive(30000)`) takes precedence over them.
+
+| Variable | Values | Meaning |
+|---|---|---|
+| `FEATUREHUB_CONNECT_TYPE` | `active`, `passive` or `streaming` | the connection mode |
+| `FEATUREHUB_CONNECT_INTERVAL` | a number and a unit (`ms`, `s`, `m`, `h`), e.g. `30s` or `1.5m`, or `0` | the polling interval, for `active` and `passive` |
+
+- `FEATUREHUB_CONNECT_INTERVAL` on its own means active polling at that interval.
+- `active` or `passive` need an interval, either from `FEATUREHUB_CONNECT_INTERVAL` or in code.
+- With neither variable set, the Node SDK streams.
+- The older `FEATUREHUB_POLLING_INTERVAL` (milliseconds) and `FEATUREHUB_POLLING_PASSIVE` still work, but only when
+  neither of the new variables is set. They are deprecated.
+
 ## General Documentation
 
 #### Supported feature state requests
