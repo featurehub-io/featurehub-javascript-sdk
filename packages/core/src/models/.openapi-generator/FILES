@@ -1,14 +1,13 @@
 .gitignore
 .npmignore
+.openapi-generator-ignore
 git_push.sh
 index.ts
 models/application-version-info.ts
-models/base-rollout-strategy-all-of.ts
 models/base-rollout-strategy.ts
 models/base-strategy.ts
 models/base-uistrategy.ts
 models/feature-environment-collection.ts
-models/feature-rollout-strategy-all-of.ts
 models/feature-rollout-strategy-attribute.ts
 models/feature-rollout-strategy.ts
 models/feature-state-update.ts

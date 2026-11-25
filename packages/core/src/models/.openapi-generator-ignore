@@ -21,3 +21,8 @@
 #docs/*.md
 # Then explicitly reverse the ignore rule for a single file:
 #!docs/README.md
+
+# generator support files this package does not use
+.gitignore
+.npmignore
+git_push.sh
