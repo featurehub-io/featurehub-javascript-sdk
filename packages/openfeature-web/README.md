@@ -12,7 +12,7 @@ npm install featurehub-openfeature-web-sdk @openfeature/web-sdk
 
 ## Usage
 
-Set the evaluation context **before** registering the provider. If the context is set (or changed) after the provider is registered, the feature bundle is requested from the server again for the changed context — with the same context on every request, as is normal in a web app, you want the bundle fetched once:
+Set the evaluation context before registering the provider, so the first evaluations already use it:
 
 ```ts
 import { OpenFeature } from "@openfeature/web-sdk";
@@ -43,7 +43,7 @@ Only **client-evaluated** keys (containing `*`) are accepted; the constructor th
 
 The default transport is **REST passive**: Edge is only contacted when a resolution happens after the cached bundle has expired. That avoids a long-lived SSE connection (or constant polling) per browser tab. Opt in to the others with `transport: "streaming"` (SSE) or `pollIntervalMs`.
 
-The provider keeps a single evaluation context: it is created in `initialize`, rebuilt on `onContextChange`, and reused across resolutions. Context changes are applied locally — the bundle is only re-fetched if the FeatureHub SDK detects the context header changed and decides to re-poll.
+The provider keeps a single evaluation context: it is created in `initialize`, rebuilt on `onContextChange`, and reused across resolutions. As the key is client-evaluated, the bundle holds every strategy, so a context change is applied locally and fetches nothing.
 
 ## Options
 
@@ -66,6 +66,126 @@ Every resolution is evaluated locally against the current context. It reports `S
 `PROVIDER_CONFIGURATION_CHANGED` is emitted with the keys of the features that changed: a new version, a feature added, or one deleted or no longer in a full set.
 
 If the connection to FeatureHub stops for good once features have arrived (the API key is rejected, or FeatureHub says the environment is stale), the provider emits `PROVIDER_STALE`, once, and keeps resolving from the last features it received. This also happens if the connection stops with the very first response: initialisation succeeds, and `PROVIDER_STALE` follows `PROVIDER_READY`. If the connection is rejected before any features arrive, initialisation fails as `PROVIDER_FATAL`.
+
+## Migrating from the FeatureHub browser SDK
+
+The provider is built on `featurehub-javascript-client-sdk`, so your features, API key and rollout strategies carry over unchanged: only the code that reads them changes, from the SDK's API to OpenFeature's. Each feature is evaluated locally, exactly as before.
+
+It needs a **client-evaluated** key (containing `*`). If your app uses a server-evaluated key, keep using the SDK: OpenFeature's web paradigm resolves synchronously, which a key evaluated by FeatureHub cannot support.
+
+### Setting up
+
+Before:
+
+```ts
+import { EdgeFeatureHubConfig, FeatureHub } from "featurehub-javascript-client-sdk";
+
+const fhConfig = new EdgeFeatureHubConfig("https://edge.example.com", "default/abc123/key*secret");
+fhConfig.restActive(30000);
+const context = await fhConfig.newContext().userKey("user-123").attributeValue("plan", "enterprise").build();
+FeatureHub.set(fhConfig, context);
+```
+
+After:
+
+```ts
+import { OpenFeature } from "@openfeature/web-sdk";
+import { FeatureHubWebProvider } from "featurehub-openfeature-web-sdk";
+
+await OpenFeature.setContext({ targetingKey: "user-123", plan: "enterprise" });
+await OpenFeature.setProviderAndWait(
+  new FeatureHubWebProvider({
+    host: "https://edge.example.com",
+    apiKey: "default/abc123/key*secret",
+    pollIntervalMs: 30000,
+  }),
+);
+const client = OpenFeature.getClient();
+```
+
+| FeatureHub SDK | Provider |
+| --- | --- |
+| `new EdgeFeatureHubConfig(url, apiKey)` | `new FeatureHubWebProvider({ host, apiKey })` |
+| `fhConfig.restActive(30000)` (the SDK's default mode) | `pollIntervalMs: 30000`. Note the provider's default is passive, not active polling |
+| `fhConfig.restPassive(30000)` | `cacheTimeToLiveMs: 30000` (or `transport: "passive"`) |
+| `fhConfig.streaming()` | `transport: "streaming"` |
+| `await fhConfig.waitForReady()` | `await OpenFeature.setProviderAndWait(provider)`; `waitForReadyMs` sets how long it waits |
+| `fhConfig.close()` | `await OpenFeature.close()` |
+
+### Contexts and reading features
+
+The SDK reads features from a context you build. With OpenFeature the context is set for the whole app (`OpenFeature.setContext`), and each read is synchronous. Changing the context later (a user signing in, say) is another `setContext`; as the key is client-evaluated, it is applied locally and nothing is fetched. OpenFeature always returns the default you give when a feature is missing or has no value, where the SDK returns `undefined`.
+
+Before:
+
+```ts
+if (context.isEnabled("checkout-v2")) {
+  const banner = context.getString("banner-text") ?? "Welcome";
+}
+```
+
+After:
+
+```ts
+if (client.getBooleanValue("checkout-v2", false)) {
+  const banner = client.getStringValue("banner-text", "Welcome");
+}
+```
+
+| FeatureHub SDK | OpenFeature |
+| --- | --- |
+| `.userKey("user-123")` | `targetingKey: "user-123"` |
+| `.sessionKey(id)` | `session: id` |
+| `.country(...)`, `.device(...)`, `.platform(...)`, `.version(...)` | `country`, `device`, `platform`, `version`, as the enum's string value (`StrategyAttributeDeviceName.Browser` is `"browser"`) |
+| `.attributeValue("plan", "enterprise")` | `plan: "enterprise"`; a list of strings, numbers or booleans is fine, a nested object is `INVALID_CONTEXT` |
+| a `Date` attribute value | an ISO-8601 string (`date.toISOString()`): the provider does not accept `Date` values yet |
+| `context.isEnabled(key)`, `getFlag(key)`, `getBoolean(key)` | `client.getBooleanValue(key, false)` |
+| `context.getString(key)` | `client.getStringValue(key, default)` |
+| `context.getNumber(key)` | `client.getNumberValue(key, default)` |
+| `context.getJson(key)` | `client.getObjectValue(key, default)`; the value must be a JSON object |
+| `context.getRawJson(key)` | no equivalent: OpenFeature only gives the parsed object |
+| `context.isSet(key)` | `get...Details(...)`: `errorCode` is `FLAG_NOT_FOUND` if the feature does not exist; `reason` is `DISABLED` if it exists with no value |
+| the strategy that matched (`feature(key).getValue().strategyId`) | `details.variant`, with `details.reason` (`SPLIT`, `TARGETING_MATCH` or `STATIC`) |
+| `feature(key).featureProperties` | `details.flagMetadata`, which also holds `featureVersion` and `featureType` |
+| `feature(key).locked` | no equivalent |
+
+### Listening for changes
+
+| FeatureHub SDK | OpenFeature |
+| --- | --- |
+| `fhConfig.addReadinessListener(...)` | `client.addHandler(ProviderEvents.Ready, ...)`, and `client.providerStatus` |
+| readiness `Failed` | `setProviderAndWait` rejects, and `providerStatus` is `FATAL` |
+| `fhConfig.addConnectionEventListener(...)` | `client.addHandler(ProviderEvents.Stale, ...)` |
+| `feature(key).addListener(...)` | `client.addHandler(ProviderEvents.ConfigurationChanged, (details) => ...)`; `details.flagsChanged` lists the keys, so read the ones you need again |
+
+### Interceptors, stores and usage plugins
+
+Value interceptors (such as the browser's session overrides), feature stores and usage plugins are attached to the FeatureHub config, which the provider creates. Pass `configFactory` to create it yourself and attach them; the provider still applies its transport options to it and starts it, so do not call `init()`:
+
+```ts
+import { EdgeFeatureHubConfig } from "featurehub-javascript-client-sdk";
+import { LocalSessionStore } from "featurehub-store-localstorage";
+
+const provider = new FeatureHubWebProvider({
+  host: "https://edge.example.com",
+  apiKey: "default/abc123/key*secret",
+  configFactory: ({ host, apiKey }) => {
+    const config = new EdgeFeatureHubConfig(host, apiKey);
+    new LocalSessionStore(config); // features from the last visit are available at once
+    return config;
+  },
+});
+```
+
+A value an interceptor supplies as a string is converted to the type you ask for.
+
+### React
+
+OpenFeature's React SDK (`@openfeature/react-sdk`) works with this provider, in place of `featurehub-react-sdk`.
+
+### What stays with the SDK
+
+Keep using the SDK directly for catch-and-release (holding feature updates back until the app chooses to show them), a server-evaluated key, the repository itself (raw feature updates, `simpleFeatures()`), a feature's lock, and raw JSON.
 
 ## License
 
