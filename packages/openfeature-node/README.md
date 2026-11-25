@@ -37,7 +37,7 @@ If your service evaluates with a single application-wide context, set it **befor
 - **Client-evaluated keys** (contain a `*`): the bundle — including rollout strategies — is delivered to the provider and every evaluation runs locally against the supplied context. Use this for services handling many different users; contexts are evaluated per call with no shared state.
 - **Server-evaluated keys** (`default/...`): the provider holds a single shared context for its lifetime and re-fetches the evaluated bundle only when that context changes (the SDK pools refreshes and honours `ETag`/`304`). Resolutions are serialised through a mutex, so use client-evaluated keys for concurrent multi-user workloads.
 
-Resolutions report `TARGETING_MATCH` with the matched strategy id as `variant`, `DEFAULT` for value-less features, and standard OpenFeature error codes (`FLAG_NOT_FOUND`, `TYPE_MISMATCH`, `PARSE_ERROR`, `INVALID_CONTEXT`, `PROVIDER_NOT_READY`).
+Resolutions report `SPLIT` for a percentage rollout and `TARGETING_MATCH` for any other matched strategy (including one FeatureHub applied for a server-evaluated key), each with the strategy id as `variant`; `STATIC` when no strategy applies; and `DISABLED`, with the code default, for a feature that has no value. A value supplied as a string (by a value interceptor, say) is converted to the type asked for: `"true"` and `"false"` for a boolean, a numeric string for a number. Errors use the standard OpenFeature codes (`FLAG_NOT_FOUND`, `TYPE_MISMATCH`, `PARSE_ERROR`, `INVALID_CONTEXT`, `PROVIDER_NOT_READY`, `PROVIDER_FATAL`). Flag metadata holds the feature's properties, plus `featureVersion` and `featureType`.
 
 ## Options
 

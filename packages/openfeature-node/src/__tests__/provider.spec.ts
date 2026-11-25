@@ -333,7 +333,7 @@ describe("FeatureHubProvider (client-evaluated key)", () => {
     expect(details.errorCode).toBe("FLAG_NOT_FOUND");
   });
 
-  it("uses DEFAULT for value-less features", async () => {
+  it("uses DISABLED for value-less features", async () => {
     const provider = await readyProvider(CLIENT_KEY);
     const details = await provider.resolveStringEvaluation(
       "novalue-flag",
@@ -342,7 +342,7 @@ describe("FeatureHubProvider (client-evaluated key)", () => {
       noopLogger,
     );
     expect(details.value).toBe("fallback");
-    expect(details.reason).toBe("DEFAULT");
+    expect(details.reason).toBe("DISABLED");
   });
 
   it("reports TYPE_MISMATCH on kind mismatch", async () => {

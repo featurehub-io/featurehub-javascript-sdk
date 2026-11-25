@@ -57,6 +57,10 @@ The provider keeps a single evaluation context: it is created in `initialize`, r
 | `waitForReadyMs` | How long `initialize` waits for the first feature payload. Default 10s. |
 | `configFactory` | Supply a pre-built config (used by tests). |
 
+## Resolution
+
+Every resolution is evaluated locally against the current context. It reports `SPLIT` for a percentage rollout and `TARGETING_MATCH` for any other matched strategy, each with the strategy id as `variant`; `STATIC` when no strategy applies; and `DISABLED`, with the code default, for a feature that has no value. A value supplied as a string (by a value interceptor, say) is converted to the type asked for: `"true"` and `"false"` for a boolean, a numeric string for a number. Errors use the standard OpenFeature codes (`FLAG_NOT_FOUND`, `TYPE_MISMATCH`, `PARSE_ERROR`, `INVALID_CONTEXT`, `PROVIDER_NOT_READY`, `PROVIDER_FATAL`). Flag metadata holds the feature's properties, plus `featureVersion` and `featureType`.
+
 ## Events
 
 `PROVIDER_CONFIGURATION_CHANGED` is emitted with the keys of the features that changed: a new version, a feature added, or one deleted or no longer in a full set.
