@@ -2,7 +2,7 @@ import murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
-import { caToString, type ClientContext, contextValueToString } from "./client_context";
+import { caToString, type ClientContext, contextValueToString, isoSeconds } from "./client_context";
 import type { FeatureValue } from "./feature_state";
 import {
   type FeatureRolloutStrategy,
@@ -159,18 +159,37 @@ class DateTimeMatcher extends StringMatcher {
         return false;
       }
 
-      return super.match(parsedDate.toISOString().substring(0, 19) + "Z", attr);
+      return super.match(isoSeconds(parsedDate), attr);
     } catch (_) {
       return false;
     }
   }
 
+  // a value that parses as a date-time is normalised as the supplied value is (UTC, whole seconds), so both
+  // sides compare to the second; one that does not is used as it is (rollout-strategies.yaml matchers.DATETIME)
   protected override attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return (attr.values || [])
       .filter((v) => v != null)
-      .map((v) => (v instanceof Date ? v.toISOString().substring(0, 19) + "Z" : v.toString()));
+      .map((v) => {
+        if (v instanceof Date) {
+          return Number.isNaN(v.getTime()) ? v.toString() : isoSeconds(v);
+        }
+
+        const text = v.toString();
+        if (DATE_TIME_VALUE.test(text.trim())) {
+          const parsed = new Date(text.trim());
+          if (!Number.isNaN(parsed.getTime())) {
+            return isoSeconds(parsed);
+          }
+        }
+
+        return text;
+      });
   }
 }
+
+// a date and time, with or without seconds, a fraction or an offset: a DATETIME value worth normalising
+const DATE_TIME_VALUE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/i;
 
 class NumberMatcher implements StrategyMatcher {
   private numericValues(attrValues: Array<any> | undefined): Array<number> {
@@ -309,24 +328,32 @@ export class MatcherRegistry implements MatcherRepository {
 // an ISO-8601 date-time with a UTC designator or an offset (rollout-strategies.yaml fhubWhenActive.value)
 const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i;
 
-function isoInstant(value: unknown): number | undefined {
+// date-times are compared in whole seconds since the epoch, never below: any fraction of a second is
+// dropped (truncated, not rounded)
+function epochSeconds(epochMs: number): number {
+  return Math.floor(epochMs / 1000);
+}
+
+// an attribute value as whole seconds since the epoch, or undefined if it is not an ISO-8601 date-time
+function isoEpochSeconds(value: unknown): number | undefined {
   if (value === null || value === undefined) return undefined;
 
   const text = String(value).trim();
   if (!ISO_DATE_TIME.test(text)) return undefined;
 
   const instant = Date.parse(text);
-  return Number.isNaN(instant) ? undefined : instant;
+  return Number.isNaN(instant) ? undefined : epochSeconds(instant);
 }
 
 /**
  * rollout-strategies.yaml algorithm.well_known_attributes.fhubWhenActive: compares the clock (`now`, on the
- * left) with the attribute's date-times using its conditional, on instants. The type is ignored; INCLUDES,
- * EXCLUDES, STARTS_WITH, ENDS_WITH and REGEX never match, nor do no valid values.
+ * left) with the attribute's date-times using its conditional, in whole seconds since the epoch: `now` is
+ * already in seconds (ApplyFeature.clock) and each value's fraction of a second is dropped. The type is
+ * ignored; INCLUDES, EXCLUDES, STARTS_WITH, ENDS_WITH and REGEX never match, nor do no valid values.
  */
 export function fhubWhenActiveMatches(attr: FeatureRolloutStrategyAttribute, now: number): boolean {
   const times = (attr.values ?? [])
-    .map((v) => isoInstant(v))
+    .map((v) => isoEpochSeconds(v))
     .filter((t): t is number => t !== undefined);
 
   if (times.length === 0) {
@@ -357,10 +384,11 @@ export const FHUB_WHEN_ACTIVE = "fhubwhenactive";
 
 export class ApplyFeature {
   /**
-   * The clock fhubWhenActive strategies are compared with, in milliseconds since the epoch. Worked out on
-   * every evaluation, never cached. Tests may replace it.
+   * The clock fhubWhenActive strategies are compared with, in whole seconds since the epoch (FeatureHub
+   * compares date-times to the second, never below). Worked out on every evaluation, never cached. Tests
+   * may replace it.
    */
-  public static clock: () => number = () => Date.now();
+  public static clock: () => number = () => epochSeconds(Date.now());
 
   private readonly _percentageCalculator: PercentageCalculator;
   private readonly _matcherRepository: MatcherRepository;
@@ -484,7 +512,7 @@ export class ApplyFeature {
             suppliedValues = [new Date().toISOString().substring(0, 10)];
             break;
           case RolloutStrategyFieldType.Datetime:
-            suppliedValues = [new Date().toISOString()];
+            suppliedValues = [isoSeconds(new Date())];
             break;
         }
       }

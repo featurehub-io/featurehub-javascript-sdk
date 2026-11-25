@@ -21,8 +21,17 @@ export type ContextAttribute =
 export type ContextRecord = Record<string, ContextAttribute>;
 
 /**
- * A single context value as a string: a date-time is UTC ISO-8601 (featurehub-protocol.yaml
- * encoding.evaluation_context.wire_value), so it reads the same in every SDK. An invalid Date is undefined.
+ * A date-time as UTC ISO-8601 to the second, YYYY-MM-DDTHH:MM:SSZ: any fraction of a second is dropped
+ * (truncated, not rounded). FeatureHub works in whole seconds (featurehub-protocol.yaml
+ * encoding.evaluation_context.wire_value, rollout-strategies.yaml matchers.DATETIME).
+ */
+export function isoSeconds(date: Date): string {
+  return date.toISOString().substring(0, 19) + "Z";
+}
+
+/**
+ * A single context value as a string: a date-time is UTC ISO-8601 to the second (isoSeconds), so it reads
+ * the same in every SDK. An invalid Date is undefined.
  */
 export function contextValueToString(value: unknown): string | undefined {
   if (value === undefined || value === null) {
@@ -30,7 +39,7 @@ export function contextValueToString(value: unknown): string | undefined {
   }
 
   if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+    return Number.isNaN(value.getTime()) ? undefined : isoSeconds(value);
   }
 
   return String(value);

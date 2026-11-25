@@ -25,7 +25,8 @@ const when = (
 ): FeatureRolloutStrategyAttribute =>
   ({ fieldName, type, conditional, values }) as FeatureRolloutStrategyAttribute;
 
-const at = (iso: string) => () => Date.parse(iso);
+// ApplyFeature.clock is in whole seconds since the epoch
+const at = (iso: string) => () => Math.floor(Date.parse(iso) / 1000);
 
 describe("fhubWhenActive", () => {
   const originalClock = ApplyFeature.clock;
@@ -64,8 +65,13 @@ describe("fhubWhenActive", () => {
     [when(C.Less, [T9]), "2026-12-01T09:00:00.000Z", false],
     [when(C.LessEquals, [T9]), "2026-12-01T09:00:00.000Z", true],
     [when(C.Equals, [T9]), "2026-12-01T09:00:00.000Z", true],
-    [when(C.Equals, [T9]), "2026-12-01T09:00:00.001Z", false],
-    [when(C.NotEquals, [T9]), "2026-12-01T09:00:00.001Z", true],
+    [when(C.Equals, [T9]), "2026-12-01T09:00:00.999Z", true],
+    [when(C.Equals, [T9]), "2026-12-01T09:00:01Z", false],
+    [when(C.NotEquals, [T9]), "2026-12-01T09:00:00.500Z", false],
+    [when(C.NotEquals, [T9]), "2026-12-01T09:00:01Z", true],
+    [when(C.Greater, [T9]), "2026-12-01T09:00:00.999Z", false],
+    [when(C.Greater, [T9]), "2026-12-01T09:00:01Z", true],
+    [when(C.Equals, ["2026-12-01T09:00:00.750Z"]), "2026-12-01T09:00:00.100Z", true],
     [when(C.Includes, [T9]), "2027-01-01T00:00:00Z", false],
     [when(C.Excludes, [T9]), "2027-01-01T00:00:00Z", false],
     [when(C.NotEquals, []), "2027-01-01T00:00:00Z", false],
@@ -145,5 +151,15 @@ describe("fhubWhenActive", () => {
     expect(xFeatureHubHeader({ userkey: "orm", FhubWhenActive: "2020-01-01T00:00:00Z" })).toBe(
       "userkey=orm",
     );
+  });
+});
+
+describe("ApplyFeature.clock", () => {
+  it("is the machine's clock in whole seconds since the epoch", () => {
+    const before = Math.floor(Date.now() / 1000);
+    const clock = ApplyFeature.clock();
+    expect(Number.isInteger(clock)).toBe(true);
+    expect(clock).toBeGreaterThanOrEqual(before);
+    expect(clock).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
   });
 });

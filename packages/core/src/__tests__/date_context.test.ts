@@ -14,7 +14,8 @@ import {
   FeatureHubUsageValue,
 } from "../usage/usage";
 
-const signedUp = new Date("2026-11-17T02:47:28.000Z");
+// the fraction of a second is dropped when it is sent, recorded or compared
+const signedUp = new Date("2026-11-17T02:47:28.456Z");
 
 function context(attrs: Record<string, ContextAttribute>, percentageKey?: string): ClientContext {
   return {
@@ -38,18 +39,18 @@ const matches = (type: T, conditional: C, values: string[], supplied: ContextAtt
   ).matched;
 
 describe("date-time context values", () => {
-  it("are sent to Edge as UTC ISO-8601 (featurehub-protocol.yaml wire_value)", () => {
+  it("are sent to Edge as UTC ISO-8601 to the second (featurehub-protocol.yaml wire_value)", () => {
     expect(xFeatureHubHeader({ userkey: "lingling", signedUp })).toBe(
-      `signedUp=${encodeURIComponent("2026-11-17T02:47:28.000Z")},userkey=lingling`,
+      `signedUp=${encodeURIComponent("2026-11-17T02:47:28Z")},userkey=lingling`,
     );
   });
 
   it("send each date of a list, and leave out an invalid date rather than throwing", () => {
     expect(
       xFeatureHubHeader({
-        visits: [signedUp, new Date("not a date"), new Date("2026-12-01T09:00:00Z")],
+        visits: [signedUp, new Date("not a date"), new Date("2026-12-01T09:00:00.999Z")],
       }),
-    ).toBe(`visits=${encodeURIComponent("2026-11-17T02:47:28.000Z,2026-12-01T09:00:00.000Z")}`);
+    ).toBe(`visits=${encodeURIComponent("2026-11-17T02:47:28Z,2026-12-01T09:00:00Z")}`);
     expect(xFeatureHubHeader({ broken: new Date("keep silent") })).toBe("");
   });
 
@@ -57,6 +58,9 @@ describe("date-time context values", () => {
     [T.Datetime, C.GreaterEquals, ["2026-11-17T00:00:00Z"], true],
     [T.Datetime, C.Less, ["2026-11-17T00:00:00Z"], false],
     [T.Datetime, C.Equals, ["2026-11-17T02:47:28Z"], true],
+    [T.Datetime, C.Equals, ["2026-11-17T02:47:28.900Z"], true],
+    [T.Datetime, C.Equals, ["2026-11-17T15:47:28+13:00"], true],
+    [T.Datetime, C.Greater, ["2026-11-17T02:47:28Z"], false],
     [T.Date, C.Equals, ["2026-11-17"], true],
     [T.Date, C.Greater, ["2026-11-18"], false],
     [T.String, C.StartsWith, ["2026-11"], true],
@@ -78,7 +82,7 @@ describe("date-time context values", () => {
 
   it("give the same percentage key as their ISO-8601 string", () => {
     expect(ApplyFeature.determinePercentageKey(context({ signedUp }), ["signedUp"])).toBe(
-      ApplyFeature.determinePercentageKey(context({ signedUp: "2026-11-17T02:47:28.000Z" }), [
+      ApplyFeature.determinePercentageKey(context({ signedUp: "2026-11-17T02:47:28Z" }), [
         "signedUp",
       ]),
     );
@@ -96,12 +100,12 @@ describe("date-time context values", () => {
     const event = new BaseUsageEventWithFeature(feature, { signedUp, visits: [signedUp] }, "orm");
 
     expect(event.collectUsageRecord()).toMatchObject({
-      signedUp: "2026-11-17T02:47:28.000Z",
-      visits: ["2026-11-17T02:47:28.000Z"],
+      signedUp: "2026-11-17T02:47:28Z",
+      visits: ["2026-11-17T02:47:28Z"],
     });
 
     const collection = new BaseUsageFeaturesCollectionContext("orm");
     collection.contextAttributes = { signedUp };
-    expect(collection.collectUsageRecord()).toMatchObject({ signedUp: "2026-11-17T02:47:28.000Z" });
+    expect(collection.collectUsageRecord()).toMatchObject({ signedUp: "2026-11-17T02:47:28Z" });
   });
 });
