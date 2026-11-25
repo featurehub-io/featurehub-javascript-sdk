@@ -2,7 +2,9 @@ import { ErrorCode, OpenFeature, ProviderEvents, ProviderStatus } from "@openfea
 import {
   EdgeFeatureHubConfig,
   type EdgeService,
+  type FeatureRolloutStrategy,
   type FeatureState,
+  type FeatureValueInterceptor,
   FeatureValueType,
   type InternalFeatureRepository,
   SSEResultState,
@@ -58,7 +60,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 let domainCount = 0;
 
-function setup(answer: Array<FeatureState> | "fail") {
+function setup(answer: Array<FeatureState> | "fail", overrides?: Record<string, string>) {
   const domain = `omu-co-${++domainCount}`;
   let config: EdgeFeatureHubConfig | undefined;
 
@@ -69,6 +71,13 @@ function setup(answer: Array<FeatureState> | "fail") {
     configFactory: (options) => {
       config = new EdgeFeatureHubConfig(options.host, options.apiKey);
       config.edgeServiceProvider((repo) => new ScriptedEdge(repo, answer));
+      if (overrides) {
+        // as a local override would: values as strings
+        const interceptor: FeatureValueInterceptor = {
+          matched: (key) => (key in overrides ? [true, overrides[key]] : [false, undefined]),
+        };
+        config.addValueInterceptor(interceptor);
+      }
       return config;
     },
   });
@@ -115,5 +124,56 @@ describe("FeatureHubWebProvider against the FeatureHub SDK's protocol behaviour"
     expect(t.client.getStringDetails("kwong_pastry", "chago").errorCode).toBe(
       ErrorCode.PROVIDER_FATAL,
     );
+  });
+
+  it("evaluates strategies locally: SPLIT for a percentage rollout, TARGETING_MATCH for attributes", async () => {
+    const strategies = [
+      {
+        id: "chago",
+        value: "mango",
+        attributes: [
+          { conditional: "EQUALS", fieldName: "country", type: "STRING", values: ["nz"] },
+        ],
+      },
+      { id: "omu-co", value: "durian", percentage: 1000000, attributes: [] },
+    ] as unknown as FeatureRolloutStrategy[];
+    const t = setup([{ ...feature("plain"), strategies } as FeatureState]);
+    await t.start();
+
+    await OpenFeature.setContext({ targetingKey: "lingling", country: "nz" });
+    expect(t.client.getStringDetails("kwong_pastry", "x")).toMatchObject({
+      value: "mango",
+      reason: "TARGETING_MATCH",
+      variant: "chago",
+    });
+
+    await OpenFeature.setContext({ targetingKey: "lingling", country: "au" });
+    expect(t.client.getStringDetails("kwong_pastry", "x")).toMatchObject({
+      value: "durian",
+      reason: "SPLIT",
+      variant: "omu-co",
+    });
+  });
+
+  it("converts an interceptor's string to the kind asked for", async () => {
+    const t = setup(
+      [
+        {
+          id: "keep-silent-id",
+          key: "keep_silent",
+          version: 1,
+          type: FeatureValueType.Boolean,
+          value: false,
+          l: false,
+        } as FeatureState,
+      ],
+      { keep_silent: "true" },
+    );
+    await t.start();
+
+    expect(t.client.getBooleanDetails("keep_silent", false)).toMatchObject({
+      value: true,
+      reason: "STATIC",
+    });
   });
 });

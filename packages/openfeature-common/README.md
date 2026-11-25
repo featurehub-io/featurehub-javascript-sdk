@@ -10,7 +10,7 @@ This package is an **implementation detail**. It is published because the provid
 ## What lives here
 
 - **Context mapping** — `mapEvaluationContext`, `toContextRecord` (`targetingKey` → `userkey`, well-known keys, arrays, nested-object rejection), `contextSignature` (change detection) and `isClientEvaluatedKey`.
-- **Resolution semantics** — `snapshotFeature` (one `FeatureStateHolder.getValue()` call returning value + matched strategy id) and `resolveFromEvaluation` (not-found, type mismatch, value-less `DEFAULT`, JSON parsing, `TARGETING_MATCH`/`STATIC` + `variant`), plus the standard error resolutions.
+- **Resolution semantics** — `snapshotFeature` (one `FeatureStateHolder.getValue()` call returning the value, the strategy id and whether it was a percentage rollout, plus the feature's properties) and `resolveFromEvaluation`, which follows the FeatureHub SDK specification's OpenFeature resolution: not found, type mismatch, value-less `DISABLED`, conversion of string values, `STATIC` / `SPLIT` / `TARGETING_MATCH` with the strategy id as `variant`, and flag metadata. Plus the standard error resolutions.
 - **Provider lifecycle** — `FeatureHubProviderCore`, the base class both providers extend: config creation, event wiring with per-feature change detection, transport selection (`applyTransport`), readiness handling and teardown.
 
 ## License

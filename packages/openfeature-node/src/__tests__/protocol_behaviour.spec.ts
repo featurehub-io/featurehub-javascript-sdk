@@ -59,7 +59,12 @@ class ScriptedEdge implements EdgeService {
   }
 }
 
-const feature = (key: string, value: string, version = 1): FeatureState =>
+const feature = (
+  key: string,
+  value: string | null,
+  version = 1,
+  extra: Partial<FeatureState> = {},
+): FeatureState =>
   ({
     id: `${key}-id`,
     key,
@@ -67,6 +72,7 @@ const feature = (key: string, value: string, version = 1): FeatureState =>
     type: FeatureValueType.String,
     value,
     l: false,
+    ...extra,
   }) as FeatureState;
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 10));
@@ -202,5 +208,35 @@ describe("FeatureHubProvider against the FeatureHub SDK's protocol behaviour", (
     await tick();
 
     expect(t.changed).toEqual(["always_wonder"]);
+  });
+
+  it("reports the strategy the server applied (v) as TARGETING_MATCH, with the properties as metadata", async () => {
+    const t = setup({
+      "": [feature("kwong_pastry", "plain")],
+      "userkey=lingling": [
+        feature("kwong_pastry", "mango", 4, { v: "chago", fp: { shop: "omu&co" } }),
+        feature("always_wonder", null, 2, { v: "ormkorn" }),
+      ],
+    });
+    await t.start();
+
+    const targeted = await t.client.getStringDetails("kwong_pastry", "plain", {
+      targetingKey: "lingling",
+    });
+    expect(targeted).toMatchObject({ value: "mango", reason: "TARGETING_MATCH", variant: "chago" });
+    expect(targeted.flagMetadata).toEqual({
+      shop: "omu&co",
+      featureVersion: 4,
+      featureType: "STRING",
+    });
+
+    const disabled = await t.client.getStringDetails("always_wonder", "keep silent", {
+      targetingKey: "lingling",
+    });
+    expect(disabled).toMatchObject({
+      value: "keep silent",
+      reason: "DISABLED",
+      variant: "ormkorn",
+    });
   });
 });
