@@ -15,12 +15,6 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
    */
   markEnvironmentStale(): void;
 
-  /** the connection updating the repository has permanently failed and will send nothing more */
-  get connectionFailed(): boolean;
-
-  /** the source has said the environment is stale and will send nothing more */
-  get environmentStale(): boolean;
-
   /**
    * Close all registered value interceptors.
    */

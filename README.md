@@ -322,6 +322,27 @@ await fhConfig.waitForReady();
 
 This will delay up to 10 seconds by default if you do not specify a time (in milliseconds). 
 
+Readiness is one of `NotReady` (no features yet), `Ready`, `Stale` and `Failed`. `Stale` means features are held
+and keep resolving, but may not be current: a server-evaluated key's context is changing, or the connection has
+stopped for good after delivering features. `Failed` means the connection failed before any features arrived.
+
+To find out when the connection stops for good, listen for connection events. Each is told once, separately from
+readiness (which may already be `Stale`, during a context change, when it happens), and one that has already
+happened is told as soon as you add the listener:
+
+```typescript
+fhConfig.addConnectionEventListener((event) => {
+  if (event === ConnectionEvent.ConnectionFailed) {
+    // permanently failed (a rejected API key, say): nothing more will arrive
+  } else if (event === ConnectionEvent.EnvironmentStale) {
+    // FeatureHub says this environment will send no further updates
+  }
+});
+
+fhConfig.connectionFailed; // or ask at any time
+fhConfig.environmentStale;
+```
+
 ### Choosing a connection mode
 
 Call one of these fluent methods on your `EdgeFeatureHubConfig` **before** calling `.init()` or `.build()`:

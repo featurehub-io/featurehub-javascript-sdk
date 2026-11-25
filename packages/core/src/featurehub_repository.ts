@@ -26,6 +26,23 @@ export enum Readyness {
   Failed = "Failed",
 }
 
+/**
+ * featurehub-protocol.yaml repository.connection_failed and repository.environment_stale: the source updating
+ * the repository has stopped for good. Each is told once, as an event of its own: it is not a readiness
+ * change (readiness may already be Stale, during a context change, when it happens).
+ * - ConnectionFailed: the connection has permanently failed (a rejected key, say) and will send nothing more
+ * - EnvironmentStale: the source says the environment is stale (polling 236, streaming edge.stale) and will
+ *   send no further updates
+ */
+export enum ConnectionEvent {
+  ConnectionFailed = "ConnectionFailed",
+  EnvironmentStale = "EnvironmentStale",
+}
+
+export interface ConnectionEventListener {
+  (event: ConnectionEvent): void;
+}
+
 export type EdgeServiceProvider = (
   repository: InternalFeatureRepository,
   config: FeatureHubConfig,
@@ -140,6 +157,22 @@ export interface FeatureHubRepository {
    * @param listener
    */
   removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle): void;
+
+  /** the connection updating the repository has permanently failed and will send nothing more */
+  get connectionFailed(): boolean;
+
+  /** the source has said the environment is stale and will send nothing more */
+  get environmentStale(): boolean;
+
+  /**
+   * Adds a listener for the connection stopping for good (ConnectionEvent), and returns a handle to remove it.
+   * An event that has already happened is told to the listener at once, so a listener added late misses
+   * nothing.
+   */
+  addConnectionEventListener(listener: ConnectionEventListener): ReadinessListenerHandle;
+
+  /** Removes a connection event listener, or does nothing if it is not registered. */
+  removeConnectionEventListener(listener: ConnectionEventListener | ReadinessListenerHandle): void;
 
   /**
    * Used by catch/release to indicate that new updates are available to release into the repository. You would generally

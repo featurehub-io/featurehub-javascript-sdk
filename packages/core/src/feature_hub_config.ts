@@ -2,6 +2,7 @@ import type { ClientContext, ContextRecord } from "./client_context";
 import type { EdgeService } from "./edge_service";
 import type { FeatureStateHolder } from "./feature_state";
 import {
+  type ConnectionEventListener,
   type EdgeServiceProvider,
   type FeatureHubRepository,
   type RawUpdateFeatureListener,
@@ -243,6 +244,27 @@ export interface FeatureHubConfig {
     ignoreNotReadyOnRegister?: boolean,
   ): ReadinessListenerHandle;
   removeReadinessListener(handle: ReadynessListener | ReadinessListenerHandle): void;
+
+  /**
+   * The connection has permanently failed and will send nothing more (featurehub-protocol.yaml
+   * repository.connection_failed). With features already held, readiness is Stale and they keep resolving.
+   */
+  get connectionFailed(): boolean;
+
+  /**
+   * The source says the environment is stale and will send no further updates (featurehub-protocol.yaml
+   * repository.environment_stale). Readiness is Stale and the last features keep resolving.
+   */
+  get environmentStale(): boolean;
+
+  /**
+   * Adds a listener for the connection stopping for good (ConnectionEvent.ConnectionFailed or
+   * EnvironmentStale), each told once and separately from readiness, which may already be Stale (during a
+   * context change) when it happens. An event that has already happened is told at once. A provider uses it
+   * to report STALE.
+   */
+  addConnectionEventListener(listener: ConnectionEventListener): ReadinessListenerHandle;
+  removeConnectionEventListener(handle: ConnectionEventListener | ReadinessListenerHandle): void;
 
   // add a value interceptor (e.g. baggage handler)
   addValueInterceptor(interceptor: FeatureValueInterceptor): void;

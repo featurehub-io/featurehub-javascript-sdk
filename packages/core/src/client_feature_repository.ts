@@ -8,6 +8,8 @@ import {
 import type { FeatureStateHolder } from "./feature_state";
 import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
+  ConnectionEvent,
+  type ConnectionEventListener,
   type PostLoadNewFeatureStateAvailableListener,
   type RawUpdateFeatureListener,
   Readyness,
@@ -44,6 +46,10 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
   private _readinessListeners: Map<number, ReadynessListener> = new Map<
     number,
     ReadynessListener
+  >();
+  private _connectionEventListeners: Map<number, ConnectionEventListener> = new Map<
+    number,
+    ConnectionEventListener
   >();
   private _listenerCounter = 1;
   private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
@@ -311,6 +317,37 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return pos;
   }
 
+  public addConnectionEventListener(listener: ConnectionEventListener): ReadinessListenerHandle {
+    const pos = ListenerUtils.newListenerKey(this._connectionEventListeners);
+    this._connectionEventListeners.set(pos, listener);
+
+    // an event that has already happened is told at once, so a listener added late misses nothing
+    if (this._connectionFailed)
+      this.tellConnectionEvent(listener, ConnectionEvent.ConnectionFailed);
+    if (this._environmentStale)
+      this.tellConnectionEvent(listener, ConnectionEvent.EnvironmentStale);
+
+    return pos;
+  }
+
+  public removeConnectionEventListener(
+    listener: ConnectionEventListener | ReadinessListenerHandle,
+  ): void {
+    ListenerUtils.removeListener(this._connectionEventListeners, listener);
+  }
+
+  private broadcastConnectionEvent(event: ConnectionEvent): void {
+    this._connectionEventListeners.forEach((l) => this.tellConnectionEvent(l, event));
+  }
+
+  private tellConnectionEvent(listener: ConnectionEventListener, event: ConnectionEvent): void {
+    try {
+      listener(event);
+    } catch (e) {
+      fhLog.error("a connection event listener failed", e);
+    }
+  }
+
   removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle) {
     ListenerUtils.removeListener(this._readinessListeners, listener);
   }
@@ -344,6 +381,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     if (this.hasReceivedInitialState && this.setReadiness(Readyness.Stale)) {
       this.broadcastReadynessState(false);
     }
+
+    // its own event, whatever readiness did (it may already be Stale, during a context change)
+    this.broadcastConnectionEvent(ConnectionEvent.EnvironmentStale);
   }
 
   /**
@@ -359,6 +399,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     if (this.setReadiness(readiness) && !this._catchAndReleaseMode) {
       this.broadcastReadynessState(false);
     }
+
+    // its own event, whatever readiness did (it may already be Stale, during a context change)
+    this.broadcastConnectionEvent(ConnectionEvent.ConnectionFailed);
   }
 
   private readinessAfterFullSet(): Readyness {

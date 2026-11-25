@@ -9,10 +9,12 @@ import {
   type FeatureHubConfig,
   fhLog,
   InvalidConfigurationError,
+  type ReadinessListenerHandle,
   validatePollInterval,
 } from "./feature_hub_config";
 import type { FeatureStateHolder } from "./feature_state";
 import {
+  type ConnectionEventListener,
   type EdgeServiceProvider,
   type RawUpdateFeatureListener,
   Readyness,
@@ -486,6 +488,26 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
   removeReadinessListener(listener: ReadynessListener | number) {
     if (this._isClosed) return;
     this.repository().removeReadinessListener(listener);
+  }
+
+  get connectionFailed(): boolean {
+    if (this._isClosed) return false;
+    return this.repository().connectionFailed;
+  }
+
+  get environmentStale(): boolean {
+    if (this._isClosed) return false;
+    return this.repository().environmentStale;
+  }
+
+  addConnectionEventListener(listener: ConnectionEventListener): ReadinessListenerHandle {
+    if (this._isClosed) throw new ConfigurationClosedError("addConnectionEventListener");
+    return this.repository().addConnectionEventListener(listener);
+  }
+
+  removeConnectionEventListener(listener: ConnectionEventListener | ReadinessListenerHandle) {
+    if (this._isClosed) return;
+    this.repository().removeConnectionEventListener(listener);
   }
 
   restActive(intervalInMilliseconds?: number): FeatureHubConfig {
