@@ -282,6 +282,7 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
           fs,
           matched.value,
           matched.strategyId!,
+          matched.split,
         );
         return triggerUsage ? this.used(result) : result;
       }

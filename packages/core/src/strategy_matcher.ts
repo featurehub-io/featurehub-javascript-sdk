@@ -28,11 +28,19 @@ export class Applied {
   public readonly matched: boolean;
   public readonly value: FeatureValue;
   public readonly strategyId: string | undefined;
+  /** the matching strategy is a percentage rollout (rollout-strategies.yaml inputs.output: split) */
+  public readonly split: boolean;
 
-  constructor(matched: boolean, value: FeatureValue, strategyId: string | undefined) {
+  constructor(
+    matched: boolean,
+    value: FeatureValue,
+    strategyId: string | undefined,
+    split = false,
+  ) {
     this.matched = matched;
     this.value = value;
     this.strategyId = strategyId;
+    this.split = split;
   }
 }
 
@@ -456,10 +464,10 @@ export class ApplyFeature {
           if (percentage <= useBasePercentage + rsi.percentage!) {
             if (rsi.attributes != null && rsi.attributes.length) {
               if (this.matchAttribute(context, rsi)) {
-                return new Applied(true, rsi.value, rsi.id);
+                return new Applied(true, rsi.value, rsi.id, true);
               }
             } else {
-              return new Applied(true, rsi.value, rsi.id);
+              return new Applied(true, rsi.value, rsi.id, true);
             }
           }
 
