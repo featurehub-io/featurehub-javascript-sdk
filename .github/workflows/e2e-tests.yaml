@@ -1,7 +1,9 @@
 name: e2e-tests
 
-# end to end tests: runs the todo backend example (examples/todo-backend-typescript) against a FeatureHub party server
-# and drives it with the todo-server tests, once streaming and once polling.
+# end to end tests: runs each todo backend example (examples/todo-backend-typescript, and the same server on OpenFeature,
+# examples/todo-backend-openfeature) against a FeatureHub party server and drives it with the todo-server tests, once
+# streaming and once polling. The SDK's own backend is also tested serving feature snapshots, and the OpenFeature one
+# with the Redis store.
 #
 # It starts on every pull request (and each push to one), but waits for approval before running anything: the job uses
 # the `e2e` environment, whose required reviewers (the fh-core-committers team) approve it from the pull request's
@@ -27,11 +29,26 @@ concurrency:
 
 jobs:
   e2e:
-    name: e2e-tests
+    name: e2e-tests (${{ matrix.backend }})
     # the environment's required reviewers must approve each run before it starts
     environment: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # the FeatureHub SDK's own example, polling with the SDK's older variable; it also serves
+          # feature snapshots, so it tests the snapshot option
+          - backend: todo-backend-typescript
+            polling-env: -e FEATUREHUB_POLLING_INTERVAL=5s
+            redis: false
+            snapshot: true
+          # the same server on OpenFeature: polling with the specification's variables, and the Redis store
+          - backend: todo-backend-openfeature
+            polling-env: -e FEATUREHUB_CONNECT_TYPE=active -e FEATUREHUB_CONNECT_INTERVAL=5s
+            redis: true
+            snapshot: false
     permissions:
       contents: read
       packages: read # <--- This is required to read from GHCR
@@ -106,10 +123,10 @@ jobs:
             --network ${{ job.container.network }} \
             --name todo-server \
             -p 8099:8099 \
-            --workdir /sdk/examples/todo-backend-typescript \
+            --workdir /sdk/examples/${{ matrix.backend }} \
             --env-file adk-env/server.env \
              todo-server:e2e \
-            /bin/bash -c "pnpm run start"
+            /bin/bash -c "pnpm run serve"
 
       - name: Wait for todo-server to be ready
         run: |
@@ -146,13 +163,13 @@ jobs:
           docker stop todo-server && docker rm -f todo-server && \
           docker run -d \
             --network ${{ job.container.network }} \
-            -e FEATUREHUB_POLLING_INTERVAL=5s \
+            ${{ matrix.polling-env }} \
             --name todo-server \
             -p 8099:8099 \
-            --workdir /sdk/examples/todo-backend-typescript \
+            --workdir /sdk/examples/${{ matrix.backend }} \
             --env-file adk-env/server.env \
              todo-server:e2e \
-            /bin/bash -c "pnpm run start"
+            /bin/bash -c "pnpm run serve"
 
       - name: Wait for todo-server to be ready again
         run: |
@@ -188,6 +205,7 @@ jobs:
       # the snapshot option: the todo-server streams from FeatureHub and re-serves its features at /featurehub
       # (feature-snapshot-protocol.yaml), and the tests read their features from there instead of FeatureHub
       - name: Run todo-server again, streaming only, to serve feature snapshots
+        if: matrix.snapshot
         run: |
           docker stop todo-server && docker rm -f todo-server && \
           docker run -d \
@@ -201,6 +219,7 @@ jobs:
             /bin/bash -c "pnpm run start"
 
       - name: Wait for the streaming todo-server and its feature snapshots
+        if: matrix.snapshot
         run: |
           echo "Waiting for todo-server on port 8099..."
           for i in $(seq 1 30); do
@@ -217,6 +236,7 @@ jobs:
           exit 1
 
       - name: Run the e2e tests reading features from the todo-server's feature snapshots
+        if: matrix.snapshot
         # this step can hang, so force a timeout
         timeout-minutes: 10
         run: |
@@ -231,6 +251,68 @@ jobs:
             todo-server:e2e \
             /bin/bash -c "pnpm run test"
 
+      # The Redis store (featurehub-store-redis): the server writes FeatureHub's features to Redis, keeps
+      # serving them when its FeatureHub connection is closed, and starts from Redis alone when FeatureHub
+      # cannot be reached.
+      - name: Redis store smoke test
+        if: matrix.redis
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          network=${{ job.container.network }}
+
+          wait_ready() {
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:8099/health/readiness > /dev/null 2>&1; then return 0; fi
+              sleep 2
+            done
+            echo "todo-server did not become ready"; docker logs todo-server; return 1
+          }
+
+          # the titles the server's features give these todos, for a user of its own
+          titles() {
+            curl -sf -X DELETE http://localhost:8099/todo/redis-check > /dev/null
+            for title in buy pay find; do
+              curl -sf -X POST http://localhost:8099/todo/redis-check \
+                -H 'Content-Type: application/json' -d "{\"title\": \"$title\"}" > /dev/null
+            done
+            curl -sf http://localhost:8099/todo/redis-check | jq -c '[.[].title] | sort'
+          }
+
+          start_server() {
+            docker rm -f todo-server > /dev/null 2>&1 || true
+            docker run -d --network "$network" --name todo-server -p 8099:8099 \
+              --workdir /sdk/examples/${{ matrix.backend }} \
+              --env-file adk-env/server.env \
+              -e FEATUREHUB_REDIS_URL=redis://redis:6379 \
+              "$@" \
+              todo-server:e2e /bin/bash -c "pnpm run serve" > /dev/null
+            wait_ready
+          }
+
+          docker run -d --network "$network" --name redis redis:7.2-alpine > /dev/null
+          for i in $(seq 1 15); do docker exec redis redis-cli ping > /dev/null 2>&1 && break; sleep 1; done
+
+          echo "== connected to FeatureHub, with Redis"
+          start_server
+          expected=$(titles)
+          echo "titles: $expected"
+
+          keys=$(docker exec redis redis-cli --scan --pattern 'featurehub_*')
+          echo "Redis keys: $keys"
+          echo "$keys" | grep -q '_sha$' || { echo "no features sha in Redis"; exit 1; }
+          [ "$(echo "$keys" | wc -l)" -ge 2 ] || { echo "no features in Redis"; exit 1; }
+
+          echo "== FeatureHub connection closed"
+          curl -sf http://localhost:8099/health/disconnect > /dev/null
+          [ "$(titles)" = "$expected" ] || { echo "the features changed once disconnected"; exit 1; }
+
+          echo "== restarted with FeatureHub unreachable"
+          start_server -e FEATUREHUB_EDGE_URL=http://unreachable.invalid:8085
+          actual=$(titles)
+          echo "titles: $actual"
+          [ "$actual" = "$expected" ] || { echo "the server did not start from Redis"; exit 1; }
+
       - name: Print logs on failure
         if: failure()
         run: |
@@ -242,5 +324,5 @@ jobs:
       - name: Tear down
         if: always()
         run: |
-          docker rm -f party-server todo-server 2>/dev/null || true
+          docker rm -f party-server todo-server redis 2>/dev/null || true
           docker network rm fh-e2e 2>/dev/null || true
