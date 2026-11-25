@@ -166,6 +166,7 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
   setFeatureState(fs: FeatureState | undefined): boolean {
     const existingValue = this.internalGetValue(false);
     const existingLocked = this.locked;
+    const existed = this.featureState() !== undefined;
 
     // capture all the original values of the listeners
     const listenerValues: Map<number, ListenerOriginal> = new Map<number, ListenerOriginal>();
@@ -178,13 +179,18 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
     this.internalFeatureState = fs;
 
     // the lock changing is not part of the contextual evaluation of values changing, and is constant across all listeners.
-    const changedLocked = existingLocked !== this.featureState()?.l;
+    const changedLocked = existingLocked !== this.isLocked();
+    // a feature appearing or being removed is a change, even with no value either side
+    const changedExistence = existed !== (this.featureState() !== undefined);
     // did at least the default value change, even if there are no listeners for the state?
-    let changed = changedLocked || existingValue?.value !== this.internalGetValue(false)?.value;
+    let changed =
+      changedLocked ||
+      changedExistence ||
+      existingValue?.value !== this.internalGetValue(false)?.value;
 
     this.listeners.forEach((value, key) => {
       const original = listenerValues.get(key);
-      if (changedLocked || original?.value !== value.holder.value) {
+      if (changedLocked || changedExistence || original?.value !== value.holder.value) {
         changed = true;
 
         try {
@@ -216,7 +222,8 @@ export class FeatureStateBaseHolder implements FeatureStateHolder {
   }
 
   isLocked(): boolean {
-    return this.featureState() === undefined ? false : this.featureState()!.l!;
+    // l is optional: absent or null means not locked (featurehub-protocol.yaml encoding.feature_state)
+    return this.featureState()?.l === true;
   }
 
   triggerListeners(feature: FeatureStateHolder): void {
