@@ -1,5 +1,11 @@
 import type { EvaluationContext } from "@openfeature/core";
-import type { ContextAttribute } from "featurehub-javascript-core-sdk";
+import {
+  type ContextAttribute,
+  StrategyAttributeWellKnownNames,
+} from "featurehub-javascript-core-sdk";
+
+/** the strategy-only attribute, compared case-insensitively */
+const FHUB_WHEN_ACTIVE = StrategyAttributeWellKnownNames.FhubWhenActive.toLowerCase();
 
 export type { ContextAttribute } from "featurehub-javascript-core-sdk";
 
@@ -10,24 +16,23 @@ export interface MappedContext {
   attributes: Record<string, ContextAttribute>;
 }
 
-/** Attribute keys FeatureHub treats specially (case-insensitive). */
-const FEATURE_HUB_KEYS = new Set([
-  "userkey",
-  "email",
-  "device",
-  "platform",
-  "version",
-  "country",
-  "session",
-  "sessionkey",
-]);
+/**
+ * The well-known attribute keys, recognised case-insensitively and written lowercase: exactly the Edge API's
+ * StrategyAttributeWellKnownNames (featurehub-protocol.yaml encoding.evaluation_context), less the user key,
+ * which targetingKey supplies, and fhubWhenActive, which is a strategy attribute and never a context key.
+ */
+const WELL_KNOWN_KEYS = new Set(
+  Object.values(StrategyAttributeWellKnownNames)
+    .map((k) => k.toLowerCase())
+    .filter((k) => k !== "userkey" && k !== FHUB_WHEN_ACTIVE),
+);
 
 /** Raised when an OpenFeature context contains a value FeatureHub cannot represent. */
 export class InvalidContextError extends Error {
   readonly key: string;
   constructor(key: string) {
     super(
-      `Context attribute '${key}' is an object or contains nested objects; FeatureHub attributes must be strings, numbers, booleans, or arrays of those.`,
+      `Context attribute '${key}' is an object or contains nested objects; FeatureHub attributes must be strings, numbers, booleans, date-times, or lists of those.`,
     );
     this.name = "InvalidContextError";
     this.key = key;
@@ -39,24 +44,31 @@ export function isClientEvaluatedKey(apiKey: string): boolean {
   return apiKey.includes("*");
 }
 
-function isPrimitive(v: unknown): v is string | number | boolean {
-  return typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+type ContextValue = string | number | boolean | Date;
+
+function isValue(v: unknown): v is ContextValue {
+  return (
+    typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v instanceof Date
+  );
 }
 
-function isAllowedArray(v: unknown): v is Array<string | number | boolean> {
-  return Array.isArray(v) && v.every(isPrimitive);
+function isAllowedList(v: unknown): v is Array<ContextValue> {
+  return Array.isArray(v) && v.every(isValue);
 }
 
 /**
- * Maps an OpenFeature EvaluationContext onto FeatureHub's context model.
+ * Maps an OpenFeature EvaluationContext onto FeatureHub's context model
+ * (featurehub-protocol.yaml encoding.evaluation_context):
  *
- * - `targetingKey` maps to FeatureHub's `userkey` (the default percentage key).
- * - `session` / `sessionkey` map to FeatureHub's `sessionkey`.
- * - Well-known FeatureHub keys (`email`, `device`, `platform`, `version`,
- *   `country`) are recognised case-insensitively.
- * - Everything else passes through as a custom attribute.
+ * - `targetingKey` (or `userkey`) maps to FeatureHub's `userkey`.
+ * - The well-known keys (`device`, `country`, `platform`, `session`, `version`) are recognised
+ *   case-insensitively and written lowercase.
+ * - `fhubWhenActive` is dropped: it is a strategy attribute, never supplied by the application.
+ * - Everything else passes through as a custom attribute, its case preserved.
+ * - Values are strings, numbers, booleans or date-times (a `Date`), or lists of those; null values are
+ *   skipped. A date-time is sent to FeatureHub as UTC ISO-8601 to the second.
  *
- * @throws InvalidContextError when a value cannot be represented.
+ * @throws InvalidContextError when a value cannot be represented (an object, or a list holding one).
  */
 export function mapEvaluationContext(context: EvaluationContext | undefined): MappedContext {
   const attributes: Record<string, ContextAttribute> = {};
@@ -70,10 +82,10 @@ export function mapEvaluationContext(context: EvaluationContext | undefined): Ma
       const lower = key.toLowerCase();
       if (lower === "targetingkey" || lower === "userkey") {
         userkey = String(value);
-      } else if (isPrimitive(value)) {
-        attributes[FEATURE_HUB_KEYS.has(lower) ? lower : key] = value;
-      } else if (isAllowedArray(value)) {
-        attributes[FEATURE_HUB_KEYS.has(lower) ? lower : key] = value as ContextAttribute;
+      } else if (lower === FHUB_WHEN_ACTIVE) {
+        continue;
+      } else if (isValue(value) || isAllowedList(value)) {
+        attributes[WELL_KNOWN_KEYS.has(lower) ? lower : key] = value as ContextAttribute;
       } else {
         throw new InvalidContextError(key);
       }
@@ -83,25 +95,12 @@ export function mapEvaluationContext(context: EvaluationContext | undefined): Ma
   return { userkey, attributes };
 }
 
-/**
- * Builds a FeatureHub `ContextRecord` (for the SDK's context API) from an
- * OpenFeature EvaluationContext.
- *
- * @param options.sessionAsSessionKey - map `session` to `sessionkey`, as
- * required when the bundle is evaluated server-side (FeatureHub's server
- * percentage key); leave false for client-evaluated keys.
- */
+/** Builds a FeatureHub `ContextRecord` (for the SDK's context API) from an OpenFeature EvaluationContext. */
 export function toContextRecord(
   context: EvaluationContext | undefined,
-  options?: { sessionAsSessionKey?: boolean },
 ): Record<string, ContextAttribute> {
   const { userkey, attributes } = mapEvaluationContext(context);
-  const record = userkey === undefined ? { ...attributes } : { userkey, ...attributes };
-  if (options?.sessionAsSessionKey && "session" in record) {
-    record["sessionkey"] = record["session"];
-    delete record["session"];
-  }
-  return record;
+  return userkey === undefined ? { ...attributes } : { userkey, ...attributes };
 }
 
 /**
@@ -112,9 +111,10 @@ export function toContextRecord(
 export function contextSignature(context: EvaluationContext | undefined): string {
   const { userkey, attributes } = mapEvaluationContext(context);
 
+  const text = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
   const entries: Array<[string, string]> = Object.entries(attributes).map(([key, value]) => [
     key,
-    Array.isArray(value) ? value.join(",") : String(value),
+    Array.isArray(value) ? value.map(text).join(",") : text(value),
   ]);
   if (userkey !== undefined) {
     entries.push(["userkey", userkey]);

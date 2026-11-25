@@ -255,15 +255,12 @@ async function readyProvider(apiKey: string) {
 }
 
 describe("context mapping", () => {
-  it("maps targetingKey to userkey; session stays session unless server-eval mapping is requested", () => {
+  it("maps targetingKey to userkey; session stays session", () => {
     expect(toContextRecord({ targetingKey: "u1", session: "s1", plan: "pro" })).toEqual({
       userkey: "u1",
       session: "s1",
       plan: "pro",
     });
-    expect(
-      toContextRecord({ targetingKey: "u1", session: "s1" }, { sessionAsSessionKey: true }),
-    ).toEqual({ userkey: "u1", sessionkey: "s1" });
   });
 
   it("rejects nested objects", () => {

@@ -239,4 +239,21 @@ describe("FeatureHubProvider against the FeatureHub SDK's protocol behaviour", (
       variant: "ormkorn",
     });
   });
+
+  it("sends session as session, and a date-time as UTC to the second, for a server-evaluated key", async () => {
+    const header = "session=s1,signedUp=2026-11-17T02%3A47%3A28Z,userkey=lingling";
+    const t = setup({
+      "": [feature("kwong_pastry", "plain")],
+      [header]: [feature("kwong_pastry", "mango", 2, { v: "chago" })],
+    });
+    await t.start();
+
+    const details = await t.client.getStringDetails("kwong_pastry", "plain", {
+      targetingKey: "lingling",
+      session: "s1",
+      signedUp: new Date("2026-11-17T02:47:28.456Z"),
+    });
+
+    expect(details).toMatchObject({ value: "mango", reason: "TARGETING_MATCH", variant: "chago" });
+  });
 });

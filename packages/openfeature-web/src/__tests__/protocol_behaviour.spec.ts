@@ -176,4 +176,42 @@ describe("FeatureHubWebProvider against the FeatureHub SDK's protocol behaviour"
       reason: "STATIC",
     });
   });
+
+  it("matches a date-time strategy against a Date in the context", async () => {
+    const strategies = [
+      {
+        id: "always-wonder",
+        value: "early bird",
+        attributes: [
+          {
+            conditional: "LESS",
+            fieldName: "signedUp",
+            type: "DATETIME",
+            values: ["2026-01-01T00:00:00Z"],
+          },
+        ],
+      },
+    ] as unknown as FeatureRolloutStrategy[];
+    const t = setup([{ ...feature("plain"), strategies } as FeatureState]);
+    await t.start();
+
+    await OpenFeature.setContext({
+      targetingKey: "orm",
+      signedUp: new Date("2025-06-01T08:00:00Z"),
+    });
+    expect(t.client.getStringDetails("kwong_pastry", "x")).toMatchObject({
+      value: "early bird",
+      reason: "TARGETING_MATCH",
+      variant: "always-wonder",
+    });
+
+    await OpenFeature.setContext({
+      targetingKey: "orm",
+      signedUp: new Date("2026-06-01T08:00:00Z"),
+    });
+    expect(t.client.getStringDetails("kwong_pastry", "x")).toMatchObject({
+      value: "plain",
+      reason: "STATIC",
+    });
+  });
 });
