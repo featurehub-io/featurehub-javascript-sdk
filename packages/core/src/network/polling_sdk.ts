@@ -57,6 +57,8 @@ export type { CryptoProvider };
 export class PollingBase implements PollingService {
   protected url: string;
   protected _frequency: number;
+  // the interval the application configured, which applies whenever the server sets no pollInterval
+  protected readonly _configuredFrequency: number;
   protected _callback: FeaturesFunction;
   protected _stopped = false;
   protected _environmentStale = false;
@@ -82,6 +84,7 @@ export class PollingBase implements PollingService {
   ) {
     this.url = url;
     this._frequency = frequency;
+    this._configuredFrequency = frequency;
     fhLog.trace(`Created polling client with url ${this.url} and frequency ${this._frequency}`);
     this._shaHeader = "0";
     this._callback = callback;
@@ -205,7 +208,7 @@ export class PollingBase implements PollingService {
       }
 
       if (response.status === 304) {
-        // a max-age is only read from a response whose body we apply (200 or 236)
+        // a 304 has no body, so it leaves the interval as it is
         fhLog.trace("304 - no updates");
         this.resolveOutstanding(requestGeneration);
         return;
@@ -216,7 +219,7 @@ export class PollingBase implements PollingService {
       // the context changed while this request was in flight: its features (and ETag) are for the old
       // context, and the callers waiting on it are answered by a request for the new one
       if (requestGeneration === this._contextGeneration) {
-        this.parseCacheControl(response.headers.get("cache-control"));
+        this.applyPollInterval(environments);
 
         // only keep the ETag of a body we decoded (otherwise the server could answer 304 for good)
         this._etag = response.headers.get("etag");
@@ -276,27 +279,33 @@ export class PollingBase implements PollingService {
   }
 
   /**
-   * Allow the cache control settings on the server override this polling _frequency. A max-age below the
-   * minimum interval is raised to it, and with an interval of 0 (poll once) it never starts polling.
-   * @param cacheHeader
+   * featurehub-protocol.yaml featurehub_edge.polling.poll_interval: each environment of a 200 or 236 body may
+   * carry a pollInterval, in whole seconds. One that is absent, null, not a whole number or below the
+   * minimum interval is ignored (not raised); the smallest of the rest replaces the configured interval,
+   * shorter or longer. With none left the configured interval applies again, and with a configured interval
+   * of 0 (poll once) nothing changes. Cache-Control is never read for this: it is for HTTP caches.
    */
-  public parseCacheControl(cacheHeader: string | undefined | null) {
-    fhLog.trace(`cache header is ${cacheHeader}`);
-    if (cacheHeader && this._frequency !== 0) {
-      const maxAge = cacheHeader.match(/max-age=(\d+)/);
-      fhLog.trace(`max age is ${maxAge}`);
-      if (maxAge) {
-        const newFreq = parseInt(maxAge[1]!, 10);
-        fhLog.trace(`cache header tried to set new freq to ${newFreq}`);
-        if (newFreq > 0) {
-          this._frequency = Math.max(newFreq * 1000, PollingBase.minimumIntervalMs);
-        }
-      }
+  public applyPollInterval(environments: FeatureEnvironmentCollection[]): void {
+    if (this._configuredFrequency === 0) {
+      return;
     }
+
+    const minimumSeconds = PollingBase.minimumIntervalMs / 1000;
+    const intervals = environments
+      .map((e) => e.pollInterval)
+      .filter(
+        (seconds): seconds is number =>
+          typeof seconds === "number" && Number.isInteger(seconds) && seconds >= minimumSeconds,
+      );
+
+    this._frequency =
+      intervals.length > 0 ? Math.min(...intervals) * 1000 : this._configuredFrequency;
+    fhLog.trace(`polling interval is now ${this._frequency}ms`);
   }
 
   /**
-   * No FeatureHub Cache-Control max-age makes us poll more often than this.
+   * The minimum polling interval: a shorter configured one is a validation error, and a FeatureHub
+   * pollInterval below it is ignored.
    *
    * Decision: this is deliberately a public static that an application can change. The protocol says
    * applications must not be able to lower it (featurehub-protocol.yaml polling_transport.interval.minimum);
@@ -384,7 +393,7 @@ export type PollingClientProvider = (
 
 export class FeatureHubPollingClient implements EdgeService {
   private _frequency: number;
-  // 0 means poll once and stop, in both modes (a max-age never changes that)
+  // 0 means poll once and stop, in both modes (a pollInterval never changes that)
   private readonly _configuredFrequency: number;
   private readonly _url: string;
   private _repository: InternalFeatureRepository;

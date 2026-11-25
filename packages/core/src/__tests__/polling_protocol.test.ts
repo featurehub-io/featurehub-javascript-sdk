@@ -73,39 +73,81 @@ describe("polling follows the FeatureHub protocol", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
-    it("reads max-age only from a 200 or 236, never from a 304 or an error", async () => {
-      const poller = new TestPoller(30000, callback);
+    const env = (id: string, pollInterval?: unknown) =>
+      pollInterval === undefined ? { id, features: [] } : { id, features: [], pollInterval };
+
+    // featurehub-protocol.yaml featurehub_edge.polling.poll_interval examples, with 60s configured
+    it.each([
+      ["shorter than configured", [30], 30000],
+      ["longer than configured is honoured", [120], 120000],
+      ["several environments: the smallest", [45, 20, null], 20000],
+      ["below 5 is ignored", [3, 40], 40000],
+      ["5 itself is used: it is the minimum interval", [5], 5000],
+      ["4 is ignored, 5 is used", [4, 5], 5000],
+      ["a fraction is not a whole number, so is ignored", [7.5], 60000],
+      ["a string is ignored", ["30"], 60000],
+    ])("applies a pollInterval: %s", async (_name, intervals, expected) => {
+      const poller = new TestPoller(60000, callback);
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
+        response(
+          200,
+          (intervals as unknown[]).map((i, n) => env(`orm${n}`, i)),
+        ),
+      );
+
+      await poller.poll();
+
+      expect(poller.frequency).toBe(expected);
+    });
+
+    it("returns to the configured interval when a full response has no pollInterval", async () => {
+      const poller = new TestPoller(60000, callback);
       fetchSpy = vi.spyOn(global, "fetch");
 
-      fetchSpy.mockResolvedValueOnce(response(304, "", { "cache-control": "max-age=1" }));
+      fetchSpy.mockResolvedValueOnce(response(200, [env("ling", 30)]));
       await poller.poll();
       expect(poller.frequency).toBe(30000);
 
-      fetchSpy.mockResolvedValueOnce(response(503, "", { "cache-control": "max-age=1" }));
-      await poller.poll().catch(() => {});
-      expect(poller.frequency).toBe(30000);
-
-      fetchSpy.mockResolvedValueOnce(response(200, [], { "cache-control": "max-age=60" }));
+      fetchSpy.mockResolvedValueOnce(response(200, [env("ling")]));
       await poller.poll();
       expect(poller.frequency).toBe(60000);
     });
 
-    it("raises a max-age below the minimum interval to it", async () => {
-      const poller = new TestPoller(30000, callback);
+    it("reads pollInterval only from a 200 or 236 body, never a 304 or an error", async () => {
+      const poller = new TestPoller(60000, callback);
+      fetchSpy = vi.spyOn(global, "fetch");
+
+      fetchSpy.mockResolvedValueOnce(response(200, [env("ling", 30)]));
+      await poller.poll();
+      expect(poller.frequency).toBe(30000);
+
+      fetchSpy.mockResolvedValueOnce(response(304, ""));
+      await poller.poll();
+      expect(poller.frequency).toBe(30000);
+
+      fetchSpy.mockResolvedValueOnce(response(503, JSON.stringify([env("ling", 5)])));
+      await poller.poll().catch(() => {});
+      expect(poller.frequency).toBe(30000);
+
+      fetchSpy.mockResolvedValueOnce(response(236, [env("ling", 45)]));
+      await poller.poll();
+      expect(poller.frequency).toBe(45000);
+    });
+
+    it("never reads Cache-Control max-age", async () => {
+      const poller = new TestPoller(60000, callback);
       fetchSpy = vi
         .spyOn(global, "fetch")
-        .mockResolvedValue(response(200, [], { "cache-control": "max-age=1" }));
+        .mockResolvedValue(response(200, [env("ling")], { "cache-control": "max-age=10" }));
 
       await poller.poll();
 
-      expect(poller.frequency).toBe(PollingBase.minimumIntervalMs);
+      expect(poller.frequency).toBe(60000);
     });
 
-    it("does not let a max-age start polling when the interval is 0 (poll once)", async () => {
+    it("does not let a pollInterval start polling when the interval is 0 (poll once)", async () => {
       const poller = new TestPoller(0, callback);
-      fetchSpy = vi
-        .spyOn(global, "fetch")
-        .mockResolvedValue(response(200, [], { "cache-control": "max-age=60" }));
+      fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(response(200, [env("ling", 60)]));
 
       await poller.poll();
 

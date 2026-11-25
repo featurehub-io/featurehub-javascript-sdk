@@ -339,11 +339,14 @@ fhConfig.restPassive(15000); // cache expires after 15 seconds
 fhConfig.streaming();
 ```
 
-FeatureHub also has the ability for the server to override the polling interval via cache-control headers, either globally or per environment.
+FeatureHub can override the polling interval for an environment: each environment in a polling response may carry a
+`pollInterval`, in whole seconds, which replaces the configured interval (shorter or longer). With several environments
+the smallest is used, and when the server stops sending one the configured interval applies again. The SDK ignores a
+`pollInterval` below 5 seconds, and does not use the `Cache-Control` header to change the interval.
 
 A polling interval must be `0` or at least 5 seconds (5000 ms): anything else throws an `InvalidConfigurationError`.
-An interval of `0` polls once and then stops, which suits short-lived processes. A cache-control `max-age` from the
-server is never allowed to make the SDK poll more often than every 5 seconds.
+An interval of `0` polls once and then stops, which suits short-lived processes, and a `pollInterval` from the server
+never starts it polling again.
 
 #### Sending extra headers
 

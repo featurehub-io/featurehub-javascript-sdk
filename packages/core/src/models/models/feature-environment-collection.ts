@@ -32,4 +32,12 @@ export interface FeatureEnvironmentCollection {
    * @memberof FeatureEnvironmentCollection
    */
   features?: Array<FeatureState>;
+  /**
+   * The polling interval, in whole seconds, the server wants for this environment, overriding the
+   * configured one; absent or null means no override (featurehub-protocol.yaml
+   * featurehub_edge.polling.poll_interval). Added by hand: it is not yet in the OpenAPI document.
+   * @type {number}
+   * @memberof FeatureEnvironmentCollection
+   */
+  pollInterval?: number | null;
 }

@@ -54,13 +54,11 @@ describe("Polling Base polls as expected", () => {
       );
     });
 
-    it("should reset the polling frequence with a cache updated header", async () => {
+    it("should reset the polling frequency from the environment's pollInterval", async () => {
       const seconds = 300;
 
-      headerMap.set("cache-control", `max-age=${seconds}`);
-
       fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
-        text: () => Promise.resolve(JSON.stringify([])),
+        text: () => Promise.resolve(JSON.stringify([{ id: "kwong", pollInterval: seconds }])),
         headers: headerMap,
         status: 200,
         ok: true,
@@ -68,7 +66,7 @@ describe("Polling Base polls as expected", () => {
 
       await poller.poll();
 
-      expect(environments).to.deep.eq([]);
+      expect(environments).to.deep.eq([{ id: "kwong", pollInterval: seconds, features: [] }]);
       expect(poller.frequency).to.eq(seconds * 1000);
       expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
         baseUrl + "/&contextSha=0&sdk_version=2",
