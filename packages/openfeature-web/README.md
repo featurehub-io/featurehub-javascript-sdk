@@ -61,6 +61,10 @@ The provider keeps a single evaluation context: it is created in `initialize`, r
 
 Every resolution is evaluated locally against the current context. It reports `SPLIT` for a percentage rollout and `TARGETING_MATCH` for any other matched strategy, each with the strategy id as `variant`; `STATIC` when no strategy applies; and `DISABLED`, with the code default, for a feature that has no value. A value supplied as a string (by a value interceptor, say) is converted to the type asked for: `"true"` and `"false"` for a boolean, a numeric string for a number. Errors use the standard OpenFeature codes (`FLAG_NOT_FOUND`, `TYPE_MISMATCH`, `PARSE_ERROR`, `INVALID_CONTEXT`, `PROVIDER_NOT_READY`, `PROVIDER_FATAL`). Flag metadata holds the feature's properties, plus `featureVersion` and `featureType`.
 
+## Tracking
+
+`client.track(name, details)` records a FeatureHub named usage event, with the current context's attributes and the details, for the usage plugins registered on the config (through `configFactory`). Without a usage plugin it goes nowhere.
+
 ## Events
 
 `PROVIDER_CONFIGURATION_CHANGED` is emitted with the keys of the features that changed: a new version, a feature added, or one deleted or no longer in a full set.
@@ -144,6 +148,7 @@ if (client.getBooleanValue("checkout-v2", false)) {
 | `context.getNumber(key)` | `client.getNumberValue(key, default)` |
 | `context.getJson(key)` | `client.getObjectValue(key, default)`; the value must be a JSON object |
 | `context.getRawJson(key)` | no equivalent: OpenFeature only gives the parsed object |
+| `context.recordNamedUsage(name, params)` | `client.track(name, params)` ([Tracking](#tracking)) |
 | `context.isSet(key)` | `get...Details(...)`: `errorCode` is `FLAG_NOT_FOUND` if the feature does not exist; `reason` is `DISABLED` if it exists with no value |
 | the strategy that matched (`feature(key).getValue().strategyId`) | `details.variant`, with `details.reason` (`SPLIT`, `TARGETING_MATCH` or `STATIC`) |
 | `feature(key).featureProperties` | `details.flagMetadata`, which also holds `featureVersion` and `featureType` |

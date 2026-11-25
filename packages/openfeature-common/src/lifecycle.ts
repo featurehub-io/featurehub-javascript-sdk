@@ -1,8 +1,19 @@
-import { type Logger, ProviderFatalError, type ResolutionDetails } from "@openfeature/core";
-import type { FeatureHubConfig, FeatureState } from "featurehub-javascript-core-sdk";
-import { Readyness } from "featurehub-javascript-core-sdk";
+import {
+  type EvaluationContext,
+  type Logger,
+  ProviderFatalError,
+  type ResolutionDetails,
+  type TrackingEventDetails,
+} from "@openfeature/core";
+import type {
+  EdgeService,
+  FeatureHubConfig,
+  FeatureState,
+  InternalFeatureRepository,
+} from "featurehub-javascript-core-sdk";
+import { ClientEvalFeatureContext, Readyness } from "featurehub-javascript-core-sdk";
 
-import { InvalidContextError, isClientEvaluatedKey } from "./context-mapper";
+import { InvalidContextError, isClientEvaluatedKey, toContextRecord } from "./context-mapper";
 import {
   type FeatureKind,
   type FeatureSnapshot,
@@ -30,14 +41,36 @@ export interface TransportSelection {
 
 export interface BaseProviderOptions<TOptions> extends TransportSelection {
   /** Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io`. */
-  host: string;
+  host?: string;
   /** A FeatureHub SDK API key (see the provider docs for eval-mode guidance). */
-  apiKey: string;
+  apiKey?: string;
   /** How long `initialize` waits for readiness. Default 10s. */
   waitForReadyMs?: number;
-  /** Build the platform FeatureHubConfig (overridable for tests). */
+  /**
+   * Build the FeatureHub config yourself, to attach value interceptors, feature stores and usage plugins. It
+   * is given the options with `host` and `apiKey` as the provider resolved them. With neither, the config's
+   * features come from its stores alone, and are evaluated locally.
+   */
   configFactory?: (options: TOptions) => FeatureHubConfig;
 }
+
+/** The connection a provider was given, in code or (server-side) from the environment. */
+export interface ProviderConnection {
+  host?: string | undefined;
+  apiKey?: string | undefined;
+}
+
+// tracking needs a context of its own, and fetches nothing
+const noEdge: EdgeService = {
+  contextChange: () => Promise.resolve(),
+  clientEvaluated: () => true,
+  requiresReplacementOnHeaderChange: () => false,
+  close: () => {},
+  poll: () => Promise.resolve(),
+};
+
+const given = (value: string | undefined): string | undefined =>
+  value !== undefined && value.trim().length > 0 ? value.trim() : undefined;
 
 /**
  * The minimal shape of an OpenFeature event emitter. Each SDK types its
@@ -56,12 +89,13 @@ const PROVIDER_STALE = "PROVIDER_STALE";
 /**
  * Applies the transport selected by the provider options. Explicit
  * `pollIntervalMs` / `cacheTimeToLiveMs` win over `transport`, which in turn
- * wins over the platform default.
+ * wins over the platform default. With none of them and no platform default,
+ * the config keeps its own mode (the node SDK's comes from the environment).
  */
 export function applyTransport(
   cfg: FeatureHubConfig,
   options: TransportSelection,
-  defaultTransport: Transport,
+  defaultTransport: Transport | undefined,
 ): void {
   if (options.cacheTimeToLiveMs !== undefined) {
     cfg.restPassive(options.cacheTimeToLiveMs);
@@ -72,7 +106,12 @@ export function applyTransport(
     return;
   }
 
-  switch (options.transport ?? defaultTransport) {
+  const transport = options.transport ?? defaultTransport;
+  if (transport === undefined) {
+    return;
+  }
+
+  switch (transport) {
     case "passive":
       cfg.restPassive();
       break;
@@ -93,6 +132,9 @@ export function applyTransport(
  */
 export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOptions<TOptions>> {
   protected readonly options: TOptions;
+  /** Edge's URL and the API key, as given in code or found in the environment; neither for stores only */
+  protected readonly host: string | undefined;
+  protected readonly apiKey: string | undefined;
   protected readonly clientEval: boolean;
   protected readonly waitForReadyMs: number;
 
@@ -112,12 +154,37 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
   private readonly featureVersions = new Map<string, number | undefined>();
   private seenPayload = false;
 
-  protected constructor(providerName: string, options: TOptions) {
-    if (!options?.host || !options?.apiKey) {
-      throw new Error(`${providerName} requires \`host\` and \`apiKey\`.`);
+  /**
+   * featurehub-protocol.yaml providers.source_selection and validation_errors: a connection needs both a host
+   * and an API key; with neither, a `configFactory` can supply a config whose features come from stores alone.
+   */
+  protected constructor(
+    providerName: string,
+    options: TOptions,
+    connection: ProviderConnection = options ?? {},
+  ) {
+    if (!options) {
+      throw new Error(`${providerName} requires its options.`);
     }
+    const host = given(connection.host);
+    const apiKey = given(connection.apiKey);
+
+    if (host === undefined && apiKey === undefined) {
+      if (!options.configFactory) {
+        throw new Error(
+          `${providerName} requires \`host\` and \`apiKey\`, or a \`configFactory\` whose config gets its features from stores.`,
+        );
+      }
+    } else if (host === undefined || apiKey === undefined) {
+      throw new Error(`${providerName} requires both \`host\` and \`apiKey\`: only one was given.`);
+    }
+
     this.options = options;
-    this.clientEval = isClientEvaluatedKey(options.apiKey);
+    this.host = host;
+    this.apiKey = apiKey;
+    // with no API key the features come from stores, and are evaluated locally
+    // (featurehub-protocol.yaml providers.local_evaluation_rule)
+    this.clientEval = apiKey === undefined || isClientEvaluatedKey(apiKey);
     this.waitForReadyMs = options.waitForReadyMs ?? 10_000;
   }
 
@@ -127,15 +194,20 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
   /** Create the config from this platform's FeatureHub SDK. */
   protected abstract createConfig(): FeatureHubConfig;
 
-  /** Transport used when the options do not select one explicitly. */
-  protected abstract get defaultTransport(): Transport;
+  /** Transport used when the options do not select one; undefined keeps the config's own mode. */
+  protected abstract get defaultTransport(): Transport | undefined;
 
   /** Creates the config, wires its listeners, applies the transport and calls `init()`. */
   protected startConfig(): FeatureHubConfig {
     const cfg = this.options.configFactory
-      ? this.options.configFactory(this.options)
+      ? this.options.configFactory({ ...this.options, host: this.host, apiKey: this.apiKey })
       : this.createConfig();
     this.config = cfg;
+
+    if (this.apiKey === undefined) {
+      // stores only: evaluated locally, each resolution with its own context
+      cfg.isClientEvaluated = true;
+    }
 
     cfg.addReadinessListener((readiness) => this.onReadiness(readiness));
     // a connection that stops for good is told by its own event, as readiness may already be Stale (during
@@ -199,6 +271,36 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
       this.stopped = true;
       // after the SDK's own READY, which it emits once initialize has resolved
       setTimeout(() => this.emitStale(), 0);
+    }
+  }
+
+  /**
+   * OpenFeature tracking: records a FeatureHub named usage event (ClientContext.recordNamedUsage) with the
+   * evaluation context and the event's details, for the registered usage plugins (Segment, say). It needs a
+   * usage plugin to go anywhere, and never fails the caller: an unusable context records nothing.
+   */
+  track(
+    trackingEventName: string,
+    context?: EvaluationContext,
+    trackingEventDetails?: TrackingEventDetails,
+  ): void {
+    const cfg = this.config;
+    if (!cfg) {
+      return;
+    }
+
+    try {
+      // a context of its own: a server-evaluated key's shared context must not take this one's attributes
+      // (the config's repository is always the SDK's own, which is internal)
+      const repository = cfg.repository() as InternalFeatureRepository;
+      const ctx = new ClientEvalFeatureContext(repository, noEdge);
+      ctx.attributes = toContextRecord(context);
+      ctx.recordNamedUsage(
+        trackingEventName,
+        trackingEventDetails ? { ...trackingEventDetails } : undefined,
+      );
+    } catch {
+      // an InvalidContextError, or a usage plugin failing: tracking never breaks the application
     }
   }
 
