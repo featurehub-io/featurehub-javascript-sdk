@@ -1,4 +1,4 @@
-.PHONY: image-backend image-tests start-backend start-backend-qa test-server test-server-tags test-server-qa test-server-qa-tags
+.PHONY: image-backend image-tests start-backend start-backend-openfeature start-backend-qa test-server test-server-tags test-server-qa test-server-qa-tags
 
 image-e2e:
 	@echo "Building full image for e2e tests"
@@ -18,6 +18,12 @@ start-backend:
 	export FEATUREHUB_EDGE_URL=http://localhost:8903/ && \
 	export FEATUREHUB_CLIENT_API_KEY=5c57c0b8-9f60-4efa-aef7-d3203792e8a8/H1M3z7UpT0X0lZEfVZ6QHt5khxKRz6*9EwfXCw0Yx4UEiCAea5G && \
 	pnpm --filter './examples/todo-backend-typescript' run start
+
+start-backend-openfeature:
+	@echo "Starting the OpenFeature TypeScript backend example..."
+	@export FEATUREHUB_EDGE_URL=http://localhost:8903/ && \
+	export FEATUREHUB_CLIENT_API_KEY=5c57c0b8-9f60-4efa-aef7-d3203792e8a8/H1M3z7UpT0X0lZEfVZ6QHt5khxKRz6*9EwfXCw0Yx4UEiCAea5G && \
+	pnpm --filter './examples/todo-backend-openfeature' run start
 
 start-backend-qa:
 	@echo "Starting TypeScript backend example (QA mode)..."
