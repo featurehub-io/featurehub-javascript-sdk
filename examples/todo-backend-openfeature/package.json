@@ -1,0 +1,42 @@
+{
+  "name": "featurehub-openfeature-node-example",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf node_modules dist",
+    "serve": "node --trace-deprecation --trace-warnings dist/app.cjs",
+    "segment": "SEGMENT_ENABLED=true node --trace-deprecation --trace-warnings dist/app.cjs",
+    "start": "pnpm run build && pnpm run serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@openfeature/server-sdk": "^1.23.0",
+    "@segment/analytics-node": "^2.3.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "featurehub-javascript-node-sdk": "workspace:*",
+    "featurehub-openfeature-node-sdk": "workspace:*",
+    "featurehub-store-redis": "workspace:*",
+    "featurehub-usage-segment": "workspace:*",
+    "featurehub-yaml-interceptor": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/node": "catalog:node",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "tsup": "catalog:tsup",
+    "typescript": "catalog:typescript"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.18.3"
+}
