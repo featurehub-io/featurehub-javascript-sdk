@@ -1,3 +1,4 @@
+import { ProviderFatalError } from "@openfeature/core";
 import type { FeatureHubConfig, FeatureState } from "featurehub-javascript-core-sdk";
 import { describe, expect, it } from "vitest";
 
@@ -20,8 +21,23 @@ class FakeConfig {
   initialized = true;
   readonly transports: string[] = [];
   listener?: RawListener;
+  connectionFailed = false;
+  environmentStale = false;
+  readinessOnWait = "Ready";
 
   private readinessListener?: (readiness: string) => void;
+  private connectionListener?: (event: string) => void;
+
+  addConnectionEventListener(listener: (event: string) => void): number {
+    this.connectionListener = listener;
+    return 1;
+  }
+
+  stopConnection(event: "ConnectionFailed" | "EnvironmentStale"): void {
+    if (event === "ConnectionFailed") this.connectionFailed = true;
+    else this.environmentStale = true;
+    this.connectionListener?.(event);
+  }
 
   addReadinessListener(listener: (readiness: string) => void): number {
     this.readinessListener = listener;
@@ -54,7 +70,7 @@ class FakeConfig {
   }
 
   async waitForReady(): Promise<string> {
-    return "Ready";
+    return this.readinessOnWait;
   }
 
   forceClose(): void {
@@ -103,6 +119,14 @@ class TestProvider extends FeatureHubProviderCore<TestOptions> {
 
   readyUp(): Promise<void> {
     return this.awaitReady(this.fake.asConfig());
+  }
+
+  resolvable(): boolean {
+    return this.ready;
+  }
+
+  events(): string[] {
+    return this.emitted.map((e) => e.event);
   }
 
   changes(): string[] {
@@ -161,6 +185,18 @@ describe("provider lifecycle events", () => {
     expect(provider.changes()).toEqual(["a", "c", "b"]);
   });
 
+  it("reports a feature a full set no longer holds as changed", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    await provider.readyUp();
+
+    cfg.listener?.processUpdates([flag("ling", 1), flag("orm", 1)], "test");
+    cfg.listener?.processUpdates([flag("ling", 1)], "test");
+
+    expect(provider.changes()).toEqual(["orm"]);
+  });
+
   it("stays silent until initialize has completed", () => {
     const cfg = new FakeConfig();
     const provider = new TestProvider(cfg);
@@ -193,5 +229,85 @@ describe("applyTransport", () => {
     const cfg = new FakeConfig();
     applyTransport(cfg.asConfig(), { transport: "streaming" }, "passive");
     expect(cfg.transports).toEqual(["streaming"]);
+  });
+});
+
+// featurehub-protocol.yaml providers.events and repository.readiness: Stale still resolves; STALE is for a
+// connection that stopped for good, never for a context change
+describe("provider lifecycle with Stale readiness", () => {
+  it("keeps resolving through a context change, with no event", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    await provider.readyUp();
+
+    cfg.setReadiness("Stale");
+    expect(provider.resolvable()).toBe(true);
+    cfg.setReadiness("Ready");
+
+    expect(provider.resolvable()).toBe(true);
+    expect(provider.emitted).toEqual([]);
+  });
+
+  it("emits STALE once when the connection stops for good, and keeps resolving", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    await provider.readyUp();
+
+    cfg.setReadiness("Stale");
+    cfg.stopConnection("ConnectionFailed");
+    cfg.stopConnection("EnvironmentStale");
+
+    expect(provider.events()).toEqual(["PROVIDER_STALE"]);
+    expect(provider.resolvable()).toBe(true);
+  });
+
+  it("emits STALE for a failure during a context change, which readiness does not show", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    await provider.readyUp();
+    cfg.setReadiness("Stale"); // the context change
+
+    cfg.stopConnection("ConnectionFailed"); // readiness stays Stale
+
+    expect(provider.events()).toEqual(["PROVIDER_STALE"]);
+  });
+
+  it("initialises with the first features when the connection stopped with them, then emits STALE", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    cfg.readinessOnWait = "Stale";
+    cfg.connectionFailed = true;
+
+    await provider.readyUp();
+
+    // after initialize resolves, so after the OpenFeature SDK's own READY
+    expect(provider.events()).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(provider.events()).toEqual(["PROVIDER_STALE"]);
+    expect(provider.resolvable()).toBe(true);
+  });
+
+  it("fails initialisation as fatal when the connection is rejected before any features", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    cfg.readinessOnWait = "Failed";
+
+    await expect(provider.readyUp()).rejects.toBeInstanceOf(ProviderFatalError);
+  });
+
+  it("fails initialisation, not as fatal, when only a context change is in progress at the deadline", async () => {
+    const cfg = new FakeConfig();
+    const provider = new TestProvider(cfg);
+    provider.start();
+    cfg.readinessOnWait = "Stale";
+
+    const failure = await provider.readyUp().catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(ProviderFatalError);
   });
 });
