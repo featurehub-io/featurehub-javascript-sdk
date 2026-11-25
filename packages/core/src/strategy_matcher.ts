@@ -192,65 +192,74 @@ class DateTimeMatcher extends StringMatcher {
   }
 }
 
-class NumberMatcher implements StrategyMatcher {
-  private numericValues(attrValues: Array<any> | undefined): Array<number> {
-    if (attrValues === undefined) return [];
+// rollout-strategies.yaml js_conversions.strict_number: a finite number, or a string that is exactly a decimal
+// integer or float - no parseInt / parseFloat prefixes, exponents, hex, whitespace or Infinity
+const STRICT_NUMBER = /^[+-]?[0-9]+(\.[0-9]+)?$/;
 
-    return (attrValues || [])
-      .filter((v) => v != null)
-      .map((v) => (typeof v === "number" ? v : parseFloat(v.toString())));
+function strictNumber(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value === "string" && STRICT_NUMBER.test(value)) {
+    return Number(value);
+  }
+
+  return undefined;
+}
+
+class NumberMatcher implements StrategyMatcher {
+  // values that are not numbers are ignored, as null values are (rollout-strategies.yaml matchers.NUMBER)
+  private numericValues(attrValues: Array<unknown> | undefined | null): Array<number> {
+    return (attrValues ?? [])
+      .map((v) => strictNumber(v))
+      .filter((v): v is number => v !== undefined);
   }
 
   match(comparedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
-    try {
-      const suppliedValue =
-        typeof comparedValue === "number"
-          ? comparedValue
-          : comparedValue.toString().indexOf(".") >= 0
-            ? parseFloat(comparedValue.toString())
-            : parseInt(comparedValue.toString(), 10);
-
-      switch (attr.conditional) {
-        case RolloutStrategyAttributeConditional.Equals:
-          return this.numericValues(attr.values).findIndex((v) => v === suppliedValue) >= 0;
-        case RolloutStrategyAttributeConditional.Greater:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue > v) >= 0;
-        case RolloutStrategyAttributeConditional.GreaterEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue >= v) >= 0;
-        case RolloutStrategyAttributeConditional.Less:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue < v) >= 0;
-        case RolloutStrategyAttributeConditional.LessEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue <= v) >= 0;
-        case RolloutStrategyAttributeConditional.NotEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue === v) === -1;
-        // the below have to be string comparisons still
-        case RolloutStrategyAttributeConditional.Includes:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.includes(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.Excludes:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.includes(v)) === -1)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.Regex:
-          return ((val: string) => stringValues(attr.values).findIndex((v) => val.match(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.EndsWith:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.endsWith(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.StartsWith:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.startsWith(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-      }
-    } catch (_) {
+    // a supplied value that is not a number never matches, whatever the conditional
+    const supplied = strictNumber(comparedValue);
+    if (supplied === undefined) {
       return false;
+    }
+
+    const values = this.numericValues(attr.values);
+    // the text conditionals compare the supplied number's string form with the number values' (so "100.0"
+    // is "100", which STARTS_WITH 1)
+    const text = String(supplied);
+    const texts = values.map((v) => String(v));
+
+    switch (attr.conditional) {
+      case RolloutStrategyAttributeConditional.Equals:
+        return values.some((v) => v === supplied);
+      case RolloutStrategyAttributeConditional.NotEquals:
+        return !values.some((v) => v === supplied);
+      case RolloutStrategyAttributeConditional.Greater:
+        return values.some((v) => supplied > v);
+      case RolloutStrategyAttributeConditional.GreaterEquals:
+        return values.some((v) => supplied >= v);
+      case RolloutStrategyAttributeConditional.Less:
+        return values.some((v) => supplied < v);
+      case RolloutStrategyAttributeConditional.LessEquals:
+        return values.some((v) => supplied <= v);
+      case RolloutStrategyAttributeConditional.Includes:
+        return texts.some((v) => text.includes(v));
+      case RolloutStrategyAttributeConditional.Excludes:
+        return !texts.some((v) => text.includes(v));
+      case RolloutStrategyAttributeConditional.StartsWith:
+        return texts.some((v) => text.startsWith(v));
+      case RolloutStrategyAttributeConditional.EndsWith:
+        return texts.some((v) => text.endsWith(v));
+      case RolloutStrategyAttributeConditional.Regex:
+        return texts.some((v) => {
+          try {
+            return new RegExp(v).test(text);
+          } catch (_) {
+            return false;
+          }
+        });
+      default:
+        return false;
     }
   }
 }
@@ -408,10 +417,12 @@ export class ApplyFeature {
 
       for (const strategy of strategies) {
         // a null percentage or attributes means the same as an absent one (rollout-strategies.yaml
-        // decoding: null, absent and empty all mean none), so treat them alike
+        // decoding: null, absent and empty all mean none), and an absent percentage counts as 0
+        // (algorithm.pseudocode): otherwise a strategy with neither would add NaN to the share, and no
+        // later percentage strategy could match (golden_fixture.known_typescript_bugs)
         const rsi = {
           ...strategy,
-          percentage: strategy.percentage ?? undefined,
+          percentage: strategy.percentage ?? 0,
           attributes: strategy.attributes ?? undefined,
         };
 

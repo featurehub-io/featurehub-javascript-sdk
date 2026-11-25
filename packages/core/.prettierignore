@@ -1,0 +1,2 @@
+# the golden fixture is a byte-identical copy of featurehub-sdk-docs specs/fixtures/typescript_golden.json
+src/__tests__/fixtures/typescript_golden.json
