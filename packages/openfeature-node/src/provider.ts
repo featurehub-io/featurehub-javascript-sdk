@@ -97,7 +97,7 @@ export class FeatureHubProvider
     if (!this.clientEval) {
       // server-evaluated keys: one shared context for the provider's lifetime;
       // fetch the initial evaluated bundle so readiness reflects a real fetch
-      this.sharedContext = cfg.context(toContextRecord(context, { sessionAsSessionKey: true }));
+      this.sharedContext = cfg.context(toContextRecord(context));
       await this.sharedContext.build();
       this.lastContextSignature = contextSignature(context);
     }
@@ -195,7 +195,7 @@ export class FeatureHubProvider
         // and clear() does not reset the user key — reset both, then apply
         ctx.userKey(undefined);
         ctx.clear();
-        ctx.attributes = toContextRecord(context, { sessionAsSessionKey: true });
+        ctx.attributes = toContextRecord(context);
         await ctx.build();
         this.lastContextSignature = signature;
       }

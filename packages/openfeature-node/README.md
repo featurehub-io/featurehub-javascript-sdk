@@ -132,8 +132,8 @@ if (await client.getBooleanValue("checkout-v2", false, context)) {
 | `.userKey("user-123")` | `targetingKey: "user-123"` |
 | `.sessionKey(id)` | `session: id` |
 | `.country(...)`, `.device(...)`, `.platform(...)`, `.version(...)` | `country`, `device`, `platform`, `version`, as the enum's string value (`StrategyAttributeCountryName.NewZealand` is `"new_zealand"`) |
-| `.attributeValue("plan", "enterprise")` | `plan: "enterprise"`; a list of strings, numbers or booleans is fine, a nested object is `INVALID_CONTEXT` |
-| a `Date` attribute value | an ISO-8601 string (`date.toISOString()`): the provider does not accept `Date` values yet |
+| `.attributeValue("plan", "enterprise")` | `plan: "enterprise"`; a list of strings, numbers, booleans or dates is fine, a nested object is `INVALID_CONTEXT`. Keys other than the well-known ones keep their case, and `fhubWhenActive` is ignored, as only a strategy may set it |
+| a `Date` attribute value | the same `Date` (or a list of them); it is evaluated, and sent to FeatureHub, as UTC to the second |
 | `ctx.isEnabled(key)`, `ctx.getFlag(key)`, `ctx.getBoolean(key)` | `client.getBooleanValue(key, false, context)` |
 | `ctx.getString(key)` | `client.getStringValue(key, default, context)` |
 | `ctx.getNumber(key)` | `client.getNumberValue(key, default, context)` |

@@ -17,25 +17,57 @@ describe("context mapping", () => {
     });
   });
 
-  it("maps session to sessionkey only when server-eval mapping is requested", () => {
-    expect(
-      toContextRecord({ targetingKey: "u1", session: "s1" }, { sessionAsSessionKey: true }),
-    ).toEqual({ userkey: "u1", sessionkey: "s1" });
+  // featurehub-protocol.yaml encoding.evaluation_context
+  it("keeps session as session, the key FeatureHub's percentage rollouts use", () => {
+    expect(toContextRecord({ targetingKey: "lingling", SESSION: "s1" })).toEqual({
+      userkey: "lingling",
+      session: "s1",
+    });
   });
 
-  it("maps a camelCase sessionKey to sessionkey under server-eval mapping", () => {
-    // keys are lower-cased before the well-known-key lookup, so sessionKey
-    // arrives as the recognised "sessionkey" attribute either way
+  it("recognises exactly the well-known keys case-insensitively, writing them lowercase", () => {
     expect(
-      toContextRecord({ targetingKey: "u1", sessionKey: "s1" }, { sessionAsSessionKey: true }),
-    ).toEqual({ userkey: "u1", sessionkey: "s1" });
-    expect(toContextRecord({ sessionKey: "s1" })).toEqual({ sessionkey: "s1" });
+      mapEvaluationContext({
+        Country: "thailand",
+        DEVICE: "mobile",
+        Platform: "ios",
+        Version: "1.2.0",
+        Session: "s1",
+      }).attributes,
+    ).toEqual({
+      country: "thailand",
+      device: "mobile",
+      platform: "ios",
+      version: "1.2.0",
+      session: "s1",
+    });
   });
 
-  it("recognises well-known FeatureHub keys case-insensitively", () => {
-    expect(mapEvaluationContext({ Country: "NZ", DEVICE: "iphone" }).attributes).toEqual({
-      country: "NZ",
-      device: "iphone",
+  it("passes any other key through with its case, email and sessionKey included", () => {
+    expect(
+      mapEvaluationContext({ Email: "orm@omu.co", sessionKey: "s1", KwongPastry: "mango" })
+        .attributes,
+    ).toEqual({ Email: "orm@omu.co", sessionKey: "s1", KwongPastry: "mango" });
+  });
+
+  it("drops fhubWhenActive, which only a strategy may hold", () => {
+    expect(
+      toContextRecord({
+        targetingKey: "orm",
+        fhubWhenActive: "2020-01-01T00:00:00Z",
+        FHUBWHENACTIVE: "x",
+      }),
+    ).toEqual({ userkey: "orm" });
+  });
+
+  it("accepts date-times, alone and in lists", () => {
+    const signedUp = new Date("2026-11-17T02:47:28Z");
+    const visits = [signedUp, new Date("2026-12-01T09:00:00Z")];
+
+    expect(toContextRecord({ targetingKey: "orm", signedUp, visits })).toEqual({
+      userkey: "orm",
+      signedUp,
+      visits,
     });
   });
 
@@ -67,6 +99,12 @@ describe("context signature", () => {
     expect(contextSignature({ targetingKey: "u1", country: "AU" })).not.toBe(base);
     expect(contextSignature({ targetingKey: "u2", country: "NZ" })).not.toBe(base);
     expect(contextSignature({ targetingKey: "u1", country: "NZ", plan: "pro" })).not.toBe(base);
+  });
+
+  it("changes when a date-time changes", () => {
+    expect(contextSignature({ signedUp: new Date("2026-11-17T02:47:28Z") })).not.toBe(
+      contextSignature({ signedUp: new Date("2026-11-18T02:47:28Z") }),
+    );
   });
 
   it("distinguishes an empty context from one with attributes", () => {
