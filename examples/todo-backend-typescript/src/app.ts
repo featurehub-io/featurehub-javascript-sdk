@@ -86,13 +86,17 @@ fhConfig.init();
 
 const app = express();
 
-app.get("/health/liveness", (_req, res) => {
+const healthy = (_req: express.Request, res: express.Response) => {
   if (fhConfig.readyness === Readyness.Ready) {
     res.status(200).send("ok");
   } else {
     res.status(500).send("not ready");
   }
-});
+};
+
+app.get("/health/liveness", healthy);
+// the e2e workflow waits on readiness
+app.get("/health/readiness", healthy);
 
 // used when we want to rely only on the backing store
 app.get("/health/disconnect", (_, res) => {

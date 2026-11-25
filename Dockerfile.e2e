@@ -22,4 +22,5 @@ RUN pnpm run build:packages
 RUN pnpm run build:plugins
 #RUN pnpm --filter './examples/todo-server-tests' run build
 RUN pnpm --filter './examples/todo-backend-typescript' run build
+RUN pnpm --filter './examples/todo-backend-openfeature' run build
 
