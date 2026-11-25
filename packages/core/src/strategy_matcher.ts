@@ -120,23 +120,46 @@ class StringMatcher implements StrategyMatcher {
   }
 }
 
+// rollout-strategies.yaml matchers.iso_date_time: an ISO-8601 date, or date-time with an optional offset
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/i;
+const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * A date-time, read strictly and always as UTC (rollout-strategies.yaml matchers.iso_date_time): a Date as it
+ * is, or a string that is an ISO-8601 date or date-time. A date alone is midnight UTC, and a date-time without
+ * an offset is UTC, never the machine's local time (which is how JavaScript's Date would read it). Anything
+ * else - a number, "15/06/2020", "2020-06-15 10:00:00Z" - is not a date-time, and gives undefined.
+ */
+export function parseUtcDateTime(value: unknown): Date | undefined {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  let text = value.trim().toUpperCase();
+  if (!ISO_DATE_TIME.test(text)) {
+    return undefined;
+  }
+
+  if (text.includes("T") && !HAS_OFFSET.test(text)) {
+    text += "Z";
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 class DateMatcher extends StringMatcher {
   override match(
     suppliedValue: BaseContextAttribute,
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
-    try {
-      const parsedDate =
-        suppliedValue instanceof Date ? suppliedValue : new Date(suppliedValue.toString());
+    const parsedDate = parseUtcDateTime(suppliedValue);
 
-      if (Number.isNaN(parsedDate.getTime())) {
-        return false;
-      }
-
-      return super.match(parsedDate.toISOString().substring(0, 10), attr);
-    } catch (_) {
-      return false;
-    }
+    return parsedDate !== undefined && super.match(parsedDate.toISOString().substring(0, 10), attr);
   }
 
   protected override attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
@@ -151,45 +174,23 @@ class DateTimeMatcher extends StringMatcher {
     suppliedValue: BaseContextAttribute,
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
-    try {
-      const parsedDate =
-        suppliedValue instanceof Date ? suppliedValue : new Date(suppliedValue.toString());
+    const parsedDate = parseUtcDateTime(suppliedValue);
 
-      if (Number.isNaN(parsedDate.getTime())) {
-        return false;
-      }
-
-      return super.match(isoSeconds(parsedDate), attr);
-    } catch (_) {
-      return false;
-    }
+    return parsedDate !== undefined && super.match(isoSeconds(parsedDate), attr);
   }
 
-  // a value that parses as a date-time is normalised as the supplied value is (UTC, whole seconds), so both
-  // sides compare to the second; one that does not is used as it is (rollout-strategies.yaml matchers.DATETIME)
+  // a value that is an ISO-8601 date or date-time is normalised as the supplied value is (UTC, no offset
+  // meaning UTC, whole seconds), so both sides compare to the second; any other value is used as it is
+  // (rollout-strategies.yaml matchers.DATETIME)
   protected override attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return (attr.values || [])
       .filter((v) => v != null)
       .map((v) => {
-        if (v instanceof Date) {
-          return Number.isNaN(v.getTime()) ? v.toString() : isoSeconds(v);
-        }
-
-        const text = v.toString();
-        if (DATE_TIME_VALUE.test(text.trim())) {
-          const parsed = new Date(text.trim());
-          if (!Number.isNaN(parsed.getTime())) {
-            return isoSeconds(parsed);
-          }
-        }
-
-        return text;
+        const parsed = parseUtcDateTime(v);
+        return parsed === undefined ? v.toString() : isoSeconds(parsed);
       });
   }
 }
-
-// a date and time, with or without seconds, a fraction or an offset: a DATETIME value worth normalising
-const DATE_TIME_VALUE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/i;
 
 class NumberMatcher implements StrategyMatcher {
   private numericValues(attrValues: Array<any> | undefined): Array<number> {
@@ -325,24 +326,19 @@ export class MatcherRegistry implements MatcherRepository {
   }
 }
 
-// an ISO-8601 date-time with a UTC designator or an offset (rollout-strategies.yaml fhubWhenActive.value)
-const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i;
-
 // date-times are compared in whole seconds since the epoch, never below: any fraction of a second is
 // dropped (truncated, not rounded)
 function epochSeconds(epochMs: number): number {
   return Math.floor(epochMs / 1000);
 }
 
-// an attribute value as whole seconds since the epoch, or undefined if it is not an ISO-8601 date-time
+// an fhubWhenActive value as whole seconds since the epoch: an ISO-8601 date-time (the time part is required),
+// with no offset meaning UTC; undefined for anything else (rollout-strategies.yaml fhubWhenActive.value)
 function isoEpochSeconds(value: unknown): number | undefined {
-  if (value === null || value === undefined) return undefined;
+  if (typeof value !== "string" || !value.toUpperCase().includes("T")) return undefined;
 
-  const text = String(value).trim();
-  if (!ISO_DATE_TIME.test(text)) return undefined;
-
-  const instant = Date.parse(text);
-  return Number.isNaN(instant) ? undefined : epochSeconds(instant);
+  const parsed = parseUtcDateTime(value);
+  return parsed === undefined ? undefined : epochSeconds(parsed.getTime());
 }
 
 /**
