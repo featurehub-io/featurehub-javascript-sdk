@@ -8,7 +8,7 @@ It shows:
 - a `configFactory` that attaches FeatureHub's own extras to the config the provider runs on: a Redis store, the YAML store and interceptor, and a Segment usage plugin;
 - evaluation with an OpenFeature context per request, and `client.track` for named usage events.
 
-The OpenTelemetry integration of the SDK example is left out.
+The SDK example's OpenTelemetry integration (`featurehub-usage-opentelemetry`) is left out: with OpenFeature, use OpenFeature's own OpenTelemetry hooks instead ([With OpenTelemetry](#with-opentelemetry)).
 
 ## Features
 
@@ -57,6 +57,35 @@ The YAML store creates the features, and the YAML interceptor supplies their val
 ### With Segment
 
 Set `SEGMENT_WRITE_KEY` and run `pnpm run segment`. Feature evaluations, and the `todo-add` and `todo-remove` events the server tracks, go to Segment.
+
+### With OpenTelemetry
+
+OpenFeature has its own OpenTelemetry support, as hooks (`@openfeature/open-telemetry-hooks`), which work with any provider, this one included. Add them rather than FeatureHub's `featurehub-usage-opentelemetry` plugin:
+
+```bash
+pnpm add @openfeature/open-telemetry-hooks @opentelemetry/api @opentelemetry/sdk-node
+```
+
+Set up the OpenTelemetry SDK as usual (tracing for spans, metrics for `MetricsHook`, logs for `EventHook`), then register the hooks, for example in `src/app.ts` before `OpenFeature.setProvider(provider)`:
+
+```ts
+import { MetricsHook, SpanHook } from "@openfeature/open-telemetry-hooks";
+
+OpenFeature.addHooks(new SpanHook(), new MetricsHook());
+```
+
+Each flag evaluation then becomes a span (or a log event, with `EventHook`) and is counted in the metrics, with the flag's key, value, variant and reason. The variant is the id of the FeatureHub strategy that matched. FeatureHub's own details are in the evaluation's flag metadata, and the hooks' `attributeMapper` option can add them as attributes:
+
+```ts
+new SpanHook({
+  attributeMapper: (_hookContext, details) => ({
+    "featurehub.feature_version": details.flagMetadata["featureVersion"],
+    "featurehub.feature_type": details.flagMetadata["featureType"],
+  }),
+});
+```
+
+The hooks see evaluations only. Events recorded with `client.track` (`todo-add`, `todo-remove`) still go to FeatureHub's usage plugins (Segment, here), not to the hooks. Nor do the hooks read feature overrides from OpenTelemetry baggage, as `featurehub-usage-opentelemetry`'s interceptor does.
 
 ## Trying it
 
