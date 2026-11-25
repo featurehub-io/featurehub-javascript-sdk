@@ -11,17 +11,11 @@
  */
 
 import type { BaseRolloutStrategy } from "./base-rollout-strategy";
-import type { FeatureRolloutStrategyAttribute } from "./feature-rollout-strategy-attribute";
+import type { FeatureRolloutStrategyAllOf } from "./feature-rollout-strategy-all-of";
 
 /**
  * @type FeatureRolloutStrategy
  * This is the model for the rollout strategy as required by Dacha and Edge
  * @export
  */
-// Hand edit, to keep when regenerating: the generator drops the properties of an inline allOf member, which
-// the API's FeatureRolloutStrategy adds to BaseRolloutStrategy (Edge API 1.2.0).
-export type FeatureRolloutStrategy = BaseRolloutStrategy & {
-  /** strategy id */
-  id: string;
-  attributes?: Array<FeatureRolloutStrategyAttribute> | null;
-};
+export type FeatureRolloutStrategy = BaseRolloutStrategy & FeatureRolloutStrategyAllOf;

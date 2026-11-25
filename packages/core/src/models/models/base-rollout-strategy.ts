@@ -10,18 +10,11 @@
  * Do not edit the class manually.
  */
 
+import type { BaseRolloutStrategyAllOf } from "./base-rollout-strategy-all-of";
 import type { BaseStrategy } from "./base-strategy";
 
 /**
  * @type BaseRolloutStrategy
  * @export
  */
-// Hand edit, to keep when regenerating: the generator drops the properties of an inline allOf member, which
-// the API's BaseRolloutStrategy adds to BaseStrategy (Edge API 1.2.0).
-export type BaseRolloutStrategy = BaseStrategy & {
-  /**
-   * when we attach the RolloutStrategy for Dacha or SSE this lets us push the value out. Only visible in
-   * SDK and SSE Edge.
-   */
-  value?: any | null;
-};
+export type BaseRolloutStrategy = BaseRolloutStrategyAllOf & BaseStrategy;
