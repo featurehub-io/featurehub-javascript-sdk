@@ -436,4 +436,99 @@ describe("FeatureHubProvider configuration and tracking", () => {
     expect(named!.userKey).toBe("lingling");
     expect(named!.collectUsageRecord()).toMatchObject({ gaValue: "10", plan: "always wonder" });
   });
+
+  // openfeature-resolution.yaml tracking.test_vectors
+  describe("tracking", () => {
+    class Collector extends DefaultUsagePlugin {
+      override canSendAsync = false;
+      readonly events: UsageEvent[] = [];
+      send(event: UsageEvent): void {
+        events.push(event);
+        this.events.push(event);
+      }
+    }
+    let events: UsageEvent[] = [];
+    const named = (name: string) =>
+      events.filter((e) => (e as { eventName?: string }).eventName === name);
+
+    async function tracking(apiKey: string, answers: Record<string, Answer>) {
+      events = [];
+      const edges: ScriptedEdge[] = [];
+      const domain = `tracking-${++domainCount}`;
+      await OpenFeature.setProviderAndWait(
+        domain,
+        new FeatureHubProvider({
+          host: "http://localhost:8085",
+          apiKey,
+          configFactory: (options) => {
+            const config = new EdgeFeatureHubConfig(options.host, options.apiKey);
+            config.edgeServiceProvider((repo) => {
+              const edge = new ScriptedEdge(repo, answers);
+              edges.push(edge);
+              return edge;
+            });
+            config
+              .repository()
+              .notify(SSEResultState.Features, [feature("kwong_pastry", "omu&co")], "test");
+            config.addUsagePlugin(new Collector());
+            return config;
+          },
+        }),
+      );
+      return { client: OpenFeature.getClient(domain), edges };
+    }
+
+    it("uses the session as the user key when there is no targetingKey", async () => {
+      const { client } = await tracking("default/env-ling/lingorm*client", {});
+
+      client.track("todo-add", { session: "s1", Country: "NZ" }, {});
+      await tick();
+
+      const [event] = named("todo-add");
+      expect(event!.userKey).toBe("s1");
+      expect(event!.collectUsageRecord()).toMatchObject({ session: "s1", country: "NZ" });
+    });
+
+    it("records nothing, and raises nothing, for a context it cannot map", async () => {
+      const { client } = await tracking("default/env-ling/lingorm*client", {});
+
+      expect(() =>
+        client.track("kwong-pastry", { targetingKey: "orm", shop: { nested: true } } as never, {}),
+      ).not.toThrow();
+      await tick();
+
+      expect(named("kwong-pastry")).toEqual([]);
+    });
+
+    it("leaves a server-evaluated key's shared context alone, and fetches nothing", async () => {
+      const { client, edges } = await tracking("default/env-ling/lingorm", {
+        "": [feature("kwong_pastry", "omu&co")],
+        "userkey=chago": [feature("kwong_pastry", "mango")],
+      });
+      expect(await client.getStringValue("kwong_pastry", "x", { targetingKey: "chago" })).toBe(
+        "mango",
+      );
+      const requests = edges.flatMap((e) => e.headers).length;
+
+      client.track("omu-co", { targetingKey: "kornaphat" }, {});
+      await tick();
+
+      expect(named("omu-co")[0]!.userKey).toBe("kornaphat");
+      expect(edges.flatMap((e) => e.headers).length).toBe(requests);
+      // the shared context is still chago's: no new context change for the next resolution
+      expect(await client.getStringValue("kwong_pastry", "x", { targetingKey: "chago" })).toBe(
+        "mango",
+      );
+      expect(edges.flatMap((e) => e.headers).length).toBe(requests);
+    });
+
+    it("records nothing before initialisation", () => {
+      const provider = new FeatureHubProvider({
+        host: "http://localhost:8085",
+        apiKey: "default/env-ling/lingorm*client",
+      });
+
+      expect(() => provider.track("always-wonder", { targetingKey: "orm" }, {})).not.toThrow();
+    });
+  });
 });
