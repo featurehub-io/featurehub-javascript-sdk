@@ -22,8 +22,11 @@ import {
 } from "featurehub-openfeature-common";
 
 export interface FeatureHubProviderOptions extends BaseProviderOptions<FeatureHubProviderOptions> {
-  /** Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io` or `http://localhost:8553`. */
-  host: string;
+  /**
+   * Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io` or `http://localhost:8553`. Defaults to
+   * `FEATUREHUB_EDGE_URL`.
+   */
+  host?: string;
   /**
    * A FeatureHub SDK API key for the environment.
    *
@@ -37,12 +40,24 @@ export interface FeatureHubProviderOptions extends BaseProviderOptions<FeatureHu
    *   (the SDK pools concurrent refreshes and honours ETag/304). Because the
    *   context is shared, resolutions are serialised; use a client-evaluated
    *   key for concurrent multi-user workloads.
+   *
+   * Defaults to `FEATUREHUB_CLIENT_API_KEY`, else `FEATUREHUB_SERVER_API_KEY`. With no host and no key
+   * (in code or the environment), a `configFactory` can supply a config whose features come from stores.
    */
-  apiKey: string;
+  apiKey?: string;
   /** How long `initialize` (and context changes) wait for readiness. Default 10s. */
   waitForReadyMs?: number;
-  /** Supply a pre-built config, or build the platform one yourself (used by tests). */
+  /**
+   * Build the FeatureHub config yourself, to attach value interceptors, feature stores and usage plugins.
+   * It is given the options with `host` and `apiKey` as resolved (from the environment if not in code).
+   */
   configFactory?: (options: FeatureHubProviderOptions) => FeatureHubConfig;
+}
+
+// featurehub-protocol.yaml providers.environment_variables.set: present and not empty once trimmed
+function environment(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
 }
 
 /**
@@ -73,8 +88,20 @@ export class FeatureHubProvider
   private lock: Promise<unknown> = Promise.resolve();
   private lastContextSignature: string | undefined;
 
-  constructor(options: FeatureHubProviderOptions) {
-    super("FeatureHubProvider", options);
+  /**
+   * Settings not given in code come from the environment, setting by setting (featurehub-protocol.yaml
+   * providers.environment_variables): FEATUREHUB_EDGE_URL, then FEATUREHUB_CLIENT_API_KEY or else
+   * FEATUREHUB_SERVER_API_KEY, and, with no transport option, the node SDK's mode
+   * (FEATUREHUB_CONNECT_TYPE and FEATUREHUB_CONNECT_INTERVAL; streaming when neither is set).
+   */
+  constructor(options: FeatureHubProviderOptions = {}) {
+    super("FeatureHubProvider", options, {
+      host: options.host ?? environment("FEATUREHUB_EDGE_URL"),
+      apiKey:
+        options.apiKey ??
+        environment("FEATUREHUB_CLIENT_API_KEY") ??
+        environment("FEATUREHUB_SERVER_API_KEY"),
+    });
   }
 
   protected get eventSink(): ProviderEventSink {
@@ -83,12 +110,13 @@ export class FeatureHubProvider
     return this.events as unknown as ProviderEventSink;
   }
 
-  protected get defaultTransport(): Transport {
-    return "streaming";
+  /** none: the node SDK's own, from FEATUREHUB_CONNECT_TYPE / FEATUREHUB_CONNECT_INTERVAL, else streaming */
+  protected get defaultTransport(): Transport | undefined {
+    return undefined;
   }
 
   protected createConfig(): FeatureHubConfig {
-    return new EdgeFeatureHubConfig(this.options.host, this.options.apiKey);
+    return new EdgeFeatureHubConfig(this.host, this.apiKey);
   }
 
   async initialize(context?: EvaluationContext): Promise<void> {

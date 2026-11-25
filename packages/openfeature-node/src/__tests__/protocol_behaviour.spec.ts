@@ -1,11 +1,15 @@
 import { ErrorCode, OpenFeature, ProviderEvents, ProviderStatus } from "@openfeature/server-sdk";
 import {
+  DefaultUsagePlugin,
   EdgeFeatureHubConfig,
   type EdgeService,
+  EdgeType,
+  type FeatureRolloutStrategy,
   type FeatureState,
   FeatureValueType,
   type InternalFeatureRepository,
   SSEResultState,
+  type UsageEvent,
 } from "featurehub-javascript-node-sdk";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -255,5 +259,181 @@ describe("FeatureHubProvider against the FeatureHub SDK's protocol behaviour", (
     });
 
     expect(details).toMatchObject({ value: "mango", reason: "TARGETING_MATCH", variant: "chago" });
+  });
+});
+
+// featurehub-protocol.yaml providers.environment_variables, source_selection and local_evaluation_rule, and
+// OpenFeature tracking as FeatureHub named usage
+describe("FeatureHubProvider configuration and tracking", () => {
+  const saved = { ...process.env };
+
+  afterEach(async () => {
+    process.env = { ...saved };
+    await OpenFeature.clearProviders();
+  });
+
+  // never connects anywhere
+  const offline = (config: EdgeFeatureHubConfig) => {
+    config.edgeServiceProvider((repo) => new ScriptedEdge(repo, {}));
+    return config;
+  };
+
+  const clearEnvironment = () => {
+    delete process.env["FEATUREHUB_EDGE_URL"];
+    delete process.env["FEATUREHUB_CLIENT_API_KEY"];
+    delete process.env["FEATUREHUB_SERVER_API_KEY"];
+  };
+
+  it("takes the host and API key from the environment when they are not given in code", async () => {
+    clearEnvironment();
+    process.env["FEATUREHUB_EDGE_URL"] = " http://edge.example.com ";
+    process.env["FEATUREHUB_CLIENT_API_KEY"] = "";
+    process.env["FEATUREHUB_SERVER_API_KEY"] = "default/env-ling/kwong";
+
+    let seen: { host?: string | undefined; apiKey?: string | undefined } = {};
+    const provider = new FeatureHubProvider({
+      waitForReadyMs: 50,
+      configFactory: (options) => {
+        seen = { host: options.host, apiKey: options.apiKey };
+        return offline(new EdgeFeatureHubConfig(options.host, options.apiKey));
+      },
+    });
+    // the offline edge sends no features, so initialisation times out
+    await provider.initialize().catch(() => {});
+    await provider.onClose();
+
+    // an empty variable counts as not set, so the server key is used
+    expect(seen).toEqual({ host: "http://edge.example.com", apiKey: "default/env-ling/kwong" });
+  });
+
+  it("lets code win over the environment, setting by setting", async () => {
+    clearEnvironment();
+    process.env["FEATUREHUB_EDGE_URL"] = "http://edge.example.com";
+    process.env["FEATUREHUB_CLIENT_API_KEY"] = "default/env-ling/orm*key";
+
+    let seen: { host?: string | undefined; apiKey?: string | undefined } = {};
+    const provider = new FeatureHubProvider({
+      apiKey: "default/env-ling/kornaphat",
+      waitForReadyMs: 50,
+      configFactory: (options) => {
+        seen = { host: options.host, apiKey: options.apiKey };
+        return offline(new EdgeFeatureHubConfig(options.host, options.apiKey));
+      },
+    });
+    await provider.initialize().catch(() => {});
+    await provider.onClose();
+
+    expect(seen).toEqual({ host: "http://edge.example.com", apiKey: "default/env-ling/kornaphat" });
+  });
+
+  it("refuses only one of host and API key, and nothing at all without a configFactory", () => {
+    clearEnvironment();
+
+    expect(() => new FeatureHubProvider({ host: "http://edge.example.com" })).toThrow(/both/);
+    expect(() => new FeatureHubProvider({})).toThrow(/configFactory/);
+  });
+
+  it("keeps the config's own mode when no transport option is given (the node SDK's, from the environment)", async () => {
+    let config: EdgeFeatureHubConfig | undefined;
+    const factory = (restActive: boolean) => (options: { host?: string; apiKey?: string }) => {
+      config = new EdgeFeatureHubConfig(options.host, options.apiKey);
+      if (restActive) config.restActive(30000);
+      config.edgeServiceProvider((repo) => new ScriptedEdge(repo, { "": [feature("a", "b")] }));
+      return config;
+    };
+
+    await new FeatureHubProvider({
+      host: "http://localhost:8085",
+      apiKey: "default/env-ling/lingorm",
+      configFactory: factory(true),
+    }).initialize();
+    expect(config!.edgeType).toBe(EdgeType.REST_ACTIVE);
+
+    await new FeatureHubProvider({
+      host: "http://localhost:8085",
+      apiKey: "default/env-ling/lingorm",
+      transport: "streaming",
+      configFactory: factory(true),
+    }).initialize();
+    expect(config!.edgeType).toBe(EdgeType.STREAMING);
+  });
+
+  it("runs from stores alone, evaluating each context locally", async () => {
+    clearEnvironment();
+    const strategies = [
+      {
+        id: "chago",
+        value: "mango",
+        attributes: [
+          { conditional: "EQUALS", fieldName: "country", type: "STRING", values: ["nz"] },
+        ],
+      },
+    ] as unknown as FeatureRolloutStrategy[];
+
+    await OpenFeature.setProviderAndWait(
+      "stores-only",
+      new FeatureHubProvider({
+        configFactory: () => {
+          const config = new EdgeFeatureHubConfig();
+          // as a feature store would load them
+          config
+            .repository()
+            .notify(
+              SSEResultState.Features,
+              [{ ...feature("kwong_pastry", "plain"), strategies } as FeatureState],
+              "local-yaml-store",
+            );
+          return config;
+        },
+      }),
+    );
+    const client = OpenFeature.getClient("stores-only");
+
+    expect(
+      await client.getStringDetails("kwong_pastry", "x", { targetingKey: "ling", country: "nz" }),
+    ).toMatchObject({ value: "mango", reason: "TARGETING_MATCH", variant: "chago" });
+    // a context of its own each time: nothing of the last one is left over
+    expect(await client.getStringValue("kwong_pastry", "x", { targetingKey: "orm" })).toBe("plain");
+  });
+
+  it("records a tracked event as a FeatureHub named usage event", async () => {
+    const events: UsageEvent[] = [];
+    class Collector extends DefaultUsagePlugin {
+      override canSendAsync = false;
+      send(event: UsageEvent): void {
+        events.push(event);
+      }
+    }
+
+    const t = setup({ "": [feature("kwong_pastry", "omu&co")] });
+    const config = { current: undefined as EdgeFeatureHubConfig | undefined };
+    await OpenFeature.setProviderAndWait(
+      t.domain,
+      new FeatureHubProvider({
+        host: "http://localhost:8085",
+        apiKey: "default/env-ling/lingorm*client",
+        configFactory: (options) => {
+          config.current = new EdgeFeatureHubConfig(options.host, options.apiKey);
+          config.current.edgeServiceProvider((repo) => new ScriptedEdge(repo, {}));
+          config.current
+            .repository()
+            .notify(SSEResultState.Features, [feature("kwong_pastry", "omu&co")], "test");
+          config.current.addUsagePlugin(new Collector());
+          return config.current;
+        },
+      }),
+    );
+
+    t.client.track(
+      "todo-add",
+      { targetingKey: "lingling", plan: "always wonder" },
+      { gaValue: "10" },
+    );
+    await tick();
+
+    const named = events.find((e) => (e as { eventName?: string }).eventName === "todo-add");
+    expect(named).toBeDefined();
+    expect(named!.userKey).toBe("lingling");
+    expect(named!.collectUsageRecord()).toMatchObject({ gaValue: "10", plan: "always wonder" });
   });
 });

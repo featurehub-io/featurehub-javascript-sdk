@@ -22,18 +22,22 @@ import {
 export interface FeatureHubWebProviderOptions
   extends BaseProviderOptions<FeatureHubWebProviderOptions> {
   /** Base URL of FeatureHub Edge, e.g. `https://edge.featurehub.io`. */
-  host: string;
+  host?: string;
   /**
    * A **client-evaluated** FeatureHub API key (contains `*`): the full feature
    * bundle — including rollout strategies — is delivered to the browser and
    * every OpenFeature resolution is evaluated locally. Server-evaluated keys
    * are not supported by this provider because the OpenFeature web paradigm
    * resolves synchronously.
+   *
+   * With no host and no key, a `configFactory` can supply a config whose features come from stores.
    */
-  apiKey: string;
+  apiKey?: string;
   /** How long `initialize` waits for the first feature payload. Default 10s. */
   waitForReadyMs?: number;
-  /** Supply a pre-built config, or build the platform one yourself (used by tests). */
+  /**
+   * Build the FeatureHub config yourself, to attach value interceptors, feature stores and usage plugins.
+   */
   configFactory?: (options: FeatureHubWebProviderOptions) => FeatureHubConfig;
 }
 
@@ -90,7 +94,7 @@ export class FeatureHubWebProvider
   }
 
   protected createConfig(): FeatureHubConfig {
-    return new EdgeFeatureHubConfig(this.options.host, this.options.apiKey);
+    return new EdgeFeatureHubConfig(this.host, this.apiKey);
   }
 
   async initialize(context?: EvaluationContext): Promise<void> {

@@ -19,16 +19,18 @@ import { FeatureHubProvider } from "featurehub-openfeature-node-sdk";
 await OpenFeature.setProviderAndWait(
   new FeatureHubProvider({
     host: "https://edge.featurehub.io",
-    apiKey: process.env.FEATUREHUB_API_KEY!, // client-evaluated (`*...`) recommended for servers
+    apiKey: process.env.FEATUREHUB_CLIENT_API_KEY!, // client-evaluated (`*...`) recommended for servers
   }),
 );
 
 const client = OpenFeature.getClient();
 const enabled = await client.getBooleanValue("checkout-v2", false, {
   targetingKey: "user-123",
-  country: "NZ",
+  country: "new_zealand",
 });
 ```
+
+With `FEATUREHUB_EDGE_URL` and `FEATUREHUB_CLIENT_API_KEY` set, `new FeatureHubProvider()` is enough: see [Environment variables](#environment-variables).
 
 If your service evaluates with a single application-wide context, set it **before** registering the provider (via `OpenFeature.setContext`, or by passing it to `setProviderAndWait`): changing the context after registration re-requests the feature bundle for the changed context. Per-request contexts (the normal case for client-evaluated keys) are evaluated locally and are unaffected.
 
@@ -43,13 +45,45 @@ Resolutions report `SPLIT` for a percentage rollout and `TARGETING_MATCH` for an
 
 | Option | Description |
 | --- | --- |
-| `host` | FeatureHub Edge base URL. |
-| `apiKey` | FeatureHub SDK API key (see above). |
-| `transport` | `"streaming"` (default), `"polling"` or `"passive"`. |
+| `host` | FeatureHub Edge base URL. Defaults to `FEATUREHUB_EDGE_URL`. |
+| `apiKey` | FeatureHub SDK API key (see above). Defaults to `FEATUREHUB_CLIENT_API_KEY`, else `FEATUREHUB_SERVER_API_KEY`. |
+| `transport` | `"streaming"`, `"polling"` or `"passive"`. Without it (or the two options below), the mode comes from the environment, and is streaming if that does not say. |
 | `pollIntervalMs` | REST active polling interval; implies `transport: "polling"`. |
 | `cacheTimeToLiveMs` | REST passive cache TTL; implies `transport: "passive"`. |
 | `waitForReadyMs` | How long `initialize` waits for readiness. Default 10s. |
-| `configFactory` | Supply a pre-built config (used by tests). |
+| `configFactory` | Build the FeatureHub config yourself, to attach interceptors, stores and usage plugins (see below). |
+
+### Environment variables
+
+Anything not given in code comes from the environment, setting by setting, as for the FeatureHub Node SDK: `FEATUREHUB_EDGE_URL` for the host; `FEATUREHUB_CLIENT_API_KEY`, or else `FEATUREHUB_SERVER_API_KEY`, for the key; and, when no transport option is given, `FEATUREHUB_CONNECT_TYPE` (`active`, `passive` or `streaming`) with `FEATUREHUB_CONNECT_INTERVAL` (such as `30s`). An empty variable counts as not set. The SDK's other variables (timeouts, streaming retry delays) apply as well.
+
+### Stores only
+
+With no host and no key, in code or the environment, the provider runs from the features its config's stores supply, such as a local YAML file, and evaluates them locally. Give it a `configFactory` that builds the config with no connection:
+
+```ts
+import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
+import { LocalYamlFeatureStore, LocalYamlValueInterceptor } from "featurehub-yaml-interceptor";
+
+const provider = new FeatureHubProvider({
+  configFactory: () => {
+    const config = new EdgeFeatureHubConfig();
+    new LocalYamlFeatureStore(config);
+    config.addValueInterceptor(new LocalYamlValueInterceptor());
+    return config;
+  },
+});
+```
+
+Giving only one of the host and key is an error.
+
+## Tracking
+
+`client.track(name, context, details)` records a FeatureHub named usage event, with the context's attributes and the details, for the usage plugins registered on the config (Segment, say; see [configFactory](#interceptors-stores-and-usage-plugins)). Without a usage plugin it goes nowhere.
+
+```ts
+client.track("checkout-complete", { targetingKey: "user-123" }, { value: 99.95, currency: "NZD" });
+```
 
 ## Events
 
@@ -68,8 +102,7 @@ Before:
 ```ts
 import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
 
-const fhConfig = new EdgeFeatureHubConfig(process.env.FEATUREHUB_EDGE_URL, process.env.FEATUREHUB_CLIENT_API_KEY);
-fhConfig.streaming();
+const fhConfig = new EdgeFeatureHubConfig(); // FEATUREHUB_EDGE_URL and FEATUREHUB_CLIENT_API_KEY
 await fhConfig.init().waitForReady();
 ```
 
@@ -79,22 +112,18 @@ After:
 import { OpenFeature } from "@openfeature/server-sdk";
 import { FeatureHubProvider } from "featurehub-openfeature-node-sdk";
 
-await OpenFeature.setProviderAndWait(
-  new FeatureHubProvider({
-    host: process.env.FEATUREHUB_EDGE_URL!,
-    apiKey: process.env.FEATUREHUB_CLIENT_API_KEY!,
-  }),
-);
+await OpenFeature.setProviderAndWait(new FeatureHubProvider()); // the same variables
 const client = OpenFeature.getClient();
 ```
 
 | FeatureHub SDK | Provider |
 | --- | --- |
-| `new EdgeFeatureHubConfig(url, apiKey)` | `new FeatureHubProvider({ host, apiKey })`; both are required, as the provider does not read them from the environment |
-| `fhConfig.streaming()` | `transport: "streaming"` (the default) |
+| `new EdgeFeatureHubConfig(url, apiKey)` | `new FeatureHubProvider({ host, apiKey })`; either may come from the environment, as for the SDK |
+| `new EdgeFeatureHubConfig()` with only stores (a local YAML file, say) | `new FeatureHubProvider({ configFactory })`, the factory attaching the stores ([Stores only](#stores-only)) |
+| `fhConfig.streaming()` | `transport: "streaming"` |
 | `fhConfig.restActive(30000)` | `pollIntervalMs: 30000` |
 | `fhConfig.restPassive(30000)` | `cacheTimeToLiveMs: 30000` |
-| `FEATUREHUB_CONNECT_TYPE`, `FEATUREHUB_CONNECT_INTERVAL` | Not read: choose the transport and interval in code. The other `FEATUREHUB_` variables (timeouts, streaming retry delays) still apply. |
+| `FEATUREHUB_CONNECT_TYPE`, `FEATUREHUB_CONNECT_INTERVAL` | read as by the SDK, when no transport option is given |
 | `await fhConfig.init().waitForReady()` | `await OpenFeature.setProviderAndWait(provider)`; `waitForReadyMs` sets how long it waits |
 | `fhConfig.close()` | `await OpenFeature.close()` |
 
@@ -139,6 +168,7 @@ if (await client.getBooleanValue("checkout-v2", false, context)) {
 | `ctx.getNumber(key)` | `client.getNumberValue(key, default, context)` |
 | `ctx.getJson(key)` | `client.getObjectValue(key, default, context)`; the value must be a JSON object |
 | `ctx.getRawJson(key)` | no equivalent: OpenFeature only gives the parsed object |
+| `ctx.recordNamedUsage(name, params)` | `client.track(name, context, params)` ([Tracking](#tracking)) |
 | `ctx.isSet(key)` | `get...Details(...)`: `errorCode` is `FLAG_NOT_FOUND` if the feature does not exist; `reason` is `DISABLED` if it exists with no value |
 | the strategy that matched (`feature(key).getValue().strategyId`) | `details.variant`, with `details.reason` (`SPLIT`, `TARGETING_MATCH` or `STATIC`) |
 | `feature(key).featureProperties` | `details.flagMetadata`, which also holds `featureVersion` and `featureType` |
@@ -157,7 +187,7 @@ With a server-evaluated key the SDK fetched features for each context you built.
 
 ### Interceptors, stores and usage plugins
 
-Value interceptors, feature stores and usage plugins are attached to the FeatureHub config, which the provider creates. Pass `configFactory` to create it yourself and attach them; the provider still applies its transport options to it and starts it, so do not call `init()`:
+Value interceptors, feature stores and usage plugins are attached to the FeatureHub config, which the provider creates. Pass `configFactory` to create it yourself and attach them. The provider starts it, so do not call `init()`; it applies a transport option if you give one, and otherwise leaves the config's own mode (from the environment, or one you set on it):
 
 ```ts
 import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
