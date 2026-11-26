@@ -20,14 +20,14 @@ export type {
   TransportSelection,
 } from "./lifecycle";
 export { applyTransport, FeatureHubProviderCore } from "./lifecycle";
-export type { FeatureKind, FeatureSnapshot } from "./resolution";
+export type { FeatureEvaluation, FeatureKind } from "./resolution";
 export {
   buildFlagMetadata,
+  captureFeature,
   expectedFeatureType,
   flagNotFoundResolution,
   generalErrorResolution,
   invalidContextResolution,
   notReadyResolution,
   resolveFromEvaluation,
-  snapshotFeature,
 } from "./resolution";

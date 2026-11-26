@@ -9,8 +9,8 @@ import type { FeatureStateHolder } from "featurehub-javascript-core-sdk";
 
 export type FeatureKind = "boolean" | "string" | "number" | "object";
 
-/** A plain snapshot of a FeatureHub feature, safe to pass between async boundaries. */
-export interface FeatureSnapshot {
+/** A plain copy of one FeatureHub feature evaluation, safe to pass between async boundaries. */
+export interface FeatureEvaluation {
   exists: boolean;
   featureType?: string;
   version?: number;
@@ -24,11 +24,11 @@ export interface FeatureSnapshot {
 }
 
 /**
- * Takes a snapshot of a (live) FeatureHub feature state holder. The holder is
+ * Captures one evaluation of a (live) FeatureHub feature state holder. The holder is
  * bound to a shared repository, so callers that resolve against a shared
- * context must take the snapshot while they still hold their lock.
+ * context must capture it while they still hold their lock.
  */
-export function snapshotFeature(holder: FeatureStateHolder | undefined): FeatureSnapshot {
+export function captureFeature(holder: FeatureStateHolder | undefined): FeatureEvaluation {
   if (holder === undefined || !holder.exists) {
     return { exists: false };
   }
@@ -178,7 +178,7 @@ function convert(flagKey: string, kind: FeatureKind, value: unknown): Converted 
 }
 
 /**
- * Applies OpenFeature resolution semantics to a FeatureHub snapshot (openfeature-resolution.yaml
+ * Applies OpenFeature resolution semantics to a captured FeatureHub evaluation (openfeature-resolution.yaml
  * resolution.steps, in order): not found, a feature of the wrong type, no value (DISABLED), conversion,
  * then the reason - STATIC with no strategy, SPLIT for a percentage rollout matched locally,
  * TARGETING_MATCH for any other strategy (the server's `v` included) - with the strategy id as variant.
@@ -189,7 +189,7 @@ export function resolveFromEvaluation(
   flagKey: string,
   kind: FeatureKind,
   defaultValue: unknown,
-  evaluation: FeatureSnapshot,
+  evaluation: FeatureEvaluation,
 ): ResolutionDetails<unknown> {
   if (!evaluation.exists) {
     return flagNotFoundResolution(flagKey, defaultValue);

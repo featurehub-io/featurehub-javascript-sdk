@@ -11,12 +11,12 @@ import type { ClientContext, FeatureHubConfig } from "featurehub-javascript-node
 import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
 import {
   type BaseProviderOptions,
+  captureFeature,
   contextSignature,
+  type FeatureEvaluation,
   FeatureHubProviderCore,
   type FeatureKind,
-  type FeatureSnapshot,
   type ProviderEventSink,
-  snapshotFeature,
   toContextRecord,
   type Transport,
 } from "featurehub-openfeature-common";
@@ -197,7 +197,7 @@ export class FeatureHubProvider
   }
 
   /**
-   * Produces a consistent snapshot of a flag evaluation.
+   * Captures a consistent evaluation of a flag.
    *
    * - client-evaluated keys: a fresh local context is created per resolution
    *   (no shared state) and the flag is evaluated in-memory.
@@ -206,13 +206,13 @@ export class FeatureHubProvider
    *   awaited, and the values are extracted — all inside a mutex, because the
    *   context and its repository are shared, mutable, and process-wide.
    */
-  private async evaluate(flagKey: string, context: EvaluationContext): Promise<FeatureSnapshot> {
+  private async evaluate(flagKey: string, context: EvaluationContext): Promise<FeatureEvaluation> {
     if (this.clientEval) {
       const ctx = this.config!.context(toContextRecord(context));
-      return snapshotFeature(ctx.feature(flagKey));
+      return captureFeature(ctx.feature(flagKey));
     }
 
-    const run = async (): Promise<FeatureSnapshot> => {
+    const run = async (): Promise<FeatureEvaluation> => {
       const cfg = this.config!;
       const signature = contextSignature(context);
 
@@ -230,7 +230,7 @@ export class FeatureHubProvider
 
       // read through the shared context itself (config.feature would create
       // another reference-counted context per resolution)
-      return snapshotFeature(this.sharedContext!.feature(flagKey));
+      return captureFeature(this.sharedContext!.feature(flagKey));
     };
 
     const run1 = this.lock.then(run, run);
