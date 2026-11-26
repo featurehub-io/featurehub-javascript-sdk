@@ -1,26 +1,37 @@
 name: e2e-tests
 
-# only on PRs and workflow-dispatch
+# end to end tests: runs the todo backend example (examples/todo-backend-typescript) against a FeatureHub party server
+# and drives it with the todo-server tests, once streaming and once polling.
+#
+# It starts on every pull request (and each push to one), but waits for approval before running anything: the job uses
+# the `e2e` environment, whose required reviewers (the fh-core-committers team) approve it from the pull request's
+# checks or the Actions tab. Waiting for approval, or failing, never blocks a merge, as long as `e2e-tests` is not
+# added to the required checks of a branch protection rule or ruleset (only checks named there are enforced). A newer
+# push cancels a run still waiting.
+#
+# Setup (once): Settings -> Environments -> New environment `e2e`, tick "Required reviewers" and add who may approve;
+# and add the `GHCR_TOKEN` secret (read access to the FeatureHub packages) to the repository or the environment.
 on:
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize, reopened]
+    branches: [main]
 
   workflow_dispatch:
 
-jobs:
-  manual_approval_job:
-    runs-on: ubuntu-latest
-    environment:
-      name: requires-approval # Reference the environment created in Step 1
-    steps:
-      - name: Awaiting Approval
-        run: echo "Waiting for manual approval"
+permissions:
+  contents: read
 
+concurrency:
+  group: e2e-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
   e2e:
     name: e2e-tests
-    needs: [manual_approval_job]
+    # the environment's required reviewers must approve each run before it starts
+    environment: e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: read # <--- This is required to read from GHCR
