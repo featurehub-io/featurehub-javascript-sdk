@@ -2,13 +2,13 @@ import type { FeatureStateHolder } from "featurehub-javascript-core-sdk";
 import { describe, expect, it } from "vitest";
 
 import {
-  type FeatureSnapshot,
+  captureFeature,
+  type FeatureEvaluation,
   flagNotFoundResolution,
   generalErrorResolution,
   invalidContextResolution,
   notReadyResolution,
   resolveFromEvaluation,
-  snapshotFeature,
 } from "../resolution";
 
 function holder(
@@ -29,7 +29,7 @@ function holder(
   } as unknown as FeatureStateHolder;
 }
 
-const snapshot = (overrides: Partial<FeatureSnapshot> = {}): FeatureSnapshot => ({
+const evaluation = (overrides: Partial<FeatureEvaluation> = {}): FeatureEvaluation => ({
   exists: true,
   featureType: "BOOLEAN",
   version: 3,
@@ -37,17 +37,17 @@ const snapshot = (overrides: Partial<FeatureSnapshot> = {}): FeatureSnapshot => 
   ...overrides,
 });
 
-describe("snapshotFeature", () => {
+describe("captureFeature", () => {
   it("is not present when the holder is missing or does not exist", () => {
-    expect(snapshotFeature(undefined)).toEqual({ exists: false });
-    expect(snapshotFeature({ exists: false } as unknown as FeatureStateHolder)).toEqual({
+    expect(captureFeature(undefined)).toEqual({ exists: false });
+    expect(captureFeature({ exists: false } as unknown as FeatureStateHolder)).toEqual({
       exists: false,
     });
   });
 
   it("takes one evaluation for value, strategy id and split, with the feature's properties", () => {
     expect(
-      snapshotFeature(
+      captureFeature(
         holder({
           value: "blue",
           strategyId: "strategy-7",
@@ -76,7 +76,12 @@ describe("resolveFromEvaluation", () => {
   });
 
   it("reports TYPE_MISMATCH when the feature type does not match the resolution", () => {
-    const details = resolveFromEvaluation("str", "number", 0, snapshot({ featureType: "STRING" }));
+    const details = resolveFromEvaluation(
+      "str",
+      "number",
+      0,
+      evaluation({ featureType: "STRING" }),
+    );
     expect(details.errorCode).toBe("TYPE_MISMATCH");
     expect(details.flagMetadata).toEqual({ featureVersion: 3, featureType: "STRING" });
   });
@@ -86,7 +91,7 @@ describe("resolveFromEvaluation", () => {
       "novalue",
       "string",
       "fallback",
-      snapshot({ featureType: "STRING", value: undefined }),
+      evaluation({ featureType: "STRING", value: undefined }),
     );
     expect(details.value).toBe("fallback");
     expect(details.reason).toBe("DISABLED");
@@ -99,12 +104,12 @@ describe("resolveFromEvaluation", () => {
         "json",
         "object",
         {},
-        snapshot({ featureType: "JSON", value: '{"a":1}' }),
+        evaluation({ featureType: "JSON", value: '{"a":1}' }),
       ).value,
     ).toEqual({ a: 1 });
 
     expect(
-      resolveFromEvaluation("json", "object", {}, snapshot({ featureType: "JSON", value: "{" }))
+      resolveFromEvaluation("json", "object", {}, evaluation({ featureType: "JSON", value: "{" }))
         .errorCode,
     ).toBe("PARSE_ERROR");
   });
@@ -114,12 +119,12 @@ describe("resolveFromEvaluation", () => {
       "flag",
       "boolean",
       false,
-      snapshot({ strategyId: "strategy-42" }),
+      evaluation({ strategyId: "strategy-42" }),
     );
     expect(matched.reason).toBe("TARGETING_MATCH");
     expect(matched.variant).toBe("strategy-42");
 
-    const plain = resolveFromEvaluation("flag", "boolean", false, snapshot());
+    const plain = resolveFromEvaluation("flag", "boolean", false, evaluation());
     expect(plain.reason).toBe("STATIC");
     expect(plain.variant).toBeUndefined();
   });
@@ -141,7 +146,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
       "always_wonder",
       "string",
       "always wonder",
-      snapshot({ featureType: "STRING", value: null, strategyId: "ormkorn" }),
+      evaluation({ featureType: "STRING", value: null, strategyId: "ormkorn" }),
     );
     expect(details).toMatchObject({
       value: "always wonder",
@@ -155,7 +160,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
       "kwong_pastry",
       "boolean",
       false,
-      snapshot({ featureType: "STRING", value: null }),
+      evaluation({ featureType: "STRING", value: null }),
     );
     expect(details).toMatchObject({ value: false, reason: "ERROR", errorCode: "TYPE_MISMATCH" });
   });
@@ -172,7 +177,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
     ["object", "JSON", '{"shop":"omu&co"}', { shop: "omu&co" }],
     ["object", "JSON", { shop: "omu&co" }, { shop: "omu&co" }],
   ] as const)("converts a %s from %o", (kind, featureType, value, expected) => {
-    const details = resolveFromEvaluation("f", kind, undefined, snapshot({ featureType, value }));
+    const details = resolveFromEvaluation("f", kind, undefined, evaluation({ featureType, value }));
     expect(details.value).toEqual(expected);
     expect(details.reason).toBe("STATIC");
     expect(details.errorCode).toBeUndefined();
@@ -188,7 +193,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
     ["object", "JSON", "[1, 2]"],
     ["object", "JSON", "3"],
   ] as const)("does not convert a %s from %o: TYPE_MISMATCH", (kind, featureType, value) => {
-    const details = resolveFromEvaluation("f", kind, "chago", snapshot({ featureType, value }));
+    const details = resolveFromEvaluation("f", kind, "chago", evaluation({ featureType, value }));
     expect(details).toMatchObject({ value: "chago", reason: "ERROR", errorCode: "TYPE_MISMATCH" });
   });
 
@@ -197,7 +202,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
       "kwong_pastry",
       "string",
       "plain",
-      snapshot({ featureType: "STRING", value: "durian", strategyId: "omu-co", split: true }),
+      evaluation({ featureType: "STRING", value: "durian", strategyId: "omu-co", split: true }),
     );
     expect(split).toMatchObject({ value: "durian", reason: "SPLIT", variant: "omu-co" });
 
@@ -205,7 +210,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
       "kwong_pastry",
       "string",
       "plain",
-      snapshot({ featureType: "STRING", value: "mango", strategyId: "chago", split: false }),
+      evaluation({ featureType: "STRING", value: "mango", strategyId: "chago", split: false }),
     );
     expect(targeted).toMatchObject({ value: "mango", reason: "TARGETING_MATCH", variant: "chago" });
   });
@@ -215,7 +220,7 @@ describe("resolveFromEvaluation, the specification's vectors", () => {
       "kwong_pastry",
       "string",
       "plain",
-      snapshot({
+      evaluation({
         featureType: "STRING",
         version: 4,
         value: "mango",

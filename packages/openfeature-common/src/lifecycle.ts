@@ -15,8 +15,8 @@ import { ClientEvalFeatureContext, Readyness } from "featurehub-javascript-core-
 
 import { InvalidContextError, isClientEvaluatedKey, toContextRecord } from "./context-mapper";
 import {
+  type FeatureEvaluation,
   type FeatureKind,
-  type FeatureSnapshot,
   generalErrorResolution,
   invalidContextResolution,
   notReadyResolution,
@@ -323,7 +323,7 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
     kind: FeatureKind,
     defaultValue: unknown,
     logger: Logger | undefined,
-    take: () => FeatureSnapshot,
+    take: () => FeatureEvaluation,
   ): ResolutionDetails<unknown> {
     if (!this.ready || !this.config) {
       return notReadyResolution(defaultValue);
@@ -341,7 +341,7 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
     kind: FeatureKind,
     defaultValue: unknown,
     logger: Logger | undefined,
-    take: () => FeatureSnapshot | Promise<FeatureSnapshot>,
+    take: () => FeatureEvaluation | Promise<FeatureEvaluation>,
   ): Promise<ResolutionDetails<unknown>> {
     if (!this.ready || !this.config) {
       return notReadyResolution(defaultValue);

@@ -11,10 +11,10 @@ import type { ClientContext, FeatureHubConfig } from "featurehub-javascript-clie
 import { EdgeFeatureHubConfig } from "featurehub-javascript-client-sdk";
 import {
   type BaseProviderOptions,
+  captureFeature,
   contextSignature,
   FeatureHubProviderCore,
   type ProviderEventSink,
-  snapshotFeature,
   toContextRecord,
   type Transport,
 } from "featurehub-openfeature-common";
@@ -172,7 +172,7 @@ export class FeatureHubWebProvider
     logger: Logger,
   ): ResolutionDetails<unknown> {
     return this.resolveSync(flagKey, kind, defaultValue, logger, () =>
-      snapshotFeature(this.contextFor(context).feature(flagKey)),
+      captureFeature(this.contextFor(context).feature(flagKey)),
     );
   }
 
