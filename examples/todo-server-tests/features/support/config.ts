@@ -1,6 +1,8 @@
 import {
   EdgeFeatureHubConfig,
+  type FeatureHubConfig,
   FeatureHubPollingClient,
+  featureSnapshotConfig,
   FHLog,
   NodejsPollingService,
   FeatureEnvironmentCollection,
@@ -29,11 +31,40 @@ function getApplicationServerUrl(): string {
   return appUrl;
 }
 
-function getFhConfig(): EdgeFeatureHubConfig {
-  const fhConfig = new EdgeFeatureHubConfig(
+// FEATUREHUB_SNAPSHOT_URL set: the tests read their features from the todo backend's feature snapshot endpoint
+// (its /featurehub) instead of FeatureHub, so each change goes FeatureHub -> todo backend -> tests. Changes are
+// still made through FeatureHub. Its polling interval is FEATUREHUB_CONNECT_INTERVAL (or
+// FEATUREHUB_POLLING_INTERVAL), else 5 seconds
+const SNAPSHOT_URL = process.env["FEATUREHUB_SNAPSHOT_URL"];
+const SNAPSHOT_INTERVAL_MS = pollingIntervalFromEnvironment(process.env) || 5000;
+
+// the config the tests change features through (FeatureHub's test API): it never connects in snapshot mode
+function getUpdateConfig(): EdgeFeatureHubConfig {
+  return new EdgeFeatureHubConfig(
     process.env["FEATUREHUB_EDGE_URL"]!,
     process.env["FEATUREHUB_CLIENT_API_KEY"]!,
   );
+}
+
+const updateConfig = getUpdateConfig();
+
+function getSnapshotConfig(url: string): FeatureHubConfig {
+  console.log(`reading features from the todo backend at ${url}, every ${SNAPSHOT_INTERVAL_MS}ms`);
+  const fhConfig = featureSnapshotConfig({
+    url,
+    intervalMs: SNAPSHOT_INTERVAL_MS,
+    headers: () => ({ "cuke-req-id": `cuke-req-id=${Config.reqIdPrefix}-${Config.cukeId}` }),
+  });
+  fhConfig.init();
+  return fhConfig;
+}
+
+function getFhConfig(): FeatureHubConfig {
+  if (SNAPSHOT_URL) {
+    return getSnapshotConfig(SNAPSHOT_URL);
+  }
+
+  const fhConfig = updateConfig;
   // if a Segment key is defined, set it up and register it as a usage plugin
   if (process.env["SEGMENT_WRITE_KEY"] && process.env["SEGMENT_ENABLED"]) {
     console.log("configuring Segment plugin");
@@ -86,7 +117,11 @@ function getFhConfig(): EdgeFeatureHubConfig {
 
 export class Config {
   public static baseApplicationPath = getApplicationServerUrl();
+  public static updateConfig = updateConfig;
+  /** where the tests read features from: FeatureHub, or the todo backend's snapshot endpoint */
   public static fhConfig = getFhConfig();
+  /** how much longer a change takes to reach the tests: in snapshot mode, one more poll */
+  public static extraWaitMs = SNAPSHOT_URL ? SNAPSHOT_INTERVAL_MS : 0;
   public static cukeId: number = 1;
   public static reqIdPrefix = process.env["REQUEST_ID_PREFIX"] || "poll";
 }

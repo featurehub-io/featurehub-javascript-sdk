@@ -93,7 +93,7 @@ async function awaitCompletionOfChange(expectFunc: (ctx: ClientContext) => void)
   const ctx = await Config.fhConfig.newContext().build();
 
   const pollingInterval = pollingIntervalFromEnvironment(process.env);
-  const timeout = pollingInterval ? pollingInterval + 4000 : 7000;
+  const timeout = (pollingInterval ? pollingInterval + 4000 : 7000) + Config.extraWaitMs;
   await waitForExpect(
     async () => {
       expectFunc(ctx);

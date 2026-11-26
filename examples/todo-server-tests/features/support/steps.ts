@@ -94,7 +94,7 @@ Then(
 
     // has to be longer than the polling interval
     const pollingInterval = pollingIntervalFromEnvironment(process.env);
-    const timeout = pollingInterval ? pollingInterval + 4000 : 7000;
+    const timeout = (pollingInterval ? pollingInterval + 4000 : 7000) + Config.extraWaitMs;
     let counter = 0;
 
     const self = this;
@@ -142,7 +142,7 @@ Given(
 
     // has to be longer than the polling interval
     const pollingInterval = pollingIntervalFromEnvironment(process.env);
-    const timeout = pollingInterval ? pollingInterval + 2000 : 4000;
+    const timeout = (pollingInterval ? pollingInterval + 2000 : 4000) + Config.extraWaitMs;
 
     await waitForExpect(
       () => {

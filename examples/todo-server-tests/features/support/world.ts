@@ -127,7 +127,7 @@ export class CustomWorld extends World<any> {
 
   async lockFeature(name: string, locked: boolean = true) {
     const pollingInterval = pollingIntervalFromEnvironment(process.env) ?? 0;
-    const timeout = pollingInterval > 0 ? pollingInterval + 4000 : 7000;
+    const timeout = (pollingInterval > 0 ? pollingInterval + 4000 : 7000) + Config.extraWaitMs;
     const interval = pollingInterval > 0 && pollingInterval < 1000 ? 500 : 1000;
     let counter = 0;
 
@@ -153,7 +153,7 @@ export class CustomWorld extends World<any> {
   }
 
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
-    const updater = new FeatureUpdater(Config.fhConfig);
+    const updater = new FeatureUpdater(Config.updateConfig);
     const world = this;
 
     updater.defaultOptions = {
