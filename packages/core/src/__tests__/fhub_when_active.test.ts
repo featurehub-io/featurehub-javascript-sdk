@@ -163,3 +163,41 @@ describe("ApplyFeature.clock", () => {
     expect(clock).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
   });
 });
+
+// the time a caller fixes for an evaluation (a snapshot server evaluates a whole request at one reading)
+describe("evaluating at a given time", () => {
+  const originalClock = ApplyFeature.clock;
+
+  afterEach(() => {
+    ApplyFeature.clock = originalClock;
+  });
+
+  const applyAt = (attr: FeatureRolloutStrategyAttribute, nowMs: number) =>
+    new ApplyFeature().apply(
+      [{ id: "s1", value: true, attributes: [attr] } as FeatureRolloutStrategy],
+      "kwong",
+      "fv1",
+      context({}),
+      nowMs,
+    ).matched;
+
+  it("uses that time for fhubWhenActive, never reading the clock", () => {
+    ApplyFeature.clock = () => {
+      throw new Error("the clock was read");
+    };
+    const t = when(C.GreaterEquals, ["2026-12-01T09:00:00Z"]);
+
+    expect(applyAt(t, Date.parse("2026-12-01T08:59:59.999Z"))).toBe(false);
+    expect(applyAt(t, Date.parse("2026-12-01T09:00:00.500Z"))).toBe(true);
+  });
+
+  it("uses that time for a DATE or DATETIME attribute the context does not supply", () => {
+    const launch = when(C.Greater, ["2026-12-01"], T.Date, "launch");
+    const expires = when(C.Less, ["2026-12-01T09:00:00Z"], T.Datetime, "expires");
+
+    expect(applyAt(launch, Date.parse("2026-12-01T23:59:59Z"))).toBe(false);
+    expect(applyAt(launch, Date.parse("2026-12-02T00:00:00Z"))).toBe(true);
+    expect(applyAt(expires, Date.parse("2026-12-01T08:59:59Z"))).toBe(true);
+    expect(applyAt(expires, Date.parse("2026-12-01T09:00:00.999Z"))).toBe(false);
+  });
+});

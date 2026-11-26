@@ -416,6 +416,7 @@ export class ApplyFeature {
     _key: string,
     featureValueId: string,
     context?: ClientContext,
+    nowMs?: number,
   ): Applied {
     if (context !== undefined && strategies.length) {
       let percentage: number | null = null;
@@ -463,7 +464,7 @@ export class ApplyFeature {
           // id of feature value then apply it
           if (percentage <= useBasePercentage + rsi.percentage!) {
             if (rsi.attributes != null && rsi.attributes.length) {
-              if (this.matchAttribute(context, rsi)) {
+              if (this.matchAttribute(context, rsi, nowMs)) {
                 return new Applied(true, rsi.value, rsi.id, true);
               }
             } else {
@@ -481,7 +482,7 @@ export class ApplyFeature {
           (rsi.percentage === 0 || rsi.percentage === undefined) &&
           rsi.attributes !== undefined &&
           rsi.attributes.length > 0 &&
-          this.matchAttribute(context, rsi)
+          this.matchAttribute(context, rsi, nowMs)
         ) {
           // nothing to do with a percentage
           return new Applied(true, rsi.value, rsi.id);
@@ -503,11 +504,17 @@ export class ApplyFeature {
     return percentageAttributes.map((pa) => caToString(context.getAttr(pa) || "<none>")).join("$");
   }
 
-  private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
+  // nowMs: the time to evaluate at, if the caller fixed one; otherwise the clock is read
+  private matchAttribute(
+    context: ClientContext,
+    rsi: FeatureRolloutStrategy,
+    nowMs?: number,
+  ): boolean {
     for (const attr of rsi.attributes || []) {
       if (attr.fieldName?.toLowerCase() === FHUB_WHEN_ACTIVE) {
         // the time comes from the clock, never the context, and is ANDed with the other attributes
-        if (!fhubWhenActiveMatches(attr, ApplyFeature.clock())) {
+        const now = nowMs === undefined ? ApplyFeature.clock() : epochSeconds(nowMs);
+        if (!fhubWhenActiveMatches(attr, now)) {
           return false;
         }
 
@@ -524,10 +531,10 @@ export class ApplyFeature {
       ) {
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
-            suppliedValues = [new Date().toISOString().substring(0, 10)];
+            suppliedValues = [new Date(nowMs ?? Date.now()).toISOString().substring(0, 10)];
             break;
           case RolloutStrategyFieldType.Datetime:
-            suppliedValues = [isoSeconds(new Date())];
+            suppliedValues = [isoSeconds(new Date(nowMs ?? Date.now()))];
             break;
         }
       }

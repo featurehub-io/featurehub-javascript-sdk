@@ -124,8 +124,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     key: string,
     featureValueId: string,
     context: ClientContext,
+    nowMs?: number,
   ): Applied {
-    return this._applyFeature.apply(strategies, key, featureValueId, context);
+    return this._applyFeature.apply(strategies, key, featureValueId, context, nowMs);
   }
 
   public get readyness(): Readyness {

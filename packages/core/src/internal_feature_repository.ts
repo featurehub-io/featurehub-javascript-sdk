@@ -39,10 +39,16 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
     featureState?: FeatureState,
   ): [boolean, string | boolean | number | undefined];
 
+  /**
+   * Applies the strategies for the context. `nowMs` is the time (milliseconds since the epoch) to evaluate
+   * at: fhubWhenActive and the current time a DATE or DATETIME attribute uses when the context does not
+   * supply it. Without it the clock is read as the strategies are applied.
+   */
   apply(
     strategies: Array<FeatureRolloutStrategy>,
     key: string,
     featureValueId: string,
     context: ClientContext,
+    nowMs?: number,
   ): Applied;
 }
