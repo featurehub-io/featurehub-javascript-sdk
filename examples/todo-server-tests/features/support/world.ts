@@ -15,7 +15,9 @@ import { IWorldOptions } from "@cucumber/cucumber/lib/support_code_library_build
 setDefaultTimeout(30 * 1000);
 
 AfterAll(async function () {
-  Config.fhConfig.close();
+  // forceClose, not close: a server evaluated config (such as the snapshot one, which sends its context) reference
+  // counts its contexts, and the tests never close theirs, so close() would leave it polling and the process alive
+  Config.fhConfig.forceClose();
 });
 
 const responseToRecord = (response: AxiosResponse) => {
