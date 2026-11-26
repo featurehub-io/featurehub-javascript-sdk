@@ -185,6 +185,52 @@ jobs:
             todo-server:e2e \
             /bin/bash -c "pnpm run test"
 
+      # the snapshot option: the todo-server streams from FeatureHub and re-serves its features at /featurehub
+      # (feature-snapshot-protocol.yaml), and the tests read their features from there instead of FeatureHub
+      - name: Run todo-server again, streaming only, to serve feature snapshots
+        run: |
+          docker stop todo-server && docker rm -f todo-server && \
+          docker run -d \
+            --network ${{ job.container.network }} \
+            --env-file adk-env/server.env \
+            -e FEATUREHUB_CONNECT_TYPE=streaming \
+            --name todo-server \
+            -p 8099:8099 \
+            --workdir /sdk/examples/todo-backend-typescript \
+             todo-server:e2e \
+            /bin/bash -c "pnpm run start"
+
+      - name: Wait for the streaming todo-server and its feature snapshots
+        run: |
+          echo "Waiting for todo-server on port 8099..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8099/health/liveness > /dev/null 2>&1 && \
+               curl -sf http://localhost:8099/featurehub > /dev/null 2>&1; then
+              echo "todo-server is ready and serving feature snapshots"
+              exit 0
+            fi
+            echo "  attempt $i/30 - not ready yet, retrying in 2s"
+            sleep 2
+          done
+          echo "todo-server did not become ready in time"
+          docker logs todo-server
+          exit 1
+
+      - name: Run the e2e tests reading features from the todo-server's feature snapshots
+        # this step can hang, so force a timeout
+        timeout-minutes: 10
+        run: |
+          docker run --rm \
+            --network ${{ job.container.network }} \
+            -v $PWD/adk-env:/opt/e2e \
+            --env-file adk-env/server.env \
+            -e APP_SERVER_URL=http://todo-server:8099 \
+            -e FEATUREHUB_SNAPSHOT_URL=http://todo-server:8099/featurehub \
+            --workdir /sdk/examples/todo-server-tests \
+            --name jsdk-snapshot-client \
+            todo-server:e2e \
+            /bin/bash -c "pnpm run test"
+
       - name: Print logs on failure
         if: failure()
         run: |
