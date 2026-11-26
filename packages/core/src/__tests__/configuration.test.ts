@@ -12,9 +12,64 @@ import {
   parseDuration,
   PollingBase,
   type RestOptions,
+  setTestPolling,
+  testPollingEnabled,
+  testPollingFromEnvironment,
   validatePollInterval,
   webCryptoHexHash,
 } from "../index";
+
+// featurehub-protocol.yaml polling_transport.interval.test_mode
+describe("test polling", () => {
+  afterEach(() => setTestPolling(false));
+
+  it.each([
+    ["true", true],
+    [" TRUE ", true],
+    ["True", true],
+    ["false", false],
+    ["yes", false],
+    ["1", false],
+    ["", false],
+  ])("FEATUREHUB_TEST_POLLING=%j is %s", (value, on) => {
+    expect(testPollingFromEnvironment({ FEATUREHUB_TEST_POLLING: value })).toBe(on);
+  });
+
+  it("is off when FEATUREHUB_TEST_POLLING is not set", () => {
+    expect(testPollingFromEnvironment({})).toBe(false);
+    expect(testPollingEnabled()).toBe(false);
+  });
+
+  it("allows any interval above 0, in code and in FEATUREHUB_CONNECT_INTERVAL", () => {
+    setTestPolling(true);
+
+    expect(validatePollInterval(500)).toBe(500);
+    expect(validatePollInterval(1)).toBe(1);
+    expect(validatePollInterval(0)).toBe(0);
+    expect(() =>
+      new EdgeFeatureHubConfig("http://localhost:8085", "ling*orm").restActive(500),
+    ).not.toThrow();
+    expect(
+      connectionFromEnvironment({
+        FEATUREHUB_CONNECT_TYPE: "active",
+        FEATUREHUB_CONNECT_INTERVAL: "500ms",
+      })?.intervalMs,
+    ).toBe(500);
+  });
+
+  it("still refuses a negative interval", () => {
+    setTestPolling(true);
+
+    expect(() => validatePollInterval(-1)).toThrow(InvalidConfigurationError);
+  });
+
+  it("keeps the 5 second minimum once turned off", () => {
+    setTestPolling(true);
+    setTestPolling(false);
+
+    expect(() => validatePollInterval(500)).toThrow(InvalidConfigurationError);
+  });
+});
 
 describe("poll intervals", () => {
   it.each([0, 5000, 30000])("accepts %d", (ms) => {

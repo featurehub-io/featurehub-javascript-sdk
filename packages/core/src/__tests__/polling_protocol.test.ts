@@ -12,6 +12,7 @@ import {
   PollingBase,
   PollingError,
   type RestOptions,
+  setTestPolling,
   SSEResultState,
   webCryptoHexHash,
 } from "../index";
@@ -98,6 +99,23 @@ describe("polling follows the FeatureHub protocol", () => {
       await poller.poll();
 
       expect(poller.frequency).toBe(expected);
+    });
+
+    // polling_transport.interval.test_mode: a pollInterval of at least 1 second is used
+    it("uses a pollInterval of 1 second in test mode", async () => {
+      setTestPolling(true);
+      try {
+        const poller = new TestPoller(60000, callback);
+        fetchSpy = vi
+          .spyOn(global, "fetch")
+          .mockResolvedValue(response(200, [env("kwong", 1), env("orm", 0)]));
+
+        await poller.poll();
+
+        expect(poller.frequency).toBe(1000);
+      } finally {
+        setTestPolling(false);
+      }
     });
 
     it("returns to the configured interval when a full response has no pollInterval", async () => {

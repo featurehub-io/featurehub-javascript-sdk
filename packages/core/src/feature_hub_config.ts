@@ -69,8 +69,24 @@ export class InvalidConfigurationError extends Error {
   }
 }
 
-/** no poll interval other than 0 (poll once) may be shorter than this */
+/** no poll interval other than 0 (poll once) may be shorter than this, outside test mode */
 export const MINIMUM_POLL_INTERVAL_MS = 5000;
+
+let testPolling = false;
+
+/**
+ * Test mode only, never for production (featurehub-protocol.yaml polling_transport.interval.test_mode): when
+ * on, any poll interval above 0 is allowed, and a FeatureHub pollInterval of at least 1 second is used. The
+ * Node SDK turns it on from FEATUREHUB_TEST_POLLING=true. Not for applications.
+ */
+export function setTestPolling(enabled: boolean): void {
+  testPolling = enabled;
+}
+
+/** whether test mode has lifted the poll interval minimum (setTestPolling) */
+export function testPollingEnabled(): boolean {
+  return testPolling;
+}
 
 /**
  * featurehub-protocol.yaml polling_transport.interval: an interval is 0 (poll once and stop) or at least 5
@@ -83,7 +99,7 @@ export function validatePollInterval(intervalMs: number, what = "the poll interv
     );
   }
 
-  if (intervalMs > 0 && intervalMs < MINIMUM_POLL_INTERVAL_MS) {
+  if (intervalMs > 0 && intervalMs < MINIMUM_POLL_INTERVAL_MS && !testPolling) {
     throw new InvalidConfigurationError(
       `${what} is ${intervalMs}ms: it must be 0 (poll once) or at least ${MINIMUM_POLL_INTERVAL_MS}ms`,
     );

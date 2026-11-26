@@ -5,6 +5,7 @@ import {
   configHostQuery,
   type FeatureHubConfig,
   fhLog,
+  testPollingEnabled,
 } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureEnvironmentCollection, type FeatureState, SSEResultState } from "../models";
@@ -290,7 +291,8 @@ export class PollingBase implements PollingService {
       return;
     }
 
-    const minimumSeconds = PollingBase.minimumIntervalMs / 1000;
+    // test mode uses any pollInterval of at least a second (polling_transport.interval.test_mode)
+    const minimumSeconds = testPollingEnabled() ? 1 : PollingBase.minimumIntervalMs / 1000;
     const intervals = environments
       .map((e) => e.pollInterval)
       .filter(

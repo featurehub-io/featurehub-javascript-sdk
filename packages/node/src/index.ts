@@ -11,6 +11,8 @@ import {
   FeatureStateHolder,
   fhLog,
   InvalidConfigurationError,
+  setTestPolling,
+  testPollingFromEnvironment,
 } from "featurehub-javascript-core-sdk";
 
 import { legacyPollingIntervalMs, nodeEnvironment } from "./environment";
@@ -21,6 +23,16 @@ export * from "./feature_snapshot_handler";
 export * from "./feature_snapshot_store";
 export * from "./polling_sdk";
 export * from "featurehub-javascript-core-sdk";
+
+// FEATUREHUB_TEST_POLLING=true is test mode, for test processes only (featurehub-protocol.yaml
+// polling_transport.interval.test_mode): any poll interval above 0 is allowed. It is read first, so the
+// intervals read below are validated with it
+setTestPolling(testPollingFromEnvironment(process.env));
+if (testPollingFromEnvironment(process.env)) {
+  fhLog.warn(
+    "[featurehubsdk] FEATUREHUB_TEST_POLLING is on: the 5 second poll interval minimum is off. Use it for tests only",
+  );
+}
 
 // FEATUREHUB_EDGE_URL, the API keys, and the polling and streaming timeouts and delays
 // (featurehub-protocol.yaml providers.environment_variables.names); each only supplies what code does not

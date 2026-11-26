@@ -34,6 +34,14 @@ export interface EnvironmentConnection {
 
 type Environment = Record<string, string | undefined>;
 
+/**
+ * featurehub-protocol.yaml polling_transport.interval.test_mode: FEATUREHUB_TEST_POLLING is on only when it
+ * is "true" (any case, trimmed). Anything else, or unset, is off, never an error. For test processes only.
+ */
+export function testPollingFromEnvironment(env: Environment): boolean {
+  return env["FEATUREHUB_TEST_POLLING"]?.trim().toLowerCase() === "true";
+}
+
 const isSet = (env: Environment, name: string) =>
   env[name] !== undefined && env[name]!.trim().length > 0;
 
