@@ -17,6 +17,8 @@ import { legacyPollingIntervalMs, nodeEnvironment } from "./environment";
 import { NodejsPollingService } from "./polling_sdk";
 
 export * from "./environment";
+export * from "./feature_snapshot_handler";
+export * from "./feature_snapshot_store";
 export * from "./polling_sdk";
 export * from "featurehub-javascript-core-sdk";
 

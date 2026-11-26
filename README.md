@@ -921,6 +921,83 @@ Call `store.close()` on shutdown. See the
 [package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor
 variants and configuration options.
 
+## Re-serving features from your own server (feature snapshots)
+
+Your own Node server can re-serve the features it gets from FeatureHub to its own clients, evaluated for each
+client's context, so those clients never talk to FeatureHub directly. The server connects to FeatureHub as usual,
+with a **client-evaluated** API key (one containing `*`), so it holds every feature's rollout strategies. With a
+server-evaluated key the snapshot store refuses to attach and every request gets `503`, because every client would
+otherwise get the server's own context's values.
+
+### The server (Node)
+
+Create a `FeatureSnapshotStore` for the config **before** the config connects, so it sees FeatureHub's first set
+of features, and serve it:
+
+```typescript
+import express from "express";
+import {
+  EdgeFeatureHubConfig,
+  featureSnapshotHandler,
+  FeatureSnapshotStore,
+} from "featurehub-javascript-node-sdk";
+
+const fhConfig = new EdgeFeatureHubConfig(edgeUrl, clientEvaluatedApiKey);
+const snapshots = new FeatureSnapshotStore(fhConfig);
+fhConfig.init();
+
+const app = express();
+// the query parameters are the context: /features?userkey=user-123&country=nz
+app.get("/features", featureSnapshotHandler(snapshots));
+```
+
+The handler answers with the features as JSON and an `ETag`, `304 Not Modified` when the client already has them,
+`400` for an invalid context, and `503` until the store has features. Its options:
+
+- `serveStrategiesWithoutContext`: a request with no query parameters gets the features **with their rollout
+  strategies**, for clients that evaluate locally (a snapshot client with `sendContext: false`). The default
+  (`false`) evaluates them as for an empty context, **so a server that leaves the default cannot serve clients that
+  evaluate locally**: they send no context, and would get every feature's default value. Strategies expose all
+  their values, so only serve them to trusted clients.
+- `allowOrigin`: answer CORS preflights and allow this origin (`"*"` for any), for browsers on another origin.
+
+For your own handler, `snapshots.featureSnapshot({ context, includeStrategies })` gives `{ snapshot, etag }`.
+`includeStrategies` is the same choice as `serveStrategiesWithoutContext`, and defaults to `false`. A non-empty
+context is always evaluated for. Send the `etag` it returns as the `ETag` header, not one made from the snapshot's
+`sha`: features with time-based rules (`fhubWhenActive`, or a date attribute the context does not supply) get a
+different ETag as the clock passes their times, while their `sha` stays the same. `snapshots.etag(request)` gives
+the ETag without evaluating anything, for an `If-None-Match` check. Read `snapshots.now()` once per request and pass
+it to both as `now`, so the ETag and the body are for the same moment. Value interceptors are never applied to what
+is served.
+
+`featureSnapshot` throws `InvalidContextError` for a context the protocol does not allow (answer `400`), and
+`FeatureSnapshotNotReadyError` before the store has features (answer `503`).
+
+### The client (browser or Node)
+
+```typescript
+import { featureSnapshotConfig } from "featurehub-javascript-client-sdk"; // or featurehub-javascript-node-sdk
+
+const fhConfig = featureSnapshotConfig({ url: "https://my.app/features" });
+const context = await fhConfig.newContext().userKey("user-123").country(StrategyAttributeCountryName.NewZealand).build();
+```
+
+The client polls every 30 seconds by default, sending its context as query parameters and the last `ETag` it got
+for that context. Its options:
+
+- `sendContext: false`: send no context and evaluate locally. The server must serve strategies without a context
+  (`serveStrategiesWithoutContext`).
+- `intervalMs`: how often to poll, and how long a response stays fresh. `0` fetches once; otherwise at least 5
+  seconds.
+- `passive: true`: fetch only when a feature is evaluated and the last response is older than the interval.
+- `headers`: extra headers for every request, as an object or a function returning one.
+- `requestTimeoutMs`: abandon a request that takes longer than this. It is retried later.
+- `fetch`: the `fetch` to use, for example one configured with a proxy.
+
+A `4xx` response (other than `429`) stops the client for good and marks the connection failed. Anything else is
+retried at the next poll. `decodeFeatureSnapshot(data)` reads a snapshot you already have, for example one saved
+earlier.
+
 ## FeatureHub Test API
 
 When writing automated integration tests, it is often desirable to update your feature values, particularly flags.
