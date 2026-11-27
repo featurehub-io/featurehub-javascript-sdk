@@ -2,8 +2,8 @@
 "featurehub-javascript-core-sdk": minor
 "featurehub-javascript-node-sdk": patch
 "featurehub-javascript-client-sdk": patch
-"featurehub-javascript-react-sdk": patch
-"featurehub-javascript-solid-sdk": patch
+"featurehub-react-sdk": patch
+"featurehub-solid-sdk": patch
 ---
 
 Readiness follows the FeatureHub protocol, with a new `Readyness.Stale` state: features are held and keep being resolved, but may not be current.
