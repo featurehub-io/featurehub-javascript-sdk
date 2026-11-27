@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   decodeFeatureSnapshot,
   featureSnapshotConfig,
+  FeatureSnapshotEdgeService,
   FeatureSnapshotFormatError,
   type FeatureState,
   FeatureValueType,
@@ -12,6 +13,7 @@ import {
   Readyness,
   RolloutStrategyAttributeConditional,
   RolloutStrategyFieldType,
+  setTestPolling,
   snapshotRequestUrl,
 } from "../index";
 
@@ -291,6 +293,54 @@ describe("the snapshot client", () => {
     await Promise.all([forOrm, forLing]);
 
     expect(ctx.getString("colour")).toBe("ling-colour");
+  });
+
+  it("makes one request at a time, and keeps one poll timer, when context changes wait on a request", async () => {
+    // test mode allows a short interval, so the polling can be watched
+    setTestPolling(true);
+    let inFlight = 0;
+    let mostInFlight = 0;
+    let release: (() => void) | undefined;
+    respond = (_req, res, n) => {
+      inFlight++;
+      mostInFlight = Math.max(mostInFlight, inFlight);
+      const answer = () => {
+        inFlight--;
+        ok(res, [feature("colour", n, "green")]);
+      };
+      if (n === 1) {
+        release = answer; // the first request is held while the contexts change
+      } else {
+        setTimeout(answer, 30);
+      }
+    };
+
+    const config = make({ url: base, intervalMs: 200 });
+    const service = new FeatureSnapshotEdgeService(repo(config), { url: base, intervalMs: 200 });
+    try {
+      const first = service.poll();
+      await until(() => release !== undefined);
+      const forOrm = service.contextChange("", { userkey: "orm" });
+      const forLing = service.contextChange("", { userkey: "ling" });
+      release!();
+      await Promise.all([first, forOrm, forLing]);
+
+      expect(mostInFlight).toBe(1);
+
+      // one timer chain: about one request per interval, and none at all once closed
+      const before = requests.length;
+      await new Promise((r) => setTimeout(r, 700));
+      expect(requests.length - before).toBeLessThanOrEqual(4);
+
+      service.close();
+      await new Promise((r) => setTimeout(r, 100));
+      const atClose = requests.length;
+      await new Promise((r) => setTimeout(r, 500));
+      expect(requests.length).toBe(atClose);
+    } finally {
+      service.close();
+      setTestPolling(false);
+    }
   });
 
   // client-rejection
