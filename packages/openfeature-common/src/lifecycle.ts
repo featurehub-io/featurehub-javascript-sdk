@@ -13,7 +13,12 @@ import type {
 } from "featurehub-javascript-core-sdk";
 import { ClientEvalFeatureContext, Readyness } from "featurehub-javascript-core-sdk";
 
-import { InvalidContextError, isClientEvaluatedKey, toContextRecord } from "./context-mapper";
+import {
+  ContextConflictError,
+  InvalidContextError,
+  isClientEvaluatedKey,
+  toContextRecord,
+} from "./context-mapper";
 import {
   type FeatureEvaluation,
   type FeatureKind,
@@ -248,16 +253,23 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
    *   succeeds and STALE follows READY
    * - anything else not Ready in time: initialisation fails
    */
-  protected async awaitReady(cfg: FeatureHubConfig): Promise<void> {
-    const readiness = await cfg.waitForReady(this.waitForReadyMs);
+  protected async awaitReady(
+    cfg: FeatureHubConfig,
+    waitMs: number = this.waitForReadyMs,
+  ): Promise<void> {
+    const readiness = await cfg.waitForReady(waitMs);
     const stopped = this.stopped || cfg.connectionFailed === true || cfg.environmentStale === true;
 
     if (readiness === Readyness.Failed) {
+      // nothing will make it ready: stop the connection rather than retry it for good
+      await this.onClose();
       throw new ProviderFatalError(
         "FeatureHub rejected the connection before sending any features (readiness: Failed).",
       );
     }
     if (readiness !== Readyness.Ready && !(readiness === Readyness.Stale && stopped)) {
+      // the connection keeps trying: when the features arrive, READY takes OpenFeature out of ERROR
+      this.started = true;
       throw new Error(
         `FeatureHub did not become ready within ${this.waitForReadyMs}ms (readiness: ${readiness}).`,
       );
@@ -305,7 +317,14 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
   }
 
   async onClose(): Promise<void> {
+    // a provider initialised again starts afresh, with the new config's readiness and features
     this.ready = false;
+    this.started = false;
+    this.stopped = false;
+    this.staleEmitted = false;
+    this.lastReadiness = Readyness.NotReady;
+    this.featureVersions.clear();
+    this.seenPayload = false;
     const cfg = this.config;
     this.config = undefined;
     try {
@@ -359,7 +378,7 @@ export abstract class FeatureHubProviderCore<TOptions extends BaseProviderOption
     err: unknown,
     logger: Logger | undefined,
   ): ResolutionDetails<unknown> {
-    if (err instanceof InvalidContextError) {
+    if (err instanceof InvalidContextError || err instanceof ContextConflictError) {
       return invalidContextResolution(defaultValue, err);
     }
     logger?.error(`FeatureHub evaluation of '${flagKey}' failed`, err);

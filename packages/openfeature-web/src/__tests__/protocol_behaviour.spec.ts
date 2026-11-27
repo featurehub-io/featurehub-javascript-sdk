@@ -92,6 +92,7 @@ function setup(answer: Array<FeatureState> | "fail", overrides?: Record<string, 
     client,
     events,
     repo: () => config!.repository(),
+    config: () => config,
     start: () => OpenFeature.setProviderAndWait(domain, provider),
   };
 }
@@ -113,6 +114,19 @@ describe("FeatureHubWebProvider against the FeatureHub SDK's protocol behaviour"
     const details = t.client.getStringDetails("kwong_pastry", "chago");
     expect(details.value).toBe("omu&co");
     expect(details.errorCode).toBeUndefined();
+  });
+
+  it("fails initialisation on an initial context it cannot use, leaving no connection behind", async () => {
+    const t = setup([feature("omu&co")]);
+    await OpenFeature.setContext({ targetingKey: "lingling", shop: { name: "omu&co" } as never });
+
+    try {
+      await expect(t.start()).rejects.toThrow("shop");
+      const config = t.config();
+      expect(config === undefined || config.isClosed).toBe(true);
+    } finally {
+      await OpenFeature.setContext({});
+    }
   });
 
   it("fails as fatal when the connection is rejected before any features", async () => {

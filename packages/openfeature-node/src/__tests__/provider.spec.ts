@@ -406,7 +406,7 @@ describe("FeatureHubProvider (server-evaluated key)", () => {
     expect(h.state.buildSnapshots.at(-1)).toEqual({ userkey: "u2" });
   });
 
-  it("serialises concurrent resolutions so users never see each other's bundle", async () => {
+  it("refuses a concurrent resolution for another context, so users never see each other's bundle", async () => {
     const provider = await readyProvider(SERVER_KEY);
 
     // make evaluation results context-dependent: the flag is true for u1, false for u2
@@ -432,7 +432,10 @@ describe("FeatureHubProvider (server-evaluated key)", () => {
     const [v1, v2] = await Promise.all([r1, r2]);
 
     expect(v1.value).toBe(true); // u1's evaluation
-    expect(v2.value).toBe(false); // u2's evaluation — not u1's leaked bundle
+    expect(v1.errorCode).toBeUndefined();
+    // u2's arrived while u1's was in progress: an error, not u1's bundle
+    expect(v2.value).toBe(false);
+    expect(v2.errorCode).toBe("INVALID_CONTEXT");
   });
 
   it("force-closes on shutdown even with a shared server-eval context (no connection leak)", async () => {

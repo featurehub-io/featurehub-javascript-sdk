@@ -8,10 +8,11 @@ import type {
 } from "@openfeature/server-sdk";
 import { OpenFeatureEventEmitter } from "@openfeature/server-sdk";
 import type { ClientContext, FeatureHubConfig } from "featurehub-javascript-node-sdk";
-import { EdgeFeatureHubConfig } from "featurehub-javascript-node-sdk";
+import { EdgeFeatureHubConfig, Readyness } from "featurehub-javascript-node-sdk";
 import {
   type BaseProviderOptions,
   captureFeature,
+  ContextConflictError,
   contextSignature,
   type FeatureEvaluation,
   FeatureHubProviderCore,
@@ -34,12 +35,13 @@ export interface FeatureHubProviderOptions extends BaseProviderOptions<FeatureHu
    *   rollout strategies) is streamed/polled to the provider and every
    *   evaluation is performed locally against the supplied context. This is
    *   the recommended mode for Node servers handling many different users.
-   * - **server-evaluated keys** (`default/...`): the provider holds a single
-   *   shared evaluation context for its lifetime; when the OpenFeature context
-   *   changes, the bundle is re-fetched from Edge evaluated for that context
-   *   (the SDK pools concurrent refreshes and honours ETag/304). Because the
-   *   context is shared, resolutions are serialised; use a client-evaluated
-   *   key for concurrent multi-user workloads.
+   * - **server-evaluated keys** (`default/...`): Edge evaluates the features
+   *   for one context, which the provider holds for every OpenFeature client
+   *   in the process. When the context changes, the features are fetched again
+   *   for the new one. A resolution for a different context while another
+   *   context's is in progress fails with INVALID_CONTEXT, rather than give
+   *   either the other's values: use the same context everywhere, or a
+   *   client-evaluated key for many users at once.
    *
    * Defaults to `FEATUREHUB_CLIENT_API_KEY`, else `FEATUREHUB_SERVER_API_KEY`. With no host and no key
    * (in code or the environment), a `configFactory` can supply a config whose features come from stores.
@@ -84,9 +86,13 @@ export class FeatureHubProvider
    * reference count at 1 and lets the SDK reuse its evaluated bundle.
    */
   private sharedContext?: ClientContext;
-  /** Serialises server-eval context rebuilds + reads (holders are live objects on a shared repository). */
-  private lock: Promise<unknown> = Promise.resolve();
-  private lastContextSignature: string | undefined;
+  /** the context the shared context's features were fetched for */
+  private builtSignature: string | undefined;
+  /** the context being resolved, while `inFlight` resolutions are in progress */
+  private activeSignature: string | undefined;
+  private inFlight = 0;
+  /** the fetch for `activeSignature`, which every resolution for it waits on */
+  private building: Promise<void> | undefined;
 
   /**
    * Settings not given in code come from the environment, setting by setting (featurehub-protocol.yaml
@@ -120,24 +126,32 @@ export class FeatureHubProvider
   }
 
   async initialize(context?: EvaluationContext): Promise<void> {
+    const deadline = Date.now() + this.waitForReadyMs;
+    // a context FeatureHub cannot represent fails before anything connects
+    const record = this.clientEval ? undefined : toContextRecord(context);
     const cfg = this.startConfig();
 
-    if (!this.clientEval) {
+    if (record !== undefined) {
       // server-evaluated keys: one shared context for the provider's lifetime;
       // fetch the initial evaluated bundle so readiness reflects a real fetch
-      this.sharedContext = cfg.context(toContextRecord(context));
-      await this.sharedContext.build();
-      this.lastContextSignature = contextSignature(context);
+      this.sharedContext = cfg.context(record);
+      await this.within(deadline, this.sharedContext.build());
     }
     // client-evaluated keys evaluate locally per resolution; there is nothing
     // to pre-fetch and the context is created per call
 
-    await this.awaitReady(cfg);
+    await this.awaitReady(cfg, Math.max(0, deadline - Date.now()));
+    if (record !== undefined) {
+      this.builtSignature = contextSignature(context);
+    }
   }
 
   override async onClose(): Promise<void> {
     await super.onClose();
     this.sharedContext = undefined;
+    this.builtSignature = undefined;
+    this.activeSignature = undefined;
+    this.building = undefined;
   }
 
   async resolveBooleanEvaluation(
@@ -201,10 +215,10 @@ export class FeatureHubProvider
    *
    * - client-evaluated keys: a fresh local context is created per resolution
    *   (no shared state) and the flag is evaluated in-memory.
-   * - server-evaluated keys: the single shared context is fully reset and
-   *   re-applied when the OpenFeature context changes, the refreshed bundle is
-   *   awaited, and the values are extracted — all inside a mutex, because the
-   *   context and its repository are shared, mutable, and process-wide.
+   * - server-evaluated keys: the one shared context is fetched again from Edge
+   *   when the OpenFeature context changes, and the flag read once its features
+   *   have arrived. While any resolution is in progress only its context may be
+   *   resolved: another is refused, as it would be given the first's values.
    */
   private async evaluate(flagKey: string, context: EvaluationContext): Promise<FeatureEvaluation> {
     if (this.clientEval) {
@@ -212,32 +226,66 @@ export class FeatureHubProvider
       return captureFeature(ctx.feature(flagKey));
     }
 
-    const run = async (): Promise<FeatureEvaluation> => {
-      const cfg = this.config!;
-      const signature = contextSignature(context);
+    const signature = contextSignature(context);
+    if (this.inFlight > 0 && signature !== this.activeSignature) {
+      throw new ContextConflictError();
+    }
 
-      if (signature !== this.lastContextSignature) {
-        const ctx = this.sharedContext ?? cfg.context({});
-        this.sharedContext = ctx;
-        // the SDK's attributes setter MERGES into the existing attribute map
-        // and clear() does not reset the user key — reset both, then apply
-        ctx.userKey(undefined);
-        ctx.clear();
-        ctx.attributes = toContextRecord(context);
-        await ctx.build();
-        this.lastContextSignature = signature;
+    this.inFlight++;
+    this.activeSignature = signature;
+    try {
+      if (signature !== this.builtSignature) {
+        this.building ??= this.fetchContext(context, signature).finally(() => {
+          this.building = undefined;
+        });
+        await this.building;
       }
-
       // read through the shared context itself (config.feature would create
       // another reference-counted context per resolution)
       return captureFeature(this.sharedContext!.feature(flagKey));
-    };
+    } finally {
+      this.inFlight--;
+    }
+  }
 
-    const run1 = this.lock.then(run, run);
-    this.lock = run1.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run1;
+  /**
+   * Fetches the features for a new context into the shared context. Until they arrive the repository holds
+   * the previous context's, so a fetch that fails, or does not finish in time, fails the resolution, and the
+   * next resolution for the context tries again.
+   */
+  private async fetchContext(context: EvaluationContext, signature: string): Promise<void> {
+    const deadline = Date.now() + this.waitForReadyMs;
+    const cfg = this.config!;
+    const ctx = this.sharedContext ?? cfg.context({});
+    this.sharedContext = ctx;
+    // the SDK's attributes setter MERGES into the existing attribute map
+    // and clear() does not reset the user key — reset both, then apply
+    ctx.userKey(undefined);
+    ctx.clear();
+    ctx.attributes = toContextRecord(context);
+    await this.within(deadline, ctx.build());
+
+    const readiness = await cfg.waitForReady(Math.max(0, deadline - Date.now()));
+    if (readiness !== Readyness.Ready) {
+      throw new Error(
+        `FeatureHub could not fetch the features for the new context within ${this.waitForReadyMs}ms (readiness: ${readiness}).`,
+      );
+    }
+    this.builtSignature = signature;
+  }
+
+  /** waits for the work, or until the deadline, whichever is first; the readiness check that follows decides */
+  private async within(deadline: number, work: Promise<unknown>): Promise<void> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        work,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, Math.max(0, deadline - Date.now()));
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

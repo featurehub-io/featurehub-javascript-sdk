@@ -9,9 +9,11 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "featurehub-node-example",
+    "featurehub-openfeature-node-example",
     "todo-server-tests",
     "todo-frontend-react-sdk",
     "vite-template-solid",
+    "todo-frontend-react-openfeature",
     "featurehub-react-example-catch-and-release",
     "featurehub-react-feature-override-example",
     "featurehub-react-example"

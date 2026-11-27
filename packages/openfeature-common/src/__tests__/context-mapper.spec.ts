@@ -10,18 +10,20 @@ import {
 
 describe("context mapping", () => {
   it("maps targetingKey to userkey and passes other attributes through", () => {
-    expect(toContextRecord({ targetingKey: "u1", session: "s1", plan: "pro" })).toEqual({
-      userkey: "u1",
-      session: "s1",
-      plan: "pro",
-    });
+    expect(toContextRecord({ targetingKey: "lingling", session: "chago", shop: "omu&co" })).toEqual(
+      {
+        userkey: "lingling",
+        session: "chago",
+        shop: "omu&co",
+      },
+    );
   });
 
   // featurehub-protocol.yaml encoding.evaluation_context
   it("keeps session as session, the key FeatureHub's percentage rollouts use", () => {
-    expect(toContextRecord({ targetingKey: "lingling", SESSION: "s1" })).toEqual({
+    expect(toContextRecord({ targetingKey: "lingling", SESSION: "chago" })).toEqual({
       userkey: "lingling",
-      session: "s1",
+      session: "chago",
     });
   });
 
@@ -32,22 +34,22 @@ describe("context mapping", () => {
         DEVICE: "mobile",
         Platform: "ios",
         Version: "1.2.0",
-        Session: "s1",
+        Session: "chago",
       }).attributes,
     ).toEqual({
       country: "thailand",
       device: "mobile",
       platform: "ios",
       version: "1.2.0",
-      session: "s1",
+      session: "chago",
     });
   });
 
   it("passes any other key through with its case, email and sessionKey included", () => {
     expect(
-      mapEvaluationContext({ Email: "orm@omu.co", sessionKey: "s1", KwongPastry: "mango" })
+      mapEvaluationContext({ Email: "orm@omu.co", sessionKey: "chago", KwongPastry: "mango" })
         .attributes,
-    ).toEqual({ Email: "orm@omu.co", sessionKey: "s1", KwongPastry: "mango" });
+    ).toEqual({ Email: "orm@omu.co", sessionKey: "chago", KwongPastry: "mango" });
   });
 
   it("drops fhubWhenActive, which only a strategy may hold", () => {
@@ -73,15 +75,15 @@ describe("context mapping", () => {
 
   it("keeps primitive arrays and skips nullish values", () => {
     expect(
-      toContextRecord({ targetingKey: "u1", tags: ["a", "b"], ignored: null as never }),
-    ).toEqual({ userkey: "u1", tags: ["a", "b"] });
+      toContextRecord({ targetingKey: "lingling", tags: ["ling", "orm"], ignored: null as never }),
+    ).toEqual({ userkey: "lingling", tags: ["ling", "orm"] });
   });
 
   it("rejects nested objects", () => {
-    expect(() => mapEvaluationContext({ targetingKey: "u1", x: { a: 1 } })).toThrow(
+    expect(() => mapEvaluationContext({ targetingKey: "lingling", x: { a: 1 } })).toThrow(
       InvalidContextError,
     );
-    expect(() => mapEvaluationContext({ targetingKey: "u1", x: [{ a: 1 }] })).toThrow(
+    expect(() => mapEvaluationContext({ targetingKey: "lingling", x: [{ a: 1 }] })).toThrow(
       InvalidContextError,
     );
   });
@@ -89,16 +91,18 @@ describe("context mapping", () => {
 
 describe("context signature", () => {
   it("is stable for equal contexts regardless of key order", () => {
-    expect(contextSignature({ targetingKey: "u1", country: "NZ" })).toBe(
-      contextSignature({ country: "NZ", targetingKey: "u1" }),
+    expect(contextSignature({ targetingKey: "lingling", country: "thailand" })).toBe(
+      contextSignature({ country: "thailand", targetingKey: "lingling" }),
     );
   });
 
   it("changes when an attribute or the targeting key changes", () => {
-    const base = contextSignature({ targetingKey: "u1", country: "NZ" });
-    expect(contextSignature({ targetingKey: "u1", country: "AU" })).not.toBe(base);
-    expect(contextSignature({ targetingKey: "u2", country: "NZ" })).not.toBe(base);
-    expect(contextSignature({ targetingKey: "u1", country: "NZ", plan: "pro" })).not.toBe(base);
+    const base = contextSignature({ targetingKey: "lingling", country: "thailand" });
+    expect(contextSignature({ targetingKey: "lingling", country: "china" })).not.toBe(base);
+    expect(contextSignature({ targetingKey: "orm", country: "thailand" })).not.toBe(base);
+    expect(
+      contextSignature({ targetingKey: "lingling", country: "thailand", shop: "omu&co" }),
+    ).not.toBe(base);
   });
 
   it("changes when a date-time changes", () => {
@@ -107,8 +111,16 @@ describe("context signature", () => {
     );
   });
 
+  it("tells apart lists and values that read the same as text", () => {
+    expect(contextSignature({ tags: ["ling,orm"] })).not.toBe(
+      contextSignature({ tags: ["ling", "orm"] }),
+    );
+    expect(contextSignature({ visits: 1 })).not.toBe(contextSignature({ visits: "1" }));
+    expect(contextSignature({ tags: ["kwong"] })).not.toBe(contextSignature({ tags: "kwong" }));
+  });
+
   it("distinguishes an empty context from one with attributes", () => {
-    expect(contextSignature(undefined)).not.toBe(contextSignature({ targetingKey: "u1" }));
+    expect(contextSignature(undefined)).not.toBe(contextSignature({ targetingKey: "lingling" }));
     expect(contextSignature(undefined)).toBe(contextSignature({}));
   });
 });

@@ -100,8 +100,12 @@ OpenFeature.setProvider(provider);
 
 const app = express();
 
+// STALE still serves the last features: only not ready yet, or in error, is unhealthy
 const healthy = (_req: express.Request, res: express.Response) => {
-  if (client.providerStatus === ProviderStatus.READY) {
+  if (
+    client.providerStatus === ProviderStatus.READY ||
+    client.providerStatus === ProviderStatus.STALE
+  ) {
     res.status(200).send("ok");
   } else {
     res.status(500).send("not ready");
@@ -153,7 +157,10 @@ class TodoController implements ITodoApiController {
     const context = this.context(parameters.user);
     client.track("todo-remove", context, { gaValue: "5" });
     const index: number = todos.findIndex((todo) => todo.id === parameters.id);
-    todos.splice(index, 1);
+    // an id that is not there (already removed, say) leaves the list as it is
+    if (index >= 0) {
+      todos.splice(index, 1);
+    }
     return this.listTodos(context);
   }
 
