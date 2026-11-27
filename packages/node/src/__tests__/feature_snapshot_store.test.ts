@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   EdgeFeatureHubConfig,
+  type FeatureSnapshot,
   featureSnapshotConfig,
   featureSnapshotHandler,
   FeatureSnapshotNotReadyError,
@@ -27,6 +28,8 @@ const CLIENT_KEY = "default/env-ling/abc*def";
 const SERVER_KEY = "default/env-orm/abcdef";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
+/** the snapshot a server answered with (Node's fetch gives json() as unknown) */
+const snapshotOf = async (response: Response) => (await response.json()) as FeatureSnapshot;
 const at = (iso: string) => Date.parse(iso);
 
 const attr = (fieldName: string, type: T, conditional: C, values: Array<unknown>) => ({
@@ -436,12 +439,12 @@ describe("the snapshot handler", () => {
     const evaluating = await serve(store);
     const serving = await serve(store, { serveStrategiesWithoutContext: true });
 
-    const evaluated = await (await fetch(evaluating)).json();
-    const delivered = await (await fetch(serving)).json();
-    const withQuery = await (await fetch(`${serving}?country=nz`)).json();
+    const evaluated = await snapshotOf(await fetch(evaluating));
+    const delivered = await snapshotOf(await fetch(serving));
+    const withQuery = await snapshotOf(await fetch(`${serving}?country=nz`));
 
-    expect(evaluated.features[0].strategies).toBeUndefined();
-    expect(delivered.features[0].strategies).toHaveLength(1);
+    expect(evaluated.features[0]!.strategies).toBeUndefined();
+    expect(delivered.features[0]!.strategies).toHaveLength(1);
     expect(withQuery.features[0]).toMatchObject({ value: "green", v: "nz" });
   });
 
@@ -477,7 +480,7 @@ describe("the snapshot handler", () => {
     const delivered = await fetch(serving, { headers: { "If-None-Match": evaluatedEtag } });
 
     expect(delivered.status).toBe(200);
-    expect((await delivered.json()).features[0].strategies).toHaveLength(1);
+    expect((await snapshotOf(delivered)).features[0]!.strategies).toHaveLength(1);
     const back = await fetch(evaluating, {
       headers: { "If-None-Match": delivered.headers.get("etag")! },
     });
@@ -505,7 +508,7 @@ describe("the snapshot handler", () => {
 
     const first = await fetch(url);
     const etag = first.headers.get("etag")!;
-    const sha = (await first.json()).sha;
+    const sha = (await snapshotOf(first)).sha;
 
     expect((await fetch(url, { headers: { "If-None-Match": etag } })).status).toBe(304);
     // the sha alone is not the ETag
@@ -515,7 +518,7 @@ describe("the snapshot handler", () => {
     const after = await fetch(url, { headers: { "If-None-Match": etag } });
     expect(after.status).toBe(200);
     expect(after.headers.get("etag")).not.toBe(etag);
-    expect((await after.json()).features[0].value).toBe("green");
+    expect((await snapshotOf(after)).features[0]!.value).toBe("green");
   });
 
   it("answers 400 for an invalid context and 503 before the store has features", async () => {
@@ -551,7 +554,7 @@ describe("the snapshot handler", () => {
       intervalMs: 0,
       fetch: async (input, init) => {
         const response = await fetch(input, init);
-        received = (await response.clone().json()).sha;
+        received = (await snapshotOf(response.clone())).sha;
         return response;
       },
     });

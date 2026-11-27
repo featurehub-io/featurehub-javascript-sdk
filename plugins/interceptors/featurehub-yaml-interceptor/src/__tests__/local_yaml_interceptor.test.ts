@@ -6,7 +6,7 @@ import {
 import { unlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LocalYamlValueInterceptor } from "../index";
 
@@ -18,6 +18,14 @@ function sleep(ms: number): Promise<void> {
 
 /** Must exceed POLL_INTERVAL_MS (500 ms) so watchFile fires at least once. */
 const WATCH_SETTLE_MS = 700;
+
+/**
+ * Waits for watchFile to pick a change up. It polls every 500 ms, but a loaded CI runner can be late, so a reload
+ * is waited for (up to 5s) rather than assumed after a fixed sleep.
+ */
+function eventually(assertion: () => void): Promise<void> {
+  return vi.waitFor(assertion, { timeout: 5000, interval: 50 });
+}
 
 const repo = {} as FeatureHubRepository;
 
@@ -372,9 +380,8 @@ describe("LocalYamlValueInterceptor", () => {
       expect(i.matched("flag", repo)).toEqual([true, true]);
 
       writeFileSync(yamlFile, "flagValues:\n  flag: false\n");
-      await sleep(WATCH_SETTLE_MS);
 
-      expect(i.matched("flag", repo)).toEqual([true, false]);
+      await eventually(() => expect(i.matched("flag", repo)).toEqual([true, false]));
       i.close();
     });
 
@@ -384,9 +391,8 @@ describe("LocalYamlValueInterceptor", () => {
       expect(i.matched("newKey", repo)).toEqual([false, undefined]);
 
       writeFileSync(yamlFile, "flagValues:\n  existing: 1\n  newKey: 42\n");
-      await sleep(WATCH_SETTLE_MS);
 
-      expect(i.matched("newKey", repo)).toEqual([true, 42]);
+      await eventually(() => expect(i.matched("newKey", repo)).toEqual([true, 42]));
       i.close();
     });
 
@@ -396,9 +402,8 @@ describe("LocalYamlValueInterceptor", () => {
       expect(i.matched("gone", repo)).toEqual([true, true]);
 
       writeFileSync(yamlFile, "flagValues:\n  kept: 99\n");
-      await sleep(WATCH_SETTLE_MS);
 
-      expect(i.matched("gone", repo)).toEqual([false, undefined]);
+      await eventually(() => expect(i.matched("gone", repo)).toEqual([false, undefined]));
       expect(i.matched("kept", repo)).toEqual([true, 99]);
       i.close();
     });
