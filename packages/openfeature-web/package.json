@@ -1,6 +1,6 @@
 {
   "name": "featurehub-openfeature-web-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official OpenFeature provider for FeatureHub (Web/browser). Streams the feature bundle and evaluates locally - no per-flag network calls.",
   "author": "info@featurehub.io",
   "type": "module",

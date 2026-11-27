@@ -1,6 +1,6 @@
 {
   "name": "featurehub-openfeature-common",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared context mapping and resolution helpers for the official FeatureHub OpenFeature providers (Node.js and Web). Not intended to be used directly.",
   "author": "info@featurehub.io",
   "type": "module",
