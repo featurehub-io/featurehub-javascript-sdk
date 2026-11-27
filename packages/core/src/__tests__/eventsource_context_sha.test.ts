@@ -1,5 +1,6 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { createHash } from "crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   contextSha,
@@ -48,6 +49,24 @@ describe("streaming sends the contextSha", () => {
     await new FeatureHubEventSourceClient(config, repo).poll();
 
     expect(urls).toEqual([`${edgeUrl}?contextSha=0&sdk_version=2`]);
+  });
+
+  it("reconnects for a new context in a page with no crypto.subtle (not a secure context)", async () => {
+    // browsers leave crypto.subtle out of pages served over plain http
+    vi.stubGlobal("crypto", {});
+    try {
+      config.clientEvaluated().returns(false);
+      const header = "userkey=kornaphat";
+
+      await new FeatureHubEventSourceClient(config, repo).contextChange(header);
+
+      const sha = createHash("sha256").update(header).digest("hex");
+      expect(urls).toEqual([
+        `${edgeUrl}?contextSha=${sha}&sdk_version=2&xfeaturehub=${encodeURIComponent(header)}`,
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("sends the hex contextSha, then the encoded context, for a server-evaluated key", async () => {
