@@ -148,7 +148,10 @@ class TodoController implements ITodoApiController {
     const ctx = await this.ctx(parameters.user);
     ctx.recordNamedUsage("todo-remove", { gaValue: "5" });
     const index: number = todos.findIndex((todo) => todo.id === parameters.id);
-    todos.splice(index, 1);
+    // an id that is not there (already removed, say) leaves the list as it is
+    if (index >= 0) {
+      todos.splice(index, 1);
+    }
     return this.listTodos(ctx);
   }
 

@@ -37,7 +37,7 @@ If your service evaluates with a single application-wide context, set it **befor
 ## API keys
 
 - **Client-evaluated keys** (contain a `*`): the bundle — including rollout strategies — is delivered to the provider and every evaluation runs locally against the supplied context. Use this for services handling many different users; contexts are evaluated per call with no shared state.
-- **Server-evaluated keys** (`default/...`): the provider holds a single shared context for its lifetime and re-fetches the evaluated bundle only when that context changes (the SDK pools refreshes and honours `ETag`/`304`). Resolutions are serialised through a mutex, so use client-evaluated keys for concurrent multi-user workloads.
+- **Server-evaluated keys** (`default/...`): Edge evaluates the features for one context, which the provider holds for every OpenFeature client in the process, fetching them again when the context changes (honouring `ETag`/`304`). Every code path must use the same context: a resolution for a different context while another context's is in progress fails with `INVALID_CONTEXT`, rather than return the other context's values. If the features for a new context cannot be fetched, the resolution fails with `GENERAL` and the next one tries again. Use a client-evaluated key for services that evaluate for many users.
 
 Resolutions report `SPLIT` for a percentage rollout and `TARGETING_MATCH` for any other matched strategy (including one FeatureHub applied for a server-evaluated key), each with the strategy id as `variant`; `STATIC` when no strategy applies; and `DISABLED`, with the code default, for a feature that has no value. A value supplied as a string (by a value interceptor, say) is converted to the type asked for: `"true"` and `"false"` for a boolean, a numeric string for a number. Errors use the standard OpenFeature codes (`FLAG_NOT_FOUND`, `TYPE_MISMATCH`, `PARSE_ERROR`, `INVALID_CONTEXT`, `PROVIDER_NOT_READY`, `PROVIDER_FATAL`). Flag metadata holds the feature's properties, plus `featureVersion` and `featureType`.
 
@@ -174,7 +174,7 @@ if (await client.getBooleanValue("checkout-v2", false, context)) {
 | `feature(key).featureProperties` | `details.flagMetadata`, which also holds `featureVersion` and `featureType` |
 | `feature(key).locked` | no equivalent |
 
-With a server-evaluated key the SDK fetched features for each context you built. The provider holds a single context and fetches again only when an evaluation's context differs from the last one, serialising evaluations to do it, so a client-evaluated key suits services that evaluate for many users.
+With a server-evaluated key the SDK fetched features for each context you built. The provider holds a single context, and fetches again only when an evaluation's context differs from the last one. Evaluating a different context while another context's evaluation is in progress fails with `INVALID_CONTEXT`, so a client-evaluated key suits services that evaluate for many users.
 
 ### Listening for changes
 

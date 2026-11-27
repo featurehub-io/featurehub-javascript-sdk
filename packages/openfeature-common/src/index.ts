@@ -7,6 +7,7 @@
  */
 export type { ContextAttribute, MappedContext } from "./context-mapper";
 export {
+  ContextConflictError,
   contextSignature,
   InvalidContextError,
   isClientEvaluatedKey,

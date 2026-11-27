@@ -39,6 +39,22 @@ export class InvalidContextError extends Error {
   }
 }
 
+/**
+ * Raised when a server-evaluated key is asked to resolve a context other than the one it is resolving. Such
+ * a key holds one context, evaluated by Edge, for every OpenFeature client in the process: two code paths
+ * resolving different contexts at the same time would each be given the other's values.
+ */
+export class ContextConflictError extends Error {
+  constructor() {
+    super(
+      "A server-evaluated API key holds one evaluation context for the whole process, and a resolution for a " +
+        "different context arrived while another context's was in progress. Use the same context everywhere, " +
+        "or a client-evaluated key (containing '*') to resolve many contexts at once.",
+    );
+    this.name = "ContextConflictError";
+  }
+}
+
 /** True when the API key is client-evaluated (FeatureHub marks these with a `*`). */
 export function isClientEvaluatedKey(apiKey: string): boolean {
   return apiKey.includes("*");
@@ -111,10 +127,11 @@ export function toContextRecord(
 export function contextSignature(context: EvaluationContext | undefined): string {
   const { userkey, attributes } = mapEvaluationContext(context);
 
-  const text = (v: unknown) => (v instanceof Date ? v.toISOString() : String(v));
-  const entries: Array<[string, string]> = Object.entries(attributes).map(([key, value]) => [
+  // JSON keeps the types and the list boundaries: ["a,b"] is not ["a", "b"], nor 1 "1"
+  const json = (v: unknown) => (v instanceof Date ? { date: v.toISOString() } : v);
+  const entries: Array<[string, unknown]> = Object.entries(attributes).map(([key, value]) => [
     key,
-    Array.isArray(value) ? value.map(text).join(",") : text(value),
+    Array.isArray(value) ? value.map(json) : json(value),
   ]);
   if (userkey !== undefined) {
     entries.push(["userkey", userkey]);

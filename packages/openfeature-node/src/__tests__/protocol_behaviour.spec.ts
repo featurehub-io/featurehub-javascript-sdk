@@ -22,7 +22,9 @@ import { FeatureHubProvider } from "../provider";
 type Answer =
   | Array<FeatureState>
   | "fail"
-  | { features: Array<FeatureState>; then: "stale" | "fail" };
+  | { features: Array<FeatureState>; then: "stale" | "fail" }
+  /** Edge answers once `after` settles (never, if it never does) */
+  | { features: Array<FeatureState>; after: Promise<unknown> };
 
 class ScriptedEdge implements EdgeService {
   readonly headers: string[] = [];
@@ -37,7 +39,10 @@ class ScriptedEdge implements EdgeService {
     const answer = this.answers[header];
     if (answer === undefined) return;
 
-    if (answer === "fail") {
+    if (!Array.isArray(answer) && typeof answer === "object" && "after" in answer) {
+      await answer.after;
+      this.repo.notify(SSEResultState.Features, answer.features, "test");
+    } else if (answer === "fail") {
       this.repo.notify(SSEResultState.Failure, null, "test");
     } else if (Array.isArray(answer)) {
       this.repo.notify(SSEResultState.Features, answer, "test");
@@ -123,6 +128,7 @@ function setup(answers: Record<string, Answer>) {
     events,
     changed,
     repo: () => config!.repository(),
+    config: () => config,
     start: () => OpenFeature.setProviderAndWait(domain, provider),
   };
 }
@@ -165,7 +171,7 @@ describe("FeatureHubProvider against the FeatureHub SDK's protocol behaviour", (
     expect(details.errorCode).toBeUndefined();
   });
 
-  it("goes STALE when a context change is answered by a failure, keeping the old features", async () => {
+  it("goes STALE when a context change is answered by a failure, and does not give the old context's values", async () => {
     const t = setup({ "": [feature("kwong_pastry", "omu&co")], "userkey=orm": "fail" });
     await t.start();
 
@@ -176,8 +182,70 @@ describe("FeatureHubProvider against the FeatureHub SDK's protocol behaviour", (
 
     // readiness was already Stale for the context change: only the connection event tells it
     expect(t.events).toEqual([ProviderEvents.Ready, ProviderEvents.Stale]);
-    expect(details.value).toBe("omu&co");
-    expect(details.errorCode).toBeUndefined();
+    // the features held are the empty context's, not orm's
+    expect(details.value).toBe("chago");
+    expect(details.errorCode).toBe(ErrorCode.GENERAL);
+    expect(details.errorMessage).toContain("could not fetch the features for the new context");
+
+    // nor on a later resolution for the same context
+    const again = await t.client.getStringDetails("kwong_pastry", "chago", { targetingKey: "orm" });
+    expect(again.value).toBe("chago");
+    expect(again.errorCode).toBe(ErrorCode.GENERAL);
+  });
+
+  it("refuses a different context while another context's resolution is in progress", async () => {
+    let answer: (value?: unknown) => void = () => {};
+    const after = new Promise((resolve) => (answer = resolve));
+    const t = setup({
+      "": [feature("kwong_pastry", "omu&co")],
+      "userkey=lingling": { features: [feature("kwong_pastry", "always wonder")], after },
+      "userkey=orm": [feature("kwong_pastry", "keep silent")],
+    });
+    await t.start();
+
+    const lingling = t.client.getStringDetails("kwong_pastry", "chago", {
+      targetingKey: "lingling",
+    });
+    const sameContext = t.client.getStringDetails("kwong_pastry", "chago", {
+      targetingKey: "lingling",
+    });
+    await tick();
+    const orm = await t.client.getStringDetails("kwong_pastry", "chago", { targetingKey: "orm" });
+
+    expect(orm.value).toBe("chago");
+    expect(orm.errorCode).toBe(ErrorCode.INVALID_CONTEXT);
+    expect(orm.errorMessage).toContain("server-evaluated");
+
+    answer();
+    expect((await lingling).value).toBe("always wonder");
+    expect((await sameContext).value).toBe("always wonder");
+
+    // once nothing is in progress, the context may change
+    const later = await t.client.getStringDetails("kwong_pastry", "chago", { targetingKey: "orm" });
+    expect(later.value).toBe("keep silent");
+    expect(later.errorCode).toBeUndefined();
+  });
+
+  it("fails initialisation on an initial context it cannot send, leaving no connection behind", async () => {
+    const t = setup({ "": [feature("kwong_pastry", "omu&co")] });
+    OpenFeature.setContext({ targetingKey: "lingling", shop: { name: "omu&co" } as never });
+
+    try {
+      await expect(t.start()).rejects.toThrow("shop");
+      const config = t.config();
+      expect(config === undefined || config.isClosed).toBe(true);
+    } finally {
+      await OpenFeature.setContext({});
+    }
+  });
+
+  it("fails initialisation within waitForReadyMs when the initial context is never answered", async () => {
+    const t = setup({ "": { features: [], after: new Promise(() => {}) } });
+    const started = Date.now();
+
+    await expect(t.start()).rejects.toThrow("did not become ready");
+
+    expect(Date.now() - started).toBeLessThan(2500);
   });
 
   it("initialises when the environment goes stale with the first features, then goes STALE", async () => {

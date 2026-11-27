@@ -98,6 +98,8 @@ export class FeatureHubWebProvider
   }
 
   async initialize(context?: EvaluationContext): Promise<void> {
+    // a context FeatureHub cannot represent fails before anything connects
+    toContextRecord(context);
     const cfg = this.startConfig();
     this.applyContext(context);
     await this.awaitReady(cfg);

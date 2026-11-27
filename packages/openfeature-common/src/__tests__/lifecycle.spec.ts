@@ -24,6 +24,9 @@ class FakeConfig {
   connectionFailed = false;
   environmentStale = false;
   readinessOnWait = "Ready";
+  /** what the repository's readiness is when the provider starts listening */
+  initialReadiness = "Ready";
+  forceCloses = 0;
 
   private readinessListener?: (readiness: string) => void;
   private connectionListener?: (event: string) => void;
@@ -41,7 +44,7 @@ class FakeConfig {
 
   addReadinessListener(listener: (readiness: string) => void): number {
     this.readinessListener = listener;
-    listener("Ready");
+    listener(this.initialReadiness);
     return 1;
   }
 
@@ -74,7 +77,7 @@ class FakeConfig {
   }
 
   forceClose(): void {
-    /* no-op */
+    this.forceCloses++;
   }
 
   setReadiness(readiness: string): void {
@@ -93,7 +96,7 @@ interface TestOptions extends BaseProviderOptions<TestOptions> {
 class TestProvider extends FeatureHubProviderCore<TestOptions> {
   readonly emitted: Emitted[] = [];
 
-  constructor(private readonly fake: FakeConfig) {
+  constructor(public fake: FakeConfig) {
     super("TestProvider", { host: "http://edge.test", apiKey: "*client-key" });
   }
 
@@ -309,5 +312,64 @@ describe("provider lifecycle with Stale readiness", () => {
     const failure = await provider.readyUp().catch((e: unknown) => e);
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(ProviderFatalError);
+  });
+});
+
+describe("provider lifecycle across a failed start and a restart", () => {
+  it("emits READY when the features arrive after initialisation timed out", async () => {
+    const cfg = new FakeConfig();
+    cfg.initialReadiness = "NotReady";
+    cfg.readinessOnWait = "NotReady";
+    const provider = new TestProvider(cfg);
+    provider.start();
+
+    await expect(provider.readyUp()).rejects.toThrow("did not become ready");
+
+    // Edge answers after the deadline: OpenFeature only leaves ERROR when the provider says so
+    cfg.setReadiness("Ready");
+
+    expect(provider.events()).toEqual(["PROVIDER_READY"]);
+    expect(provider.resolvable()).toBe(true);
+  });
+
+  it("closes the config when the connection is rejected before any features", async () => {
+    const cfg = new FakeConfig();
+    cfg.readinessOnWait = "Failed";
+    const provider = new TestProvider(cfg);
+    provider.start();
+
+    await expect(provider.readyUp()).rejects.toBeInstanceOf(ProviderFatalError);
+
+    expect(cfg.forceCloses).toBe(1);
+  });
+
+  it("starts afresh when initialised again after closing", async () => {
+    const first = new FakeConfig();
+    const provider = new TestProvider(first);
+    provider.start();
+    await provider.readyUp();
+    first.listener?.processUpdates([flag("kwong_pastry", 1)], "test");
+    first.stopConnection("ConnectionFailed");
+    expect(provider.events()).toEqual(["PROVIDER_STALE"]);
+
+    await provider.onClose();
+    provider.emitted.length = 0;
+
+    const second = new FakeConfig();
+    second.initialReadiness = "NotReady";
+    provider.fake = second;
+    provider.start();
+    // the SDK emits READY itself when initialize resolves
+    second.setReadiness("Ready");
+    expect(provider.events()).toEqual([]);
+    await provider.readyUp();
+
+    // a new baseline: the first full set is not a change
+    second.listener?.processUpdates([flag("kwong_pastry", 1), flag("omu_co", 1)], "test");
+    expect(provider.changes()).toEqual([]);
+
+    // and STALE can be told again
+    second.stopConnection("EnvironmentStale");
+    expect(provider.events()).toEqual(["PROVIDER_STALE"]);
   });
 });
