@@ -33,10 +33,14 @@ catalogs:
   vite:
     vite: "^7.3.8"
   vitest:
-    "@vitest/coverage-istanbul": "3.2.4"
-    vitest: "^3.2.7"
+    "@vitest/coverage-istanbul": "4.1.12"
+    vitest: "^4.1.12"
 
 gitChecks: false
+
+# security fixes with no patched release in the range their dependants ask for
+overrides:
+  "glob@>=9.0.0 <14.0.2": "^14.0.2"
 
 minimumReleaseAgeExclude:
   - glob@10.5.0
