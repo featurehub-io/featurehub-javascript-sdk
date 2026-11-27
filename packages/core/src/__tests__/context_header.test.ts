@@ -1,9 +1,8 @@
 import { createHash } from "crypto";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { ContextRecord } from "../client_context";
 import { contextSha, xFeatureHubHeader } from "../context_header";
-import { sha256Hex } from "../crypto/sha256";
 
 // featurehub-protocol.yaml encoding.evaluation_context.context_sha.examples - every SDK reproduces these
 const specVectors: Array<{ attributes: ContextRecord; header: string; contextSha: string }> = [
@@ -86,29 +85,5 @@ describe("x-featurehub header and contextSha", () => {
 
   it("is 64 lowercase hex characters otherwise", async () => {
     expect(await contextSha("userkey=orm")).toMatch(/^[0-9a-f]{64}$/);
-  });
-});
-
-describe("contextSha without the Web Crypto API", () => {
-  it("reproduces the spec vectors when crypto.subtle is missing", async () => {
-    // a page that is not a secure context (plain http) has no crypto.subtle
-    vi.stubGlobal("crypto", {});
-    try {
-      for (const vector of specVectors) {
-        expect(await contextSha(xFeatureHubHeader(vector.attributes))).toBe(vector.contextSha);
-      }
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("computes the same SHA-256 as Node's crypto, across block boundaries and for any text", () => {
-    const texts = ["", "abc", "หลิงหลิง ศิริลักษณ์ คอง", "鄺玲玲 omu&co 🎂"];
-    // 55, 56 and 64 bytes are where the padding needs another block
-    for (let n = 0; n <= 200; n++) texts.push("o".repeat(n));
-
-    for (const text of texts) {
-      expect(sha256Hex(text)).toBe(createHash("sha256").update(text).digest("hex"));
-    }
   });
 });

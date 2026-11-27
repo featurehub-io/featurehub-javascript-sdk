@@ -1,5 +1,4 @@
 import { type ContextAttribute, type ContextRecord, contextValueToString } from "./client_context";
-import { sha256Hex } from "./crypto/sha256";
 import type { HashAlgorithm } from "./crypto/types";
 
 /**
@@ -17,17 +16,9 @@ const webCryptoAlgorithms: Record<HashAlgorithm, string> = {
 
 /**
  * A lowercase hex digest using the Web Crypto API (`globalThis.crypto.subtle`), which modern browsers and
- * Node 20+ provide. Browsers leave it out of pages that are not a secure context (served over plain http,
- * other than localhost): there a SHA-256 is computed in JavaScript instead, so the contextSha is still sent.
+ * Node 20+ provide.
  */
 export const webCryptoHexHash: CryptoProvider = async (algorithm, data) => {
-  if (globalThis.crypto?.subtle === undefined) {
-    if (algorithm === "sha256") {
-      return sha256Hex(data);
-    }
-    throw new Error(`the Web Crypto API is not available here, so ${algorithm} cannot be computed`);
-  }
-
   const digest = await globalThis.crypto.subtle.digest(
     webCryptoAlgorithms[algorithm],
     new TextEncoder().encode(data),

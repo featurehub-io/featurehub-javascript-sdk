@@ -3,11 +3,13 @@ import {
   type ContextRecord,
   EdgeFeatureHubConfig,
   type FeatureHubConfig,
+  FeatureHubEventSourceClient,
   FeatureHubPollingClient,
   type FeatureStateHolder,
   fhLog,
 } from "featurehub-javascript-core-sdk";
 
+import { createHexHash } from "./crypto-browser";
 import { BrowserPollingService } from "./polling_sdk";
 
 export * from "./polling_sdk";
@@ -15,6 +17,8 @@ export * from "featurehub-javascript-core-sdk";
 
 FeatureHubPollingClient.pollingClientProvider = (opt, url, freq, callback) =>
   new BrowserPollingService(opt, url, freq, callback);
+// streaming hashes the context with the browser's hash too, which works in a page with no crypto.subtle
+FeatureHubEventSourceClient.contextHash = createHexHash;
 
 declare global {
   interface Window {

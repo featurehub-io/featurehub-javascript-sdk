@@ -1,6 +1,5 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
-import { createHash } from "crypto";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   contextSha,
@@ -51,21 +50,19 @@ describe("streaming sends the contextSha", () => {
     expect(urls).toEqual([`${edgeUrl}?contextSha=0&sdk_version=2`]);
   });
 
-  it("reconnects for a new context in a page with no crypto.subtle (not a secure context)", async () => {
-    // browsers leave crypto.subtle out of pages served over plain http
-    vi.stubGlobal("crypto", {});
+  it("hashes the context with the replaceable contextHash", async () => {
+    // a platform package (the browser SDK) sets its own
+    const original = FeatureHubEventSourceClient.contextHash;
+    FeatureHubEventSourceClient.contextHash = (_algorithm, data) =>
+      Promise.resolve(`hashed-${data}`);
     try {
       config.clientEvaluated().returns(false);
-      const header = "userkey=kornaphat";
 
-      await new FeatureHubEventSourceClient(config, repo).contextChange(header);
+      await new FeatureHubEventSourceClient(config, repo).contextChange("userkey=kornaphat");
 
-      const sha = createHash("sha256").update(header).digest("hex");
-      expect(urls).toEqual([
-        `${edgeUrl}?contextSha=${sha}&sdk_version=2&xfeaturehub=${encodeURIComponent(header)}`,
-      ]);
+      expect(urls[0]).toContain("?contextSha=hashed-userkey=kornaphat&");
     } finally {
-      vi.unstubAllGlobals();
+      FeatureHubEventSourceClient.contextHash = original;
     }
   });
 

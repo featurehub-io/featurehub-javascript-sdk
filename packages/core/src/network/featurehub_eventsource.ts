@@ -9,7 +9,7 @@ import {
 } from "../feature_hub_config";
 import type { InternalFeatureRepository } from "../internal_feature_repository";
 import { type FeatureState, SSEResultState } from "../models";
-import { contextSha } from "../context_header";
+import { contextSha, type CryptoProvider, webCryptoHexHash } from "../context_header";
 
 export declare class EventSource {
   static readonly CLOSED: number;
@@ -125,6 +125,12 @@ export class FeatureHubEventSourceClient implements EdgeService {
    * the SDK's own tests may lower it; this SDK accepts that deviation, as anyone changing it has chosen to.
    */
   public static shortConnectionThresholdMs = 10000;
+
+  /**
+   * Hashes the x-featurehub header into the contextSha, as lowercase hex. The Web Crypto API by default; a
+   * platform package replaces it with its own (the browser SDK's also works where crypto.subtle is missing).
+   */
+  public static contextHash: CryptoProvider = webCryptoHexHash;
 
   public static eventSourceProvider: EventSourceProvider = (url, dict) => {
     // a browser EventSource cannot send headers, so the context goes in the query string, after the
@@ -428,7 +434,7 @@ export class FeatureHubEventSourceClient implements EdgeService {
     // ignore if not client evaluated
     if (!this.clientEvaluated()) {
       this._header = header;
-      this._contextSha = await contextSha(header);
+      this._contextSha = await contextSha(header, FeatureHubEventSourceClient.contextHash);
       // the last event id belongs to the old context: sending it would get us nothing for the new one
       this._lastEventId = undefined;
 
