@@ -85,6 +85,16 @@ class NoopEdgeService implements EdgeService {
 
 const noopEdgeServiceProvider: EdgeServiceProvider = () => new NoopEdgeService();
 
+// a host query parameter's name, decoded; one that is not valid percent-encoding is compared as written
+function queryName(parameter: string): string {
+  const name = parameter.split("=")[0]!;
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
 export class EdgeFeatureHubConfig implements FeatureHubConfig {
   private readonly _host: string;
   private readonly _hostQuery: string;
@@ -160,10 +170,7 @@ export class EdgeFeatureHubConfig implements FeatureHubConfig {
             .substring(queryAt + 1)
             .split("&")
             .filter((p) => p.length > 0)
-            .filter(
-              (p) =>
-                !sdkQueryParameters.includes(decodeURIComponent(p.split("=")[0]!).toLowerCase()),
-            )
+            .filter((p) => !sdkQueryParameters.includes(queryName(p).toLowerCase()))
             .join("&");
 
     fhLog.trace(
