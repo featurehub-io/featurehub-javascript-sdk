@@ -21,9 +21,9 @@
     "dist"
   ],
   "dependencies": {
-    "@opentelemetry/auto-instrumentations-node": "^0.76.0",
-    "@opentelemetry/sdk-node": "^0.218.0",
-    "@opentelemetry/sdk-trace-node": "^2.5.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.81.2",
+    "@opentelemetry/sdk-node": "^0.223.2",
+    "@opentelemetry/sdk-trace-node": "^2.12.1",
     "@segment/analytics-node": "^2.3.0",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",

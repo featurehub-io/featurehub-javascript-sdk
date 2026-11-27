@@ -7,7 +7,7 @@
     "emitDeclarationOnly": true,
     "noEmitOnError": true,
     "verbatimModuleSyntax": false,
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "types": ["node"],
     "paths": {
       "featurehub-openfeature-common": ["../openfeature-common/src"],

@@ -49,7 +49,7 @@
     "featurehub-tsconfig": "workspace:*",
     "jsdom": "^27.1.0",
     "rimraf": "catalog:rimraf",
-    "solid-js": "^1.9.9",
+    "solid-js": "^1.9.20",
     "tsup": "catalog:tsup",
     "tsup-preset-solid": "^2.2.0",
     "typescript": "catalog:typescript",
