@@ -154,7 +154,7 @@ importers:
         version: 6.1.3
       tsup:
         specifier: catalog:tsup
-        version: 8.5.0(@swc/core@1.13.5)(jiti@2.6.1)(postcss@8.5.15)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.0(@swc/core@1.13.5)(jiti@2.7.0)(postcss@8.5.33)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: catalog:typescript
         version: 5.9.3
@@ -225,6 +225,52 @@ importers:
       vite:
         specifier: catalog:vite
         version: 7.3.8(@types/node@22.18.10)(jiti@2.7.0)(yaml@2.9.0)
+
+  examples/todo-frontend-react-openfeature:
+    dependencies:
+      '@openfeature/react-sdk':
+        specifier: ^1.4.1
+        version: 1.4.1(@openfeature/web-sdk@1.10.0(@openfeature/core@1.12.0))(react@19.2.0)
+      '@openfeature/web-sdk':
+        specifier: ^1.10.0
+        version: 1.10.0(@openfeature/core@1.12.0)
+      featurehub-javascript-client-sdk:
+        specifier: workspace:*
+        version: link:../../packages/js
+      featurehub-openfeature-web-sdk:
+        specifier: workspace:*
+        version: link:../../packages/openfeature-web
+      featurehub-store-localstorage:
+        specifier: workspace:*
+        version: link:../../plugins/stores/featurehub-store-localstorage
+      react:
+        specifier: catalog:react19
+        version: 19.2.0
+      react-dom:
+        specifier: catalog:react19
+        version: 19.2.0(react@19.2.0)
+    devDependencies:
+      '@types/react':
+        specifier: catalog:react19
+        version: 19.2.2
+      '@types/react-dom':
+        specifier: catalog:react19
+        version: 19.2.2(@types/react@19.2.2)
+      '@vitejs/plugin-react':
+        specifier: ^5.1.0
+        version: 5.1.0(vite@7.3.8(@types/node@22.18.11)(jiti@2.7.0)(yaml@2.9.0))
+      featurehub-tsconfig:
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      rimraf:
+        specifier: catalog:rimraf
+        version: 6.1.3
+      typescript:
+        specifier: catalog:typescript
+        version: 5.9.3
+      vite:
+        specifier: catalog:vite
+        version: 7.3.8(@types/node@22.18.11)(jiti@2.7.0)(yaml@2.9.0)
 
   examples/todo-frontend-react-sdk:
     dependencies:
@@ -1885,6 +1931,12 @@ packages:
 
   '@openfeature/core@1.12.0':
     resolution: {integrity: sha512-7PCPzyd1OC19begz30+CRknFB0ChtyaZUhk7YWrk+Bov1fpVw0HYkTXtoxxsvPfDZB9P9WsT7uixN+Z8f9+bcA==}
+
+  '@openfeature/react-sdk@1.4.1':
+    resolution: {integrity: sha512-xKpXBXVT0w9CIrhl6IzGkIuxmsqy7At+eYUW1XtaZbk+odKW424ZnmmjqiQMrbu31pfAhQrzww36QokTQaIf7g==}
+    peerDependencies:
+      '@openfeature/web-sdk': ^1.9.0
+      react: '>=16.8.0'
 
   '@openfeature/server-sdk@1.23.0':
     resolution: {integrity: sha512-JWeLvltJIV0AFgOfbw7hK9b9Rw/5wWq+RMhCIU9sJtAqarxr8hSPglG+JAGGhYdElAz3Qwe9W3ApWyPNkQEyqg==}
@@ -6617,7 +6669,7 @@ snapshots:
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/remapping@2.3.5':
@@ -6680,6 +6732,11 @@ snapshots:
       fastq: 1.20.3
 
   '@openfeature/core@1.12.0': {}
+
+  '@openfeature/react-sdk@1.4.1(@openfeature/web-sdk@1.10.0(@openfeature/core@1.12.0))(react@19.2.0)':
+    dependencies:
+      '@openfeature/web-sdk': 1.10.0(@openfeature/core@1.12.0)
+      react: 19.2.0
 
   '@openfeature/server-sdk@1.23.0(@openfeature/core@1.12.0)':
     dependencies:
@@ -8006,6 +8063,18 @@ snapshots:
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
       vite: 7.3.8(@types/node@22.18.10)(jiti@2.7.0)(yaml@2.9.0)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@vitejs/plugin-react@5.1.0(vite@7.3.8(@types/node@22.18.11)(jiti@2.7.0)(yaml@2.9.0))':
+    dependencies:
+      '@babel/core': 7.29.13
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.13)
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.13)
+      '@rolldown/pluginutils': 1.0.0-beta.43
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.18.0
+      vite: 7.3.8(@types/node@22.18.11)(jiti@2.7.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -10628,7 +10697,7 @@ snapshots:
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tinyexec: 0.3.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       tree-kill: 1.2.2
     optionalDependencies:
       '@swc/core': 1.13.5

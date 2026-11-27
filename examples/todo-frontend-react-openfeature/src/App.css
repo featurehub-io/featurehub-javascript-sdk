@@ -1,0 +1,36 @@
+.App {
+  text-align: center;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.App ul {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.App li {
+  padding: 0.25rem 0;
+}
+
+.App button {
+  margin-right: 0.5rem;
+}
+
+.users {
+  margin: 1rem 0;
+}
+
+.users button[aria-pressed="true"] {
+  font-weight: bold;
+}
+
+.flag {
+  font-size: small;
+  color: #555;
+}
+
+.error {
+  color: #b00020;
+}
