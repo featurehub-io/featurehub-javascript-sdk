@@ -127,6 +127,11 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
         case Readyness.NotReady:
           if (!isReady()) fhLog.trace("FeatureHub Solid SDK: Connection not ready yet!");
           break;
+        case Readyness.Stale:
+          // the last features are still held and shown: Stale comes during a context change (which the
+          // build that changed it is already handling) or once the connection has stopped for good, so
+          // building again would only ask the edge to reconnect, for nothing
+          break;
         default: {
           fhLog.log(
             `FeatureHub Solid SDK: Connection ready! Using context with userKey: ${uk || "anonymous"}`,

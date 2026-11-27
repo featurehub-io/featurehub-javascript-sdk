@@ -164,6 +164,29 @@ describe("FeatureHub with a real repository", () => {
     await waitFor(() => expect(flag()).toBe("omu&co"));
   });
 
+  it("does not rebuild the context when readiness goes Stale", async () => {
+    const { apiKey, config, edge, repo } = setup();
+
+    render(() => (
+      <FeatureHub url={url} apiKey={apiKey} userKey="lingling">
+        <Flag />
+      </FeatureHub>
+    ));
+    repo.notify(SSEResultState.Features, [pastry("omu&co", 1)], "test");
+    await waitFor(() => expect(flag()).toBe("omu&co"));
+    // let the builds that readiness started settle
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const contextChanges = edge.headers.length;
+
+    // stopped for good: a rebuild would ask the edge to reconnect, for nothing
+    repo.notify(SSEResultState.Failure, null, "test");
+    expect(config.readiness).toBe(Readyness.Stale);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(edge.headers.length).toBe(contextChanges);
+    expect(flag()).toBe("omu&co");
+  });
+
   it("keeps the last features when the environment goes stale", async () => {
     const { apiKey, config, repo } = setup();
 
