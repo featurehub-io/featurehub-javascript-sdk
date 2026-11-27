@@ -670,6 +670,14 @@ export class FeatureHubPollingClient implements EdgeService {
         } else {
           if (!pollingBusy) {
             this._readyNextPoll(resolve, reject, failure);
+          } else if (reject) {
+            // this caller waited behind another request, whose caller schedules the next poll: it is told of
+            // the failure here, as otherwise it would wait for ever (a context change's build(), say)
+            try {
+              reject(failure);
+            } catch (e) {
+              fhLog.error("Failed to process reject", e);
+            }
           }
 
           if (status == 503) {
