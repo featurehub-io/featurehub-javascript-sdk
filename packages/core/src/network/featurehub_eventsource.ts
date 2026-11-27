@@ -29,9 +29,16 @@ export declare class EventSource {
 
   constructor(url: string, eventSourceInitDict?: EventSource.EventSourceInitDict);
 
-  addEventListener(type: string, listener: EventListener): void;
+  // the DOM's EventListener, written out so that compiling this needs no DOM lib (Node has Event)
+  addEventListener(
+    type: string,
+    listener: ((evt: Event) => void) | { handleEvent(evt: Event): void },
+  ): void;
   dispatchEvent(evt: Event): boolean;
-  removeEventListener(type: string, listener?: EventListener): void;
+  removeEventListener(
+    type: string,
+    listener?: ((evt: Event) => void) | { handleEvent(evt: Event): void },
+  ): void;
   close(): void;
 }
 

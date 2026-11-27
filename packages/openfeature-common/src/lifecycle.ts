@@ -28,6 +28,9 @@ import {
   resolveFromEvaluation,
 } from "./resolution";
 
+// both platforms have it, but this package's tsconfig has neither the DOM nor the node types
+declare const setTimeout: (callback: () => void, ms: number) => unknown;
+
 /** How the provider keeps its local repository up to date. */
 export type Transport = "streaming" | "polling" | "passive";
 
