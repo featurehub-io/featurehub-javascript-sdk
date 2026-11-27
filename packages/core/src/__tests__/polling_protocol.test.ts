@@ -270,6 +270,44 @@ describe("polling follows the FeatureHub protocol", () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
+    it("settles a context change made during a poll when the new context's request fails", async () => {
+      // a server-evaluated key, so the context is sent
+      const serverEval = Substitute.for<FeatureHubConfig>();
+      serverEval.getHost().returns("http://localhost/");
+      serverEval.getApiKeys().returns(["ling"]);
+      serverEval.clientEvaluated().returns(false);
+      const client = new FeatureHubPollingClient(repo, serverEval, 5000);
+      let hold: ((r: Response) => void) | undefined;
+      fetchSpy = vi
+        .spyOn(global, "fetch")
+        .mockImplementationOnce(() => new Promise<Response>((resolve) => (hold = resolve)))
+        .mockResolvedValueOnce(response(503, ""));
+
+      try {
+        const first = client.poll();
+        await new Promise((r) => setTimeout(r, 5));
+        // waits behind the request in flight, then gets one of its own, which fails
+        const forLing = client.contextChange("userkey=ling");
+        // let it hash the new context and queue behind the request in flight
+        await new Promise((r) => setTimeout(r, 20));
+        hold!(response(200, []));
+        await first;
+
+        const settled = await Promise.race([
+          forLing.then(
+            () => "resolved",
+            () => "rejected",
+          ),
+          new Promise((r) => setTimeout(() => r("still waiting"), 500)),
+        ]);
+
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(settled).toBe("rejected");
+      } finally {
+        client.close();
+      }
+    });
+
     it("keeps polling after a 5xx", async () => {
       const client = new FeatureHubPollingClient(repo, config, 0);
       fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(response(503, ""));

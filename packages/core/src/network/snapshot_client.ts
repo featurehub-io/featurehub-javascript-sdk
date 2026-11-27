@@ -170,14 +170,16 @@ export class FeatureSnapshotEdgeService implements EdgeService {
     }
   }
 
-  // one request at a time: a forced request waits for the one in flight, an unforced one is answered by it
+  // one request at a time: a forced request waits for the one in flight, an unforced one is answered by it.
+  // Several forced requests can wait on the same one, so each checks again when it wakes: the first to wake
+  // starts the next request, and the others wait for that one in turn
   private async request(forced: boolean): Promise<void> {
-    if (this._inFlight) {
+    while (this._inFlight) {
       await this._inFlight;
       if (!forced) return;
     }
 
-    if (this._dead || (!forced && Date.now() < this._nextAllowed)) {
+    if (this._closed || this._dead || (!forced && Date.now() < this._nextAllowed)) {
       return;
     }
 
@@ -192,6 +194,8 @@ export class FeatureSnapshotEdgeService implements EdgeService {
   }
 
   private scheduleNext() {
+    // only ever one timer
+    this.cancelTimer();
     // active polling waits the full interval from the end of each request, succeeded or failed
     if (!this._passive && !this._closed && !this._dead && this._intervalMs > 0) {
       this._timer = setTimeout(() => {

@@ -232,6 +232,15 @@ describe("a host with a query string", () => {
     expect(config.url()).toBe("http://localhost:8085/features/ling*orm");
   });
 
+  it("keeps a parameter whose name is not valid percent-encoding, as written", () => {
+    const config = new EdgeFeatureHubConfig(
+      "http://localhost:8085/?token%=chago&%61piKey=dropped",
+      "ling*orm",
+    );
+
+    expect(config.hostQuery()).toBe("token%=chago");
+  });
+
   it("puts them first when polling", () => {
     const config = new EdgeFeatureHubConfig(host, "ling*orm");
     let url: string | undefined;

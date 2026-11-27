@@ -50,6 +50,22 @@ describe("streaming sends the contextSha", () => {
     expect(urls).toEqual([`${edgeUrl}?contextSha=0&sdk_version=2`]);
   });
 
+  it("hashes the context with the replaceable contextHash", async () => {
+    // a platform package (the browser SDK) sets its own
+    const original = FeatureHubEventSourceClient.contextHash;
+    FeatureHubEventSourceClient.contextHash = (_algorithm, data) =>
+      Promise.resolve(`hashed-${data}`);
+    try {
+      config.clientEvaluated().returns(false);
+
+      await new FeatureHubEventSourceClient(config, repo).contextChange("userkey=kornaphat");
+
+      expect(urls[0]).toContain("?contextSha=hashed-userkey=kornaphat&");
+    } finally {
+      FeatureHubEventSourceClient.contextHash = original;
+    }
+  });
+
   it("sends the hex contextSha, then the encoded context, for a server-evaluated key", async () => {
     config.clientEvaluated().returns(false);
     const header = "country=thailand,userkey=lingling%20kwong";
