@@ -1,6 +1,6 @@
 {
   "name": "featurehub-openfeature-node-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official OpenFeature provider for FeatureHub (Node.js). Evaluates flags locally via the FeatureHub SDK feature repository - streaming, polling or passive-refresh, never per-flag network calls.",
   "author": "info@featurehub.io",
   "type": "module",
