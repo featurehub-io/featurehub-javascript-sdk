@@ -1,0 +1,33 @@
+{
+  "name": "todo-frontend-react-openfeature",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rimraf node_modules dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openfeature/react-sdk": "^1.4.1",
+    "@openfeature/web-sdk": "^1.10.0",
+    "featurehub-javascript-client-sdk": "workspace:*",
+    "featurehub-openfeature-web-sdk": "workspace:*",
+    "featurehub-store-localstorage": "workspace:*",
+    "react": "catalog:react19",
+    "react-dom": "catalog:react19"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:react19",
+    "@types/react-dom": "catalog:react19",
+    "@vitejs/plugin-react": "^5.1.0",
+    "featurehub-tsconfig": "workspace:*",
+    "rimraf": "catalog:rimraf",
+    "typescript": "catalog:typescript",
+    "vite": "catalog:vite"
+  },
+  "packageManager": "pnpm@10.18.3"
+}
