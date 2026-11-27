@@ -16,6 +16,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+const DEFAULT_POLL_INTERVAL = 60000;
+
 export type UseFeatureHub = {
   readonly config: FeatureHubConfig;
   readonly client: ClientContext;
@@ -68,7 +70,7 @@ const FeatureHub: FC<Props> = ({
   apiKey,
   userKey,
   username,
-  pollInterval = 60000,
+  pollInterval = DEFAULT_POLL_INTERVAL,
   connectionType = "rest-active",
   waitForReady = true,
   headers,
@@ -85,12 +87,25 @@ const FeatureHub: FC<Props> = ({
     fhLog.log("FeatureHub React SDK: Creating config.");
 
     const config = EdgeFeatureHubConfig.config(url, apiKey);
+    // an interval must be 0 or at least 5 seconds: a prop that is not is logged, and the default used,
+    // rather than failing the render
+    const poll = (mode: (ms: number) => unknown) => {
+      try {
+        mode(pollInterval);
+      } catch (e) {
+        fhLog.error(
+          `FeatureHub React SDK: pollInterval ${pollInterval} is not used, polling every 60s`,
+          e,
+        );
+        mode(DEFAULT_POLL_INTERVAL);
+      }
+    };
     if (connectionType?.toLowerCase() === "rest-passive") {
-      config.restPassive(pollInterval);
+      poll((ms) => config.restPassive(ms));
     } else if (connectionType?.toLowerCase() === "streaming") {
       config.streaming();
     } else {
-      config.restActive(pollInterval);
+      poll((ms) => config.restActive(ms));
     }
 
     if (headers) {

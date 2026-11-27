@@ -4,6 +4,7 @@ import {
   EdgeFeatureHubConfig,
   FeatureHub as fhStatic,
   type FeatureHubConfig,
+  InvalidConfigurationError,
   Readyness,
 } from "featurehub-javascript-client-sdk";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -327,6 +328,37 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     expect(mockConfig.restActive).toHaveBeenCalledWith(30000);
     expect(mockConfig.newContext).toHaveBeenCalled();
     expect(mockContext.build).toHaveBeenCalled();
+
+    configSpy.mockRestore();
+  });
+
+  it("polls at the default interval, rather than failing to render, for a pollInterval under 5 seconds", () => {
+    fhStatic.setConfig(undefined);
+    fhStatic.setContext(undefined);
+    const { mockConfig } = buildOwnConfigMocks();
+    // as the real config does: an interval must be 0 or at least 5 seconds
+    mockConfig.restActive.mockImplementation((ms: number) => {
+      if (ms !== 0 && ms < 5000) throw new InvalidConfigurationError(`${ms}ms is too short`);
+      return mockConfig;
+    });
+    const configSpy = vi
+      .spyOn(EdgeFeatureHubConfig, "config")
+      .mockReturnValue(mockConfig as unknown as EdgeFeatureHubConfig);
+
+    render(
+      <FeatureHub
+        url="http://localhost:8085"
+        apiKey="abc123"
+        pollInterval={2000}
+        waitForReady={false}
+      >
+        <div>still rendered</div>
+      </FeatureHub>,
+    );
+
+    expect(screen.getByText("still rendered")).toBeInTheDocument();
+    expect(mockConfig.restActive).toHaveBeenCalledWith(2000);
+    expect(mockConfig.restActive).toHaveBeenLastCalledWith(60000);
 
     configSpy.mockRestore();
   });

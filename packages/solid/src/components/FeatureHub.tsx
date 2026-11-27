@@ -59,6 +59,8 @@ type Props = {
   readonly children: JSX.Element;
 };
 
+const DEFAULT_POLL_INTERVAL = 60000;
+
 export const FeatureHub: Component<Props> = (props): JSX.Element => {
   const useSharedConfiguration = fh.isCompletelyConfigured();
   const userKey = () => props.username ?? props.userKey ?? "";
@@ -72,12 +74,26 @@ export const FeatureHub: Component<Props> = (props): JSX.Element => {
     }
 
     const cfg = EdgeFeatureHubConfig.config(props.url, props.apiKey);
+    // an interval must be 0 or at least 5 seconds: a prop that is not is logged, and the default used,
+    // rather than failing the render
+    const interval = props.pollInterval ?? DEFAULT_POLL_INTERVAL;
+    const poll = (mode: (ms: number) => unknown) => {
+      try {
+        mode(interval);
+      } catch (e) {
+        fhLog.error(
+          `FeatureHub Solid SDK: pollInterval ${interval} is not used, polling every 60s`,
+          e,
+        );
+        mode(DEFAULT_POLL_INTERVAL);
+      }
+    };
     if (props.connectionType?.toLowerCase() === "rest-passive") {
-      cfg.restPassive(props.pollInterval ?? 60000);
+      poll((ms) => cfg.restPassive(ms));
     } else if (props.connectionType?.toLowerCase() === "streaming") {
       cfg.streaming();
     } else {
-      cfg.restActive(props.pollInterval ?? 60000);
+      poll((ms) => cfg.restActive(ms));
     }
 
     // read once, without tracking it: pass a function for values that change
