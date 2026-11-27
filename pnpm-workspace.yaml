@@ -31,10 +31,10 @@ catalogs:
   typescript:
     typescript: "5.9.3"
   vite:
-    vite: "^7.3.2"
+    vite: "^7.3.8"
   vitest:
     "@vitest/coverage-istanbul": "3.2.4"
-    vitest: "^3.2.4"
+    vitest: "^3.2.7"
 
 gitChecks: false
 
@@ -84,3 +84,58 @@ minimumReleaseAgeExclude:
   - uuid@11.1.1
   - qs@6.15.2
   - axios@1.16.0
+  - "@grpc/grpc-js@1.14.4"
+  - esbuild@0.28.1
+  - form-data@4.0.6
+  - vite@7.3.5
+  - js-yaml@4.1.2
+  - protobufjs@7.6.3
+  - "@babel/core@7.29.1"
+  - brace-expansion@5.0.7
+  - js-yaml@4.3.0
+  - protobufjs@7.6.5
+  - body-parser@2.3.0
+  - "@opentelemetry/propagator-jaeger@2.9.0"
+  - seroval@1.5.3
+  - brace-expansion@5.0.8
+  - postcss@8.5.23
+  - brace-expansion@5.0.9
+  - js-yaml@4.3.1
+  - axios@1.18.0
+  - postcss@8.5.18
+  - vitest@3.2.6
+  - "@opentelemetry/core@2.8.0"
+  - qs@6.15.4
+  - qs@6.16.0
+  - vitest@4.1.11
+  - "@vitest/mocker@4.1.11"
+  - js-yaml@4.3.2
+  - brace-expansion@5.0.12
+  - brace-expansion@5.0.11
+  - brace-expansion@5.0.10
+  - axios@1.20.0
+  - "@grpc/grpc-js@1.14.5"
+  - seroval@1.6.1
+  - seroval@1.6.3
+  - source-map-js@1.2.2
+  - proxy-addr@2.0.8
+  - "@opentelemetry/instrumentation-pg@0.73.0"
+  - "@opentelemetry/instrumentation-mysql2@0.67.0"
+  - "@opentelemetry/instrumentation-knex@0.65.0"
+  - "@opentelemetry/instrumentation-mysql@0.67.0"
+  - "@opentelemetry/instrumentation-mongoose@0.67.0"
+  - "@opentelemetry/instrumentation-oracledb@0.46.0"
+  - "@opentelemetry/instrumentation-tedious@0.40.0"
+  - "@opentelemetry/instrumentation-cassandra-driver@0.66.0"
+  - tinypool@2.1.1
+  - tinypool@2.1.2
+  - follow-redirects@1.16.1
+  - vite@7.3.7
+  - "@vitest/mocker@4.1.12"
+  - body-parser@2.4.0
+  - seroval@1.6.8
+  - qs@6.16.1
+  - follow-redirects@1.16.2
+  - glob@14.0.2
+  - minimatch@11.0.1
+  - "@opentelemetry/instrumentation-http@0.222.0"
