@@ -13,11 +13,11 @@ class TestPoller extends PollingBase {
   constructor(
     url: string,
     frequency: number,
-    createBase64UrlSafeHash: CryptoProvider,
+    hexHash: CryptoProvider,
     options: RestOptions,
     callback: FeaturesFunction,
   ) {
-    super(url, frequency, createBase64UrlSafeHash, options, callback);
+    super(url, frequency, hexHash, options, callback);
   }
 }
 

@@ -71,15 +71,16 @@ export class PollingBase implements PollingService {
   protected _busy = false;
   protected _awaitingFirstPollResult = true;
   protected _outstandingPromises: Array<PromiseLikeData> = [];
-  protected readonly _createBase64UrlSafeHash: CryptoProvider;
+  /** hashes the x-featurehub header into the contextSha, as lowercase hex */
+  protected readonly _hexHash: CryptoProvider;
   private readonly uri: URL;
   private readonly _options: RestOptions;
 
   protected constructor(
     url: string,
     frequency: number,
-    // hashes the x-featurehub header into the contextSha; it MUST return lowercase hex
-    createBase64UrlSafeHash: CryptoProvider,
+    // hashes the x-featurehub header into the contextSha; it MUST return lowercase hex (not base64url)
+    hexHash: CryptoProvider,
     options: RestOptions,
     callback: FeaturesFunction,
   ) {
@@ -90,9 +91,16 @@ export class PollingBase implements PollingService {
     this._shaHeader = "0";
     this._callback = callback;
     this._busy = false;
-    this._createBase64UrlSafeHash = createBase64UrlSafeHash;
+    this._hexHash = hexHash;
     this.uri = new URL(this.url);
     this._options = options;
+  }
+
+  /**
+   * @deprecated the hash is lowercase hex, not base64url, whatever this name says: use `_hexHash`
+   */
+  protected get _createBase64UrlSafeHash(): CryptoProvider {
+    return this._hexHash;
   }
 
   async attributeHeader(header: string): Promise<void> {
@@ -104,7 +112,7 @@ export class PollingBase implements PollingService {
     }
 
     this._header = header;
-    this._shaHeader = await contextSha(header, this._createBase64UrlSafeHash);
+    this._shaHeader = await contextSha(header, this._hexHash);
   }
 
   public stop(): void {
