@@ -102,7 +102,8 @@ describe("if a feature is deleted it becomes undefined", () => {
         version: undefined,
         type: FeatureValueType.Boolean,
         value: true,
-      } as FeatureState,
+        // a delete needs only the key and id; FeatureState itself requires a version
+      } as unknown as FeatureState,
       "test",
     );
     expect(repo.feature("banana").isSet()).toBe(false);

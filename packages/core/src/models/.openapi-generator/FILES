@@ -1,6 +1,3 @@
-.gitignore
-.npmignore
-git_push.sh
 index.ts
 models/application-version-info.ts
 models/base-rollout-strategy-all-of.ts

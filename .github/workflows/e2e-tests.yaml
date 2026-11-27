@@ -1,26 +1,37 @@
 name: e2e-tests
 
-# only on PRs and workflow-dispatch
+# end to end tests: runs the todo backend example (examples/todo-backend-typescript) against a FeatureHub party server
+# and drives it with the todo-server tests, once streaming and once polling.
+#
+# It starts on every pull request (and each push to one), but waits for approval before running anything: the job uses
+# the `e2e` environment, whose required reviewers (the fh-core-committers team) approve it from the pull request's
+# checks or the Actions tab. Waiting for approval, or failing, never blocks a merge, as long as `e2e-tests` is not
+# added to the required checks of a branch protection rule or ruleset (only checks named there are enforced). A newer
+# push cancels a run still waiting.
+#
+# Setup (once): Settings -> Environments -> New environment `e2e`, tick "Required reviewers" and add who may approve;
+# and add the `GHCR_TOKEN` secret (read access to the FeatureHub packages) to the repository or the environment.
 on:
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize, reopened]
+    branches: [main]
 
   workflow_dispatch:
 
-jobs:
-  manual_approval_job:
-    runs-on: ubuntu-latest
-    environment:
-      name: requires-approval # Reference the environment created in Step 1
-    steps:
-      - name: Awaiting Approval
-        run: echo "Waiting for manual approval"
+permissions:
+  contents: read
 
+concurrency:
+  group: e2e-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
   e2e:
     name: e2e-tests
-    needs: [manual_approval_job]
+    # the environment's required reviewers must approve each run before it starts
+    environment: e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: read # <--- This is required to read from GHCR
@@ -135,7 +146,7 @@ jobs:
           docker stop todo-server && docker rm -f todo-server && \
           docker run -d \
             --network ${{ job.container.network }} \
-            -e FEATUREHUB_POLLING_INTERVAL=3s \
+            -e FEATUREHUB_POLLING_INTERVAL=5s \
             --name todo-server \
             -p 8099:8099 \
             --workdir /sdk/examples/todo-backend-typescript \
@@ -166,11 +177,57 @@ jobs:
           docker run --rm \
             --network ${{ job.container.network }} \
             -v $PWD/adk-env:/opt/e2e \
-            -e FEATUREHUB_POLLING_INTERVAL=3s \
+            -e FEATUREHUB_POLLING_INTERVAL=5s \
             -e APP_SERVER_URL=http://todo-server:8099 \
             --env-file adk-env/server.env \
             --workdir /sdk/examples/todo-server-tests \
             --name jsdk-poll-client \
+            todo-server:e2e \
+            /bin/bash -c "pnpm run test"
+
+      # the snapshot option: the todo-server streams from FeatureHub and re-serves its features at /featurehub
+      # (feature-snapshot-protocol.yaml), and the tests read their features from there instead of FeatureHub
+      - name: Run todo-server again, streaming only, to serve feature snapshots
+        run: |
+          docker stop todo-server && docker rm -f todo-server && \
+          docker run -d \
+            --network ${{ job.container.network }} \
+            --env-file adk-env/server.env \
+            -e FEATUREHUB_CONNECT_TYPE=streaming \
+            --name todo-server \
+            -p 8099:8099 \
+            --workdir /sdk/examples/todo-backend-typescript \
+             todo-server:e2e \
+            /bin/bash -c "pnpm run start"
+
+      - name: Wait for the streaming todo-server and its feature snapshots
+        run: |
+          echo "Waiting for todo-server on port 8099..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8099/health/liveness > /dev/null 2>&1 && \
+               curl -sf http://localhost:8099/featurehub > /dev/null 2>&1; then
+              echo "todo-server is ready and serving feature snapshots"
+              exit 0
+            fi
+            echo "  attempt $i/30 - not ready yet, retrying in 2s"
+            sleep 2
+          done
+          echo "todo-server did not become ready in time"
+          docker logs todo-server
+          exit 1
+
+      - name: Run the e2e tests reading features from the todo-server's feature snapshots
+        # this step can hang, so force a timeout
+        timeout-minutes: 10
+        run: |
+          docker run --rm \
+            --network ${{ job.container.network }} \
+            -v $PWD/adk-env:/opt/e2e \
+            --env-file adk-env/server.env \
+            -e APP_SERVER_URL=http://todo-server:8099 \
+            -e FEATUREHUB_SNAPSHOT_URL=http://todo-server:8099/featurehub \
+            --workdir /sdk/examples/todo-server-tests \
+            --name jsdk-snapshot-client \
             todo-server:e2e \
             /bin/bash -c "pnpm run test"
 

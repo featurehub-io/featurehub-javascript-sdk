@@ -8,6 +8,8 @@ import {
 import type { FeatureStateHolder } from "./feature_state";
 import { FeatureStateBaseHolder } from "./feature_state_holders";
 import {
+  ConnectionEvent,
+  type ConnectionEventListener,
   type PostLoadNewFeatureStateAvailableListener,
   type RawUpdateFeatureListener,
   Readyness,
@@ -34,12 +36,20 @@ import {
 
 export class ClientFeatureRepository implements InternalFeatureRepository {
   private hasReceivedInitialState = false;
+  // a server-evaluated key's context is changing: the next full set is the new context's, applied at once
+  private _contextChanging = false;
+  private _connectionFailed = false;
+  private _environmentStale = false;
   // indexed by key as that what the user cares about
   private features = new Map<string, FeatureStateBaseHolder>();
   private readynessState: Readyness = Readyness.NotReady;
   private _readinessListeners: Map<number, ReadynessListener> = new Map<
     number,
     ReadynessListener
+  >();
+  private _connectionEventListeners: Map<number, ConnectionEventListener> = new Map<
+    number,
+    ConnectionEventListener
   >();
   private _listenerCounter = 1;
   private _usageStreams: Map<number, UsageEventListener> = new Map<number, UsageEventListener>();
@@ -114,8 +124,9 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     key: string,
     featureValueId: string,
     context: ClientContext,
+    nowMs?: number,
   ): Applied {
-    return this._applyFeature.apply(strategies, key, featureValueId, context);
+    return this._applyFeature.apply(strategies, key, featureValueId, context, nowMs);
   }
 
   public get readyness(): Readyness {
@@ -140,14 +151,15 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
             );
           break;
         case SSEResultState.Failure:
-          this.readynessState = Readyness.Failed;
-          if (!this._catchAndReleaseMode) {
-            this.broadcastReadynessState(false);
-          }
+          this.connectionFailedPermanently();
           break;
         case SSEResultState.Feature:
           {
             const fs = data as FeatureState;
+            if (!ClientFeatureRepository.isValidFeature(fs)) {
+              fhLog.error(`ignoring an invalid feature from ${source}`);
+              break;
+            }
 
             if (this._catchAndReleaseMode) {
               this._catchUpdatedFeatures([fs], false);
@@ -164,8 +176,20 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
           break;
         case SSEResultState.Features:
           {
-            const features = (data as FeatureState[]).filter((f) => f?.key !== undefined);
-            if (this.hasReceivedInitialState && this._catchAndReleaseMode) {
+            if (!Array.isArray(data)) {
+              // not a full set: removing every feature not in it would empty the repository
+              fhLog.error(`ignoring a features notification from ${source} that is not a list`);
+              break;
+            }
+
+            const features = (data as FeatureState[]).filter(
+              ClientFeatureRepository.isValidFeature,
+            );
+            if (
+              this.hasReceivedInitialState &&
+              this._catchAndReleaseMode &&
+              !this._contextChanging
+            ) {
               this._catchUpdatedFeatures(features, true);
               this._rawUpdateListeners
                 .values()
@@ -181,11 +205,17 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
                 .forEach(
                   (rul) => void Promise.resolve().then(() => rul.processUpdates(features, source)),
                 );
-              this.readynessState = Readyness.Ready;
-              if (!this.hasReceivedInitialState) {
-                this.hasReceivedInitialState = true;
-                this.broadcastReadynessState(true);
-              } else if (updated) {
+              const firstState = !this.hasReceivedInitialState;
+              const wasContextChanging = this._contextChanging;
+              this.hasReceivedInitialState = true;
+              this._contextChanging = false;
+
+              const readinessChanged = this.setReadiness(this.readinessAfterFullSet());
+              if (firstState || readinessChanged) {
+                this.broadcastReadynessState(firstState);
+              }
+
+              if (!firstState && updated && !wasContextChanging) {
                 this.triggerNewStateAvailable();
               }
             }
@@ -288,14 +318,122 @@ export class ClientFeatureRepository implements InternalFeatureRepository {
     return pos;
   }
 
+  public addConnectionEventListener(listener: ConnectionEventListener): ReadinessListenerHandle {
+    const pos = ListenerUtils.newListenerKey(this._connectionEventListeners);
+    this._connectionEventListeners.set(pos, listener);
+
+    // an event that has already happened is told at once, so a listener added late misses nothing
+    if (this._connectionFailed)
+      this.tellConnectionEvent(listener, ConnectionEvent.ConnectionFailed);
+    if (this._environmentStale)
+      this.tellConnectionEvent(listener, ConnectionEvent.EnvironmentStale);
+
+    return pos;
+  }
+
+  public removeConnectionEventListener(
+    listener: ConnectionEventListener | ReadinessListenerHandle,
+  ): void {
+    ListenerUtils.removeListener(this._connectionEventListeners, listener);
+  }
+
+  private broadcastConnectionEvent(event: ConnectionEvent): void {
+    this._connectionEventListeners.forEach((l) => this.tellConnectionEvent(l, event));
+  }
+
+  private tellConnectionEvent(listener: ConnectionEventListener, event: ConnectionEvent): void {
+    try {
+      listener(event);
+    } catch (e) {
+      fhLog.error("a connection event listener failed", e);
+    }
+  }
+
   removeReadinessListener(listener: ReadynessListener | ReadinessListenerHandle) {
     ListenerUtils.removeListener(this._readinessListeners, listener);
   }
 
+  /**
+   * A server-evaluated key's context is changing. The features held are still resolved, but they are for
+   * the old context: Ready becomes Stale (never NotReady) until the new context's full set arrives.
+   */
   notReady(): void {
-    this.readynessState = Readyness.NotReady;
-    this.hasReceivedInitialState = false;
-    this.broadcastReadynessState(false);
+    this._contextChanging = true;
+
+    if (this.readynessState === Readyness.Ready && this.setReadiness(Readyness.Stale)) {
+      this.broadcastReadynessState(false);
+    }
+  }
+
+  public get connectionFailed(): boolean {
+    return this._connectionFailed;
+  }
+
+  public get environmentStale(): boolean {
+    return this._environmentStale;
+  }
+
+  public markEnvironmentStale(): void {
+    if (this._environmentStale) return;
+
+    this._environmentStale = true;
+    fhLog.trace("environment is stale, no more updates will arrive");
+
+    if (this.hasReceivedInitialState && this.setReadiness(Readyness.Stale)) {
+      this.broadcastReadynessState(false);
+    }
+
+    // its own event, whatever readiness did (it may already be Stale, during a context change)
+    this.broadcastConnectionEvent(ConnectionEvent.EnvironmentStale);
+  }
+
+  /**
+   * The connection has permanently failed. Before any full set of features: Failed (final). After: Stale,
+   * and the last features keep being resolved.
+   */
+  private connectionFailedPermanently(): void {
+    if (this._connectionFailed) return;
+
+    this._connectionFailed = true;
+
+    const readiness = this.hasReceivedInitialState ? Readyness.Stale : Readyness.Failed;
+    if (this.setReadiness(readiness) && !this._catchAndReleaseMode) {
+      this.broadcastReadynessState(false);
+    }
+
+    // its own event, whatever readiness did (it may already be Stale, during a context change)
+    this.broadcastConnectionEvent(ConnectionEvent.ConnectionFailed);
+  }
+
+  private readinessAfterFullSet(): Readyness {
+    if (this.readynessState === Readyness.Failed) {
+      return Readyness.Failed; // final
+    }
+
+    // nothing will bring the features up to date again
+    return this._connectionFailed || this._environmentStale ? Readyness.Stale : Readyness.Ready;
+  }
+
+  /** returns true if readiness changed */
+  private setReadiness(readiness: Readyness): boolean {
+    if (this.readynessState === readiness) return false;
+
+    this.readynessState = readiness;
+    return true;
+  }
+
+  /** a feature without a key, version or type is invalid: it is not applied, and in a full set its key
+   * counts as not in the set */
+  private static isValidFeature(f: FeatureState | undefined | null): f is FeatureState {
+    return (
+      f !== undefined &&
+      f !== null &&
+      f.key !== undefined &&
+      f.version !== undefined &&
+      f.version !== null &&
+      f.type !== undefined &&
+      f.type !== null
+    );
   }
 
   public broadcastReadynessState(firstState: boolean): void {

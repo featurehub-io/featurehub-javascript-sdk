@@ -30,6 +30,18 @@ Example:
 
 `APP_SERVER_URL='your-server-url' FEATUREHUB_EDGE_URL='fh-edge-url' FEATUREHUB_CLIENT_API_KEY='fh-api-key' pnpm run test`
 
+### Reading features from the todo backend
+
+By default the tests read features straight from FeatureHub. Set `FEATUREHUB_SNAPSHOT_URL` to the todo backend's
+feature snapshot endpoint to read them from there instead, so each change travels from FeatureHub through the
+backend to the tests:
+
+`FEATUREHUB_SNAPSHOT_URL=http://localhost:8099/featurehub APP_SERVER_URL=http://localhost:8099 FEATUREHUB_EDGE_URL='fh-edge-url' FEATUREHUB_CLIENT_API_KEY='fh-api-key' pnpm run test`
+
+Changes are still made through FeatureHub, so `FEATUREHUB_EDGE_URL` and `FEATUREHUB_CLIENT_API_KEY` are still
+needed. The tests poll the backend at `FEATUREHUB_CONNECT_INTERVAL` (or `FEATUREHUB_POLLING_INTERVAL`), or every 5
+seconds, and wait one poll longer for each change.
+
 ## Scenario tags
 
 These tests are meant to check a todo server written in any language with any FeatureHub SDK. The server under test is whatever is running at `APP_SERVER_URL`. Every scenario has exactly one of these tags:

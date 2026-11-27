@@ -15,3 +15,6 @@ TODO.md
 /.changeset
 /.claude
 
+
+# the golden fixture is a byte-identical copy of featurehub-sdk-docs specs/fixtures/typescript_golden.json
+typescript_golden.json

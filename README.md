@@ -322,6 +322,27 @@ await fhConfig.waitForReady();
 
 This will delay up to 10 seconds by default if you do not specify a time (in milliseconds). 
 
+Readiness is one of `NotReady` (no features yet), `Ready`, `Stale` and `Failed`. `Stale` means features are held
+and keep resolving, but may not be current: a server-evaluated key's context is changing, or the connection has
+stopped for good after delivering features. `Failed` means the connection failed before any features arrived.
+
+To find out when the connection stops for good, listen for connection events. Each is told once, separately from
+readiness (which may already be `Stale`, during a context change, when it happens), and one that has already
+happened is told as soon as you add the listener:
+
+```typescript
+fhConfig.addConnectionEventListener((event) => {
+  if (event === ConnectionEvent.ConnectionFailed) {
+    // permanently failed (a rejected API key, say): nothing more will arrive
+  } else if (event === ConnectionEvent.EnvironmentStale) {
+    // FeatureHub says this environment will send no further updates
+  }
+});
+
+fhConfig.connectionFailed; // or ask at any time
+fhConfig.environmentStale;
+```
+
 ### Choosing a connection mode
 
 Call one of these fluent methods on your `EdgeFeatureHubConfig` **before** calling `.init()` or `.build()`:
@@ -339,7 +360,64 @@ fhConfig.restPassive(15000); // cache expires after 15 seconds
 fhConfig.streaming();
 ```
 
-FeatureHub also has the ability for the server to override the polling interval via cache-control headers, either globally or per environment.
+FeatureHub can override the polling interval for an environment: each environment in a polling response may carry a
+`pollInterval`, in whole seconds, which replaces the configured interval (shorter or longer). With several environments
+the smallest is used, and when the server stops sending one the configured interval applies again. The SDK ignores a
+`pollInterval` below 5 seconds, and does not use the `Cache-Control` header to change the interval.
+
+A polling interval must be `0` or at least 5 seconds (5000 ms): anything else throws an `InvalidConfigurationError`.
+An interval of `0` polls once and then stops, which suits short-lived processes, and a `pollInterval` from the server
+never starts it polling again.
+
+#### Sending extra headers
+
+If FeatureHub Edge sits behind an API gateway or proxy that needs its own headers, give them to the config. They are
+sent with every poll, and with every streaming connection and reconnection:
+
+```typescript
+fhConfig.headers({ "x-api-gateway-key": "my-gateway-key" });
+
+// or a function, called for each request, for a value that changes such as a short-lived token
+fhConfig.headers(() => ({ authorization: `Bearer ${currentToken()}` }));
+```
+
+The SDK's own protocol headers (`x-featurehub`, `If-None-Match` and `Last-Event-ID`) always take precedence over a
+header of the same name. A browser's `EventSource` cannot send headers, so in a browser they are only sent when
+polling (a warning is logged if they are configured for streaming). The React and Solid `FeatureHub` components take
+them as a `headers` prop.
+
+#### Configuring the connection mode from the environment (Node)
+
+The Node SDK reads its default connection mode from two environment variables. Anything you set in code (for
+example `fhConfig.restActive(30000)`) takes precedence over them.
+
+| Variable | Values | Meaning |
+|---|---|---|
+| `FEATUREHUB_CONNECT_TYPE` | `active`, `passive` or `streaming` | the connection mode |
+| `FEATUREHUB_CONNECT_INTERVAL` | a number and a unit (`ms`, `s`, `m`, `h`), e.g. `30s` or `1.5m`, or `0` | the polling interval, for `active` and `passive` |
+
+- `FEATUREHUB_CONNECT_INTERVAL` on its own means active polling at that interval.
+- `active` or `passive` need an interval, either from `FEATUREHUB_CONNECT_INTERVAL` or in code.
+- With neither variable set, the Node SDK streams.
+- The older `FEATUREHUB_POLLING_INTERVAL` (a number of milliseconds, or a duration such as `5s`) and `FEATUREHUB_POLLING_PASSIVE` still work, but only when
+  neither of the new variables is set. They are deprecated.
+
+The Node SDK also reads these, each only when your code does not set the same thing:
+
+| Variable | Meaning |
+|---|---|
+| `FEATUREHUB_EDGE_URL` | the Edge URL, when `EdgeFeatureHubConfig` is given none |
+| `FEATUREHUB_CLIENT_API_KEY` | a client-evaluated API key, when `EdgeFeatureHubConfig` is given none |
+| `FEATUREHUB_SERVER_API_KEY` | a server-evaluated API key, used when there is no `FEATUREHUB_CLIENT_API_KEY` |
+| `FEATUREHUB_POLLING_REQ_TIMEOUT` | how long a polling request may take, e.g. `10s` |
+| `FEATUREHUB_SSE_CONNECT_TIMEOUT` | how long opening a streaming connection may take |
+| `FEATUREHUB_SSE_READ_TIMEOUT` | how long an open stream may go without data before it is reconnected. Edge can be silent for up to 5 minutes on a healthy stream, so keep this above `5m` |
+| `FEATUREHUB_SSE_INITIAL_RETRY_DELAY` | the wait before reconnecting after a dropped stream (default `3s`) |
+| `FEATUREHUB_SSE_MAX_RETRY_DELAY` | the longest wait between reconnection attempts (default `5m`) |
+| `FEATUREHUB_SSE_BACKOFF_MULTIPLIER` | how much the wait grows after each failed attempt, a number of at least 1 (default `2`) |
+
+Durations take the same form as `FEATUREHUB_CONNECT_INTERVAL`. A value that is not valid is ignored, with a warning,
+and the default is used.
 
 ## General Documentation
 
@@ -842,6 +920,83 @@ It is compatible with the Redis backing store of all other SDKs.
 Call `store.close()` on shutdown. See the
 [package README](https://www.npmjs.com/package/featurehub-store-redis) for all constructor
 variants and configuration options.
+
+## Re-serving features from your own server (feature snapshots)
+
+Your own Node server can re-serve the features it gets from FeatureHub to its own clients, evaluated for each
+client's context, so those clients never talk to FeatureHub directly. The server connects to FeatureHub as usual,
+with a **client-evaluated** API key (one containing `*`), so it holds every feature's rollout strategies. With a
+server-evaluated key the snapshot store refuses to attach and every request gets `503`, because every client would
+otherwise get the server's own context's values.
+
+### The server (Node)
+
+Create a `FeatureSnapshotStore` for the config **before** the config connects, so it sees FeatureHub's first set
+of features, and serve it:
+
+```typescript
+import express from "express";
+import {
+  EdgeFeatureHubConfig,
+  featureSnapshotHandler,
+  FeatureSnapshotStore,
+} from "featurehub-javascript-node-sdk";
+
+const fhConfig = new EdgeFeatureHubConfig(edgeUrl, clientEvaluatedApiKey);
+const snapshots = new FeatureSnapshotStore(fhConfig);
+fhConfig.init();
+
+const app = express();
+// the query parameters are the context: /features?userkey=user-123&country=nz
+app.get("/features", featureSnapshotHandler(snapshots));
+```
+
+The handler answers with the features as JSON and an `ETag`, `304 Not Modified` when the client already has them,
+`400` for an invalid context, and `503` until the store has features. Its options:
+
+- `serveStrategiesWithoutContext`: a request with no query parameters gets the features **with their rollout
+  strategies**, for clients that evaluate locally (a snapshot client with `sendContext: false`). The default
+  (`false`) evaluates them as for an empty context, **so a server that leaves the default cannot serve clients that
+  evaluate locally**: they send no context, and would get every feature's default value. Strategies expose all
+  their values, so only serve them to trusted clients.
+- `allowOrigin`: answer CORS preflights and allow this origin (`"*"` for any), for browsers on another origin.
+
+For your own handler, `snapshots.featureSnapshot({ context, includeStrategies })` gives `{ snapshot, etag }`.
+`includeStrategies` is the same choice as `serveStrategiesWithoutContext`, and defaults to `false`. A non-empty
+context is always evaluated for. Send the `etag` it returns as the `ETag` header, not one made from the snapshot's
+`sha`: features with time-based rules (`fhubWhenActive`, or a date attribute the context does not supply) get a
+different ETag as the clock passes their times, while their `sha` stays the same. `snapshots.etag(request)` gives
+the ETag without evaluating anything, for an `If-None-Match` check. Read `snapshots.now()` once per request and pass
+it to both as `now`, so the ETag and the body are for the same moment. Value interceptors are never applied to what
+is served.
+
+`featureSnapshot` throws `InvalidContextError` for a context the protocol does not allow (answer `400`), and
+`FeatureSnapshotNotReadyError` before the store has features (answer `503`).
+
+### The client (browser or Node)
+
+```typescript
+import { featureSnapshotConfig } from "featurehub-javascript-client-sdk"; // or featurehub-javascript-node-sdk
+
+const fhConfig = featureSnapshotConfig({ url: "https://my.app/features" });
+const context = await fhConfig.newContext().userKey("user-123").country(StrategyAttributeCountryName.NewZealand).build();
+```
+
+The client polls every 30 seconds by default, sending its context as query parameters and the last `ETag` it got
+for that context. Its options:
+
+- `sendContext: false`: send no context and evaluate locally. The server must serve strategies without a context
+  (`serveStrategiesWithoutContext`).
+- `intervalMs`: how often to poll, and how long a response stays fresh. `0` fetches once; otherwise at least 5
+  seconds.
+- `passive: true`: fetch only when a feature is evaluated and the last response is older than the interval.
+- `headers`: extra headers for every request, as an object or a function returning one.
+- `requestTimeoutMs`: abandon a request that takes longer than this. It is retried later.
+- `fetch`: the `fetch` to use, for example one configured with a proxy.
+
+A `4xx` response (other than `429`) stops the client for good and marks the connection failed. Anything else is
+retried at the next poll. `decodeFeatureSnapshot(data)` reads a snapshot you already have, for example one saved
+earlier.
 
 ## FeatureHub Test API
 

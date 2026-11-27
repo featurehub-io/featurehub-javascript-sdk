@@ -2,7 +2,7 @@ import murmurhash from "murmurhash";
 import { Netmask } from "netmask";
 import compareSemver from "semver-compare";
 
-import { caToString, type ClientContext } from "./client_context";
+import { caToString, type ClientContext, contextValueToString, isoSeconds } from "./client_context";
 import type { FeatureValue } from "./feature_state";
 import {
   type FeatureRolloutStrategy,
@@ -28,11 +28,19 @@ export class Applied {
   public readonly matched: boolean;
   public readonly value: FeatureValue;
   public readonly strategyId: string | undefined;
+  /** the matching strategy is a percentage rollout (rollout-strategies.yaml inputs.output: split) */
+  public readonly split: boolean;
 
-  constructor(matched: boolean, value: FeatureValue, strategyId: string | undefined) {
+  constructor(
+    matched: boolean,
+    value: FeatureValue,
+    strategyId: string | undefined,
+    split = false,
+  ) {
     this.matched = matched;
     this.value = value;
     this.strategyId = strategyId;
+    this.split = split;
   }
 }
 
@@ -44,7 +52,7 @@ export interface MatcherRepository {
   findMatcher(attr: FeatureRolloutStrategyAttribute): StrategyMatcher;
 }
 
-type BaseContextAttribute = string | number | boolean;
+type BaseContextAttribute = string | number | boolean | Date;
 
 // @ts-expect-error - This is a fallback matcher
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -120,22 +128,46 @@ class StringMatcher implements StrategyMatcher {
   }
 }
 
+// rollout-strategies.yaml matchers.iso_date_time: an ISO-8601 date, or date-time with an optional offset
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/i;
+const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * A date-time, read strictly and always as UTC (rollout-strategies.yaml matchers.iso_date_time): a Date as it
+ * is, or a string that is an ISO-8601 date or date-time. A date alone is midnight UTC, and a date-time without
+ * an offset is UTC, never the machine's local time (which is how JavaScript's Date would read it). Anything
+ * else - a number, "15/06/2020", "2020-06-15 10:00:00Z" - is not a date-time, and gives undefined.
+ */
+export function parseUtcDateTime(value: unknown): Date | undefined {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  let text = value.trim().toUpperCase();
+  if (!ISO_DATE_TIME.test(text)) {
+    return undefined;
+  }
+
+  if (text.includes("T") && !HAS_OFFSET.test(text)) {
+    text += "Z";
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 class DateMatcher extends StringMatcher {
   override match(
     suppliedValue: BaseContextAttribute,
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
-    try {
-      const parsedDate = new Date(suppliedValue.toString());
+    const parsedDate = parseUtcDateTime(suppliedValue);
 
-      if (parsedDate == null) {
-        return false;
-      }
-
-      return super.match(parsedDate.toISOString().substring(0, 10), attr);
-    } catch (_) {
-      return false;
-    }
+    return parsedDate !== undefined && super.match(parsedDate.toISOString().substring(0, 10), attr);
   }
 
   protected override attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
@@ -150,85 +182,92 @@ class DateTimeMatcher extends StringMatcher {
     suppliedValue: BaseContextAttribute,
     attr: FeatureRolloutStrategyAttribute,
   ): boolean {
-    try {
-      const parsedDate = new Date(suppliedValue.toString());
+    const parsedDate = parseUtcDateTime(suppliedValue);
 
-      if (parsedDate == null) {
-        return false;
-      }
-
-      return super.match(parsedDate.toISOString().substring(0, 19) + "Z", attr);
-    } catch (_) {
-      return false;
-    }
+    return parsedDate !== undefined && super.match(isoSeconds(parsedDate), attr);
   }
 
+  // a value that is an ISO-8601 date or date-time is normalised as the supplied value is (UTC, no offset
+  // meaning UTC, whole seconds), so both sides compare to the second; any other value is used as it is
+  // (rollout-strategies.yaml matchers.DATETIME)
   protected override attrToStringValues(attr: FeatureRolloutStrategyAttribute): Array<string> {
     return (attr.values || [])
       .filter((v) => v != null)
-      .map((v) => (v instanceof Date ? v.toISOString().substring(0, 19) + "Z" : v.toString()));
+      .map((v) => {
+        const parsed = parseUtcDateTime(v);
+        return parsed === undefined ? v.toString() : isoSeconds(parsed);
+      });
   }
 }
 
-class NumberMatcher implements StrategyMatcher {
-  private numericValues(attrValues: Array<any> | undefined): Array<number> {
-    if (attrValues === undefined) return [];
+// rollout-strategies.yaml js_conversions.strict_number: a finite number, or a string that is exactly a decimal
+// integer or float - no parseInt / parseFloat prefixes, exponents, hex, whitespace or Infinity
+const STRICT_NUMBER = /^[+-]?[0-9]+(\.[0-9]+)?$/;
 
-    return (attrValues || [])
-      .filter((v) => v != null)
-      .map((v) => (typeof v === "number" ? v : parseFloat(v.toString())));
+function strictNumber(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (typeof value === "string" && STRICT_NUMBER.test(value)) {
+    return Number(value);
+  }
+
+  return undefined;
+}
+
+class NumberMatcher implements StrategyMatcher {
+  // values that are not numbers are ignored, as null values are (rollout-strategies.yaml matchers.NUMBER)
+  private numericValues(attrValues: Array<unknown> | undefined | null): Array<number> {
+    return (attrValues ?? [])
+      .map((v) => strictNumber(v))
+      .filter((v): v is number => v !== undefined);
   }
 
   match(comparedValue: BaseContextAttribute, attr: FeatureRolloutStrategyAttribute): boolean {
-    try {
-      const suppliedValue =
-        typeof comparedValue === "number"
-          ? comparedValue
-          : comparedValue.toString().indexOf(".") >= 0
-            ? parseFloat(comparedValue.toString())
-            : parseInt(comparedValue.toString(), 10);
-
-      switch (attr.conditional) {
-        case RolloutStrategyAttributeConditional.Equals:
-          return this.numericValues(attr.values).findIndex((v) => v === suppliedValue) >= 0;
-        case RolloutStrategyAttributeConditional.Greater:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue > v) >= 0;
-        case RolloutStrategyAttributeConditional.GreaterEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue >= v) >= 0;
-        case RolloutStrategyAttributeConditional.Less:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue < v) >= 0;
-        case RolloutStrategyAttributeConditional.LessEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue <= v) >= 0;
-        case RolloutStrategyAttributeConditional.NotEquals:
-          return this.numericValues(attr.values).findIndex((v) => suppliedValue === v) === -1;
-        // the below have to be string comparisons still
-        case RolloutStrategyAttributeConditional.Includes:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.includes(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.Excludes:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.includes(v)) === -1)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.Regex:
-          return ((val: string) => stringValues(attr.values).findIndex((v) => val.match(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.EndsWith:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.endsWith(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-        case RolloutStrategyAttributeConditional.StartsWith:
-          return ((val: string) =>
-            stringValues(attr.values).findIndex((v) => val.startsWith(v)) >= 0)(
-            suppliedValue.toString(),
-          );
-      }
-    } catch (_) {
+    // a supplied value that is not a number never matches, whatever the conditional
+    const supplied = strictNumber(comparedValue);
+    if (supplied === undefined) {
       return false;
+    }
+
+    const values = this.numericValues(attr.values);
+    // the text conditionals compare the supplied number's string form with the number values' (so "100.0"
+    // is "100", which STARTS_WITH 1)
+    const text = String(supplied);
+    const texts = values.map((v) => String(v));
+
+    switch (attr.conditional) {
+      case RolloutStrategyAttributeConditional.Equals:
+        return values.some((v) => v === supplied);
+      case RolloutStrategyAttributeConditional.NotEquals:
+        return !values.some((v) => v === supplied);
+      case RolloutStrategyAttributeConditional.Greater:
+        return values.some((v) => supplied > v);
+      case RolloutStrategyAttributeConditional.GreaterEquals:
+        return values.some((v) => supplied >= v);
+      case RolloutStrategyAttributeConditional.Less:
+        return values.some((v) => supplied < v);
+      case RolloutStrategyAttributeConditional.LessEquals:
+        return values.some((v) => supplied <= v);
+      case RolloutStrategyAttributeConditional.Includes:
+        return texts.some((v) => text.includes(v));
+      case RolloutStrategyAttributeConditional.Excludes:
+        return !texts.some((v) => text.includes(v));
+      case RolloutStrategyAttributeConditional.StartsWith:
+        return texts.some((v) => text.startsWith(v));
+      case RolloutStrategyAttributeConditional.EndsWith:
+        return texts.some((v) => text.endsWith(v));
+      case RolloutStrategyAttributeConditional.Regex:
+        return texts.some((v) => {
+          try {
+            return new RegExp(v).test(text);
+          } catch (_) {
+            return false;
+          }
+        });
+      default:
+        return false;
     }
   }
 }
@@ -304,7 +343,66 @@ export class MatcherRegistry implements MatcherRepository {
   }
 }
 
+// date-times are compared in whole seconds since the epoch, never below: any fraction of a second is
+// dropped (truncated, not rounded)
+function epochSeconds(epochMs: number): number {
+  return Math.floor(epochMs / 1000);
+}
+
+// an fhubWhenActive value as whole seconds since the epoch: an ISO-8601 date-time (the time part is required),
+// with no offset meaning UTC; undefined for anything else (rollout-strategies.yaml fhubWhenActive.value)
+function isoEpochSeconds(value: unknown): number | undefined {
+  if (typeof value !== "string" || !value.toUpperCase().includes("T")) return undefined;
+
+  const parsed = parseUtcDateTime(value);
+  return parsed === undefined ? undefined : epochSeconds(parsed.getTime());
+}
+
+/**
+ * rollout-strategies.yaml algorithm.well_known_attributes.fhubWhenActive: compares the clock (`now`, on the
+ * left) with the attribute's date-times using its conditional, in whole seconds since the epoch: `now` is
+ * already in seconds (ApplyFeature.clock) and each value's fraction of a second is dropped. The type is
+ * ignored; INCLUDES, EXCLUDES, STARTS_WITH, ENDS_WITH and REGEX never match, nor do no valid values.
+ */
+export function fhubWhenActiveMatches(attr: FeatureRolloutStrategyAttribute, now: number): boolean {
+  const times = (attr.values ?? [])
+    .map((v) => isoEpochSeconds(v))
+    .filter((t): t is number => t !== undefined);
+
+  if (times.length === 0) {
+    return false;
+  }
+
+  switch (attr.conditional) {
+    case RolloutStrategyAttributeConditional.Equals:
+      return times.some((t) => now === t);
+    case RolloutStrategyAttributeConditional.NotEquals:
+      return times.every((t) => now !== t);
+    case RolloutStrategyAttributeConditional.Greater:
+      return times.some((t) => now > t);
+    case RolloutStrategyAttributeConditional.GreaterEquals:
+      return times.some((t) => now >= t);
+    case RolloutStrategyAttributeConditional.Less:
+      return times.some((t) => now < t);
+    case RolloutStrategyAttributeConditional.LessEquals:
+      return times.some((t) => now <= t);
+    default:
+      // a moment in time cannot be included, excluded, prefixed or pattern-matched
+      return false;
+  }
+}
+
+/** the strategy-only attribute name compared with the clock, never with the context */
+export const FHUB_WHEN_ACTIVE = "fhubwhenactive";
+
 export class ApplyFeature {
+  /**
+   * The clock fhubWhenActive strategies are compared with, in whole seconds since the epoch (FeatureHub
+   * compares date-times to the second, never below). Worked out on every evaluation, never cached. Tests
+   * may replace it.
+   */
+  public static clock: () => number = () => epochSeconds(Date.now());
+
   private readonly _percentageCalculator: PercentageCalculator;
   private readonly _matcherRepository: MatcherRepository;
 
@@ -318,6 +416,7 @@ export class ApplyFeature {
     _key: string,
     featureValueId: string,
     context?: ClientContext,
+    nowMs?: number,
   ): Applied {
     if (context !== undefined && strategies.length) {
       let percentage: number | null = null;
@@ -325,7 +424,17 @@ export class ApplyFeature {
       const basePercentage = new Map<string, number>();
       const defaultPercentageKey = context.defaultPercentageKey();
 
-      for (const rsi of strategies) {
+      for (const strategy of strategies) {
+        // a null percentage or attributes means the same as an absent one (rollout-strategies.yaml
+        // decoding: null, absent and empty all mean none), and an absent percentage counts as 0
+        // (algorithm.pseudocode): otherwise a strategy with neither would add NaN to the share, and no
+        // later percentage strategy could match (golden_fixture.known_typescript_bugs)
+        const rsi = {
+          ...strategy,
+          percentage: strategy.percentage ?? 0,
+          attributes: strategy.attributes ?? undefined,
+        };
+
         if (rsi.percentage !== 0 && (defaultPercentageKey || rsi.percentageAttributes?.length)) {
           const newPercentageKey = ApplyFeature.determinePercentageKey(
             context,
@@ -355,11 +464,11 @@ export class ApplyFeature {
           // id of feature value then apply it
           if (percentage <= useBasePercentage + rsi.percentage!) {
             if (rsi.attributes != null && rsi.attributes.length) {
-              if (this.matchAttribute(context, rsi)) {
-                return new Applied(true, rsi.value, rsi.id);
+              if (this.matchAttribute(context, rsi, nowMs)) {
+                return new Applied(true, rsi.value, rsi.id, true);
               }
             } else {
-              return new Applied(true, rsi.value, rsi.id);
+              return new Applied(true, rsi.value, rsi.id, true);
             }
           }
 
@@ -373,7 +482,7 @@ export class ApplyFeature {
           (rsi.percentage === 0 || rsi.percentage === undefined) &&
           rsi.attributes !== undefined &&
           rsi.attributes.length > 0 &&
-          this.matchAttribute(context, rsi)
+          this.matchAttribute(context, rsi, nowMs)
         ) {
           // nothing to do with a percentage
           return new Applied(true, rsi.value, rsi.id);
@@ -395,8 +504,23 @@ export class ApplyFeature {
     return percentageAttributes.map((pa) => caToString(context.getAttr(pa) || "<none>")).join("$");
   }
 
-  private matchAttribute(context: ClientContext, rsi: FeatureRolloutStrategy): boolean {
+  // nowMs: the time to evaluate at, if the caller fixed one; otherwise the clock is read
+  private matchAttribute(
+    context: ClientContext,
+    rsi: FeatureRolloutStrategy,
+    nowMs?: number,
+  ): boolean {
     for (const attr of rsi.attributes || []) {
+      if (attr.fieldName?.toLowerCase() === FHUB_WHEN_ACTIVE) {
+        // the time comes from the clock, never the context, and is ANDed with the other attributes
+        const now = nowMs === undefined ? ApplyFeature.clock() : epochSeconds(nowMs);
+        if (!fhubWhenActiveMatches(attr, now)) {
+          return false;
+        }
+
+        continue;
+      }
+
       let suppliedValues = context.getAttr(attr.fieldName!);
 
       if (
@@ -407,10 +531,10 @@ export class ApplyFeature {
       ) {
         switch (attr.type) {
           case RolloutStrategyFieldType.Date:
-            suppliedValues = [new Date().toISOString().substring(0, 10)];
+            suppliedValues = [new Date(nowMs ?? Date.now()).toISOString().substring(0, 10)];
             break;
           case RolloutStrategyFieldType.Datetime:
-            suppliedValues = [new Date().toISOString()];
+            suppliedValues = [isoSeconds(new Date(nowMs ?? Date.now()))];
             break;
         }
       }
@@ -419,7 +543,18 @@ export class ApplyFeature {
         return false;
       }
 
-      const comparedValues = Array.isArray(suppliedValues) ? suppliedValues! : [suppliedValues!];
+      // a date-time keeps its Date for DATE and DATETIME attributes; every other matcher compares its UTC
+      // ISO-8601 string (Date.toString() would give a local, locale-dependent form)
+      const dateMatcher =
+        attr.type === RolloutStrategyFieldType.Date ||
+        attr.type === RolloutStrategyFieldType.Datetime;
+      const comparedValues = (
+        (Array.isArray(suppliedValues)
+          ? suppliedValues
+          : [suppliedValues]) as Array<BaseContextAttribute>
+      )
+        .map((sv) => (sv instanceof Date && !dateMatcher ? contextValueToString(sv) : sv))
+        .filter((sv): sv is BaseContextAttribute => sv !== undefined);
 
       if (attr.values == null && comparedValues.length == 0) {
         if (attr.conditional !== RolloutStrategyAttributeConditional.Equals) {

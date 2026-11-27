@@ -1,4 +1,5 @@
 import type { ClientContext } from "./client_context";
+import type { EvaluatedFeature } from "./evaluated_feature";
 import { FeatureValueType } from "./models";
 
 export interface FeatureListener {
@@ -105,6 +106,19 @@ export interface FeatureStateHolder {
 
   /** the value of the feature flag but not triggering any usage */
   get untrackedValue(): FeatureValue;
+
+  /**
+   * getValue: returns the evaluated feature - both the value and the id of the
+   * rollout strategy that matched it (if any) - or `undefined` if the feature
+   * does not exist. This is the same evaluation the typed getters
+   * (`getBoolean`, `getString`, ...) use, exposed so callers that need the
+   * matched strategy (for example OpenFeature providers reporting a variant)
+   * do not have to re-evaluate or reach into internals.
+   *
+   * @param triggerUsage - whether the evaluation should be recorded as usage
+   * (default `true`, matching the typed getters)
+   */
+  getValue(triggerUsage?: boolean): EvaluatedFeature | undefined;
 
   /**
    * getVersion: returns feature update version number (every change on the feature causes its version to update).

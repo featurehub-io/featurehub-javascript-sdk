@@ -6,6 +6,7 @@ import {
   FeatureStateHolder,
   FeatureStateUpdate,
   fhLog,
+  pollingIntervalFromEnvironment,
 } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
@@ -14,7 +15,9 @@ import { IWorldOptions } from "@cucumber/cucumber/lib/support_code_library_build
 setDefaultTimeout(30 * 1000);
 
 AfterAll(async function () {
-  Config.fhConfig.close();
+  // forceClose, not close: a server evaluated config (such as the snapshot one, which sends its context) reference
+  // counts its contexts, and the tests never close theirs, so close() would leave it polling and the process alive
+  Config.fhConfig.forceClose();
 });
 
 const responseToRecord = (response: AxiosResponse) => {
@@ -125,8 +128,8 @@ export class CustomWorld extends World<any> {
   }
 
   async lockFeature(name: string, locked: boolean = true) {
-    const pollingInterval = parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"] || "0");
-    const timeout = pollingInterval > 0 ? pollingInterval + 4000 : 7000;
+    const pollingInterval = pollingIntervalFromEnvironment(process.env) ?? 0;
+    const timeout = (pollingInterval > 0 ? pollingInterval + 4000 : 7000) + Config.extraWaitMs;
     const interval = pollingInterval > 0 && pollingInterval < 1000 ? 500 : 1000;
     let counter = 0;
 
@@ -152,7 +155,7 @@ export class CustomWorld extends World<any> {
   }
 
   addRequestIdHeaderToFeatureUpdater(): FeatureUpdater {
-    const updater = new FeatureUpdater(Config.fhConfig);
+    const updater = new FeatureUpdater(Config.updateConfig);
     const world = this;
 
     updater.defaultOptions = {

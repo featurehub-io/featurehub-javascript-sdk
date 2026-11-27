@@ -5,9 +5,15 @@ import { type FeatureRolloutStrategy, type FeatureState, SSEResultState } from "
 import { Applied } from "./strategy_matcher";
 
 export interface InternalFeatureRepository extends FeatureHubRepository {
-  // called when it is ready, but has changed important state (e.g. server eval and the client
-  // change the context
+  // called when the context of a server-evaluated key changes: the features held are for the old
+  // context, so readiness goes from Ready to Stale until the new context's features arrive
   notReady(): void;
+
+  /**
+   * The source says the environment is stale and will send no further updates (a 236 when polling,
+   * edge.stale when streaming). Readiness goes from Ready to Stale and stays there.
+   */
+  markEnvironmentStale(): void;
 
   /**
    * Close all registered value interceptors.
@@ -33,10 +39,16 @@ export interface InternalFeatureRepository extends FeatureHubRepository {
     featureState?: FeatureState,
   ): [boolean, string | boolean | number | undefined];
 
+  /**
+   * Applies the strategies for the context. `nowMs` is the time (milliseconds since the epoch) to evaluate
+   * at: fhubWhenActive and the current time a DATE or DATETIME attribute uses when the context does not
+   * supply it. Without it the clock is read as the strategies are applied.
+   */
   apply(
     strategies: Array<FeatureRolloutStrategy>,
     key: string,
     featureValueId: string,
     context: ClientContext,
+    nowMs?: number,
   ): Applied;
 }

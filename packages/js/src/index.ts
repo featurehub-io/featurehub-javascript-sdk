@@ -182,10 +182,15 @@ export class FeatureHub {
       if (client === "streaming") {
         config.streaming();
       } else if (pollInterval) {
-        if (client === "passive" || client === "passive-rest" || client === "passive-poll") {
-          config.restPassive(parseInt(pollInterval));
-        } else {
-          config.restActive(parseInt(pollInterval));
+        try {
+          if (client === "passive" || client === "passive-rest" || client === "passive-poll") {
+            config.restPassive(parseInt(pollInterval));
+          } else {
+            config.restActive(parseInt(pollInterval));
+          }
+        } catch (e) {
+          // configured from the page, so log it rather than stop the page loading; the default interval applies
+          fhLog.error(`featurehub-interval ${pollInterval} is not used`, e);
         }
       }
 

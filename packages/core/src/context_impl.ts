@@ -1,9 +1,5 @@
-import {
-  caToString,
-  type ClientContext,
-  type ContextAttribute,
-  type ContextRecord,
-} from "./client_context";
+import type { ClientContext, ContextAttribute, ContextRecord } from "./client_context";
+import { xFeatureHubHeader } from "./context_header";
 import type { EdgeService } from "./edge_service";
 import type { EvaluatedFeature } from "./evaluated_feature";
 import { type EdgeServiceSupplier, type FeatureHubConfig, fhLog } from "./feature_hub_config";
@@ -294,10 +290,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
 
   async build(): Promise<ClientContext> {
     try {
-      const newHeader = Object.entries(this.attributes)
-        .map((key) => key[0] + "=" + encodeURIComponent(caToString(key[1]) || ""))
-        .sort()
-        .join(",");
+      const newHeader = xFeatureHubHeader(this.attributes);
 
       if (newHeader !== this._xHeader) {
         this._xHeader = newHeader;
@@ -317,7 +310,7 @@ export class ServerEvalFeatureContext extends BaseClientContext {
       }
 
       if (this._currentEdge !== undefined) {
-        await this._currentEdge.contextChange(this._xHeader);
+        await this._currentEdge.contextChange(this._xHeader, this.attributes);
       }
     } catch (e) {
       if (e) {

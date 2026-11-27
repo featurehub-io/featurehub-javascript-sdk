@@ -57,6 +57,7 @@ function buildOwnConfigMocks() {
     restActive: vi.fn().mockReturnThis(),
     restPassive: vi.fn().mockReturnThis(),
     streaming: vi.fn().mockReturnThis(),
+    headers: vi.fn().mockReturnThis(),
     context: vi.fn().mockReturnValue(mockContext),
     newContext: vi.fn().mockReturnValue(mockContext),
     addReadinessListener: vi.fn().mockImplementation((listener: any) => {
@@ -173,6 +174,60 @@ describe("FeatureHub component — shared configuration (fh.set)", () => {
     expect(mocks.mockBuild).toHaveBeenCalled();
   });
 
+  it("renders children when readiness is Stale, as features are still held", async () => {
+    render(
+      <FeatureHub url="http://localhost" apiKey="test-key" waitForReady={true}>
+        <div>child content</div>
+      </FeatureHub>,
+    );
+
+    await act(async () => {
+      await mocks.getListener()?.(Readyness.Stale);
+    });
+
+    expect(screen.getByText("child content")).toBeInTheDocument();
+  });
+
+  it("keeps children rendered through a context change (Ready -> Stale -> Ready)", async () => {
+    render(
+      <FeatureHub url="http://localhost" apiKey="test-key" userKey="lingling" waitForReady={true}>
+        <div>child content</div>
+      </FeatureHub>,
+    );
+
+    await act(async () => {
+      await mocks.getListener()?.(Readyness.Ready);
+    });
+    const child = screen.getByText("child content");
+
+    vi.clearAllMocks();
+    await act(async () => {
+      await mocks.getListener()?.(Readyness.Stale);
+    });
+    expect(screen.getByText("child content")).toBe(child);
+
+    await act(async () => {
+      await mocks.getListener()?.(Readyness.Ready);
+    });
+    expect(screen.getByText("child content")).toBe(child);
+    // the context is not rebuilt by its own context change
+    expect(mocks.mockBuild).not.toHaveBeenCalled();
+  });
+
+  it("does not render children when readiness is Failed", async () => {
+    render(
+      <FeatureHub url="http://localhost" apiKey="test-key" waitForReady={true}>
+        <div>child content</div>
+      </FeatureHub>,
+    );
+
+    await act(async () => {
+      await mocks.getListener()?.(Readyness.Failed);
+    });
+
+    expect(screen.queryByText("child content")).not.toBeInTheDocument();
+  });
+
   it("does not call build on client when readiness is Failed", async () => {
     render(
       <FeatureHub url="http://localhost" apiKey="test-key" userKey="john.doe" waitForReady={false}>
@@ -273,6 +328,28 @@ describe("FeatureHub component — own configuration (EdgeFeatureHubConfig.confi
     expect(mockConfig.newContext).toHaveBeenCalled();
     expect(mockContext.build).toHaveBeenCalled();
 
+    configSpy.mockRestore();
+  });
+
+  it("gives the headers prop to the config it creates", () => {
+    const { mockConfig } = buildOwnConfigMocks();
+    const configSpy = vi
+      .spyOn(EdgeFeatureHubConfig, "config")
+      .mockReturnValue(mockConfig as unknown as EdgeFeatureHubConfig);
+    const headers = { "x-gateway-key": "lingling-kwong" };
+
+    render(
+      <FeatureHub
+        url="http://localhost:8085"
+        apiKey="abc123"
+        headers={headers}
+        waitForReady={false}
+      >
+        <div>test</div>
+      </FeatureHub>,
+    );
+
+    expect(mockConfig.headers).toHaveBeenCalledWith(headers);
     configSpy.mockRestore();
   });
 

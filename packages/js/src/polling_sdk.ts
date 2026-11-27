@@ -7,7 +7,7 @@ import type {
 } from "featurehub-javascript-core-sdk";
 import { fhLog, PollingBase } from "featurehub-javascript-core-sdk";
 
-import { createBase64UrlSafeHash } from "./crypto-browser";
+import { createHexHash } from "./crypto-browser";
 
 interface StoredData {
   e?: Array<FeatureEnvironmentCollection>;
@@ -34,7 +34,7 @@ export class BrowserPollingService extends PollingBase implements PollingService
   };
 
   constructor(options: RestOptions, url: string, frequency: number, callback: FeaturesFunction) {
-    super(url, frequency, createBase64UrlSafeHash, options, callback);
+    super(url, frequency, createHexHash, options, callback);
   }
 
   public override async preload(_req: FetchRequestOptions, url: string): Promise<boolean> {

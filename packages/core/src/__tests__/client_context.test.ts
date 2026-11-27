@@ -52,7 +52,8 @@ describe("Client context should be able to encode as expected", () => {
     edge
       .received(2)
       .contextChange(
-        "city=istanbul,country=turkey,device=desktop,musical styles=deep%2Cpsychedelic,platform=macos,session=VirtualBurningMan,userkey=DJElif,version=4.3.2",
+        "city=istanbul,country=turkey,device=desktop,musical%20styles=deep%2Cpsychedelic,platform=macos,session=VirtualBurningMan,userkey=DJElif,version=4.3.2",
+        Arg.any(),
       );
   });
 

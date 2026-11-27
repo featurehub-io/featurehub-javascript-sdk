@@ -1,6 +1,6 @@
 import { After, Before } from "@cucumber/cucumber";
 import { expect } from "chai";
-import type { ClientContext } from "featurehub-javascript-node-sdk";
+import { type ClientContext, pollingIntervalFromEnvironment } from "featurehub-javascript-node-sdk";
 import waitForExpect from "wait-for-expect";
 
 import { Config } from "./config";
@@ -92,9 +92,8 @@ Before({ tags: "@FEATURE_NUMBER_DEC" }, async function (this: CustomWorld) {
 async function awaitCompletionOfChange(expectFunc: (ctx: ClientContext) => void) {
   const ctx = await Config.fhConfig.newContext().build();
 
-  const timeout = process.env["FEATUREHUB_POLLING_INTERVAL"]
-    ? parseInt(process.env["FEATUREHUB_POLLING_INTERVAL"]!) + 4000
-    : 7000;
+  const pollingInterval = pollingIntervalFromEnvironment(process.env);
+  const timeout = (pollingInterval ? pollingInterval + 4000 : 7000) + Config.extraWaitMs;
   await waitForExpect(
     async () => {
       expectFunc(ctx);

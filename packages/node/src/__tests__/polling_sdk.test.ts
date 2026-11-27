@@ -1,7 +1,7 @@
 import { Substitute, type SubstituteOf } from "@fluffy-spoon/substitute";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createBase64UrlSafeHash } from "../crypto-node";
+import { createHexHash } from "../crypto-node";
 import { type FeatureHubConfig, FHLog, PollingBase, type PollingService } from "../index";
 
 describe("basic polling sdk works as expected", () => {
@@ -23,14 +23,14 @@ describe("basic polling sdk works as expected", () => {
   });
 
   describe("attributeHeader hashing", () => {
-    const TEST_HASH = "n4bQgYhMfWWaL-qgxVrQFaO_TxsrC4Is0V1sFbDwCgg";
-    const USER_ID_HASH = "F7827sASf1GewZfMvDzBlYpLnaFcKM0xchzNEElvh94";
-    const SESSION_HASH = "ZJ2mGsLI7CqpUgmQqueaBudcjnxW6SZ9uVuwMWASoe4";
+    const TEST_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+    const USER_ID_HASH = "17bf36eec0127f519ec197ccbc3cc1958a4b9da15c28cd31721ccd10496f87de";
+    const SESSION_HASH = "649da61ac2c8ec2aa9520990aae79a06e75c8e7c56e9267db95bb0316012a1ee";
 
     it("should produce consistent hash results for context headers", async () => {
       class TestPoller extends PollingBase {
         constructor() {
-          super("http://localhost", 0, createBase64UrlSafeHash, {}, () => {});
+          super("http://localhost", 0, createHexHash, {}, () => {});
         }
 
         override poll(): Promise<void> {
@@ -60,13 +60,13 @@ describe("basic polling sdk works as expected", () => {
     });
 
     it("produces same hash results in browser environment as node environment", async () => {
-      const testHash = await createBase64UrlSafeHash("sha256", "test");
+      const testHash = await createHexHash("sha256", "test");
       expect(testHash).toBe(TEST_HASH);
 
-      const userIdHash = await createBase64UrlSafeHash("sha256", "user-id:12345");
+      const userIdHash = await createHexHash("sha256", "user-id:12345");
       expect(userIdHash).toBe(USER_ID_HASH);
 
-      const sessionHash = await createBase64UrlSafeHash("sha256", "user-id:12345,session:abcdef");
+      const sessionHash = await createHexHash("sha256", "user-id:12345,session:abcdef");
       expect(sessionHash).toBe(SESSION_HASH);
     });
   });

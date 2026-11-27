@@ -54,6 +54,19 @@ Once you launch the server, any call to "add" or "delete" to-do will generate a 
 
 More on GA integration can be found here https://docs.featurehub.io/analytics.html
 
+## Serving features to your own clients
+
+The server re-serves the features it gets from FeatureHub at `/featurehub`, as feature snapshots: the query
+parameters are the context (`/featurehub?userkey=user-123&country=new_zealand`), and the features come back
+evaluated for it, with an `ETag` so a client that already has them gets `304 Not Modified`. A snapshot client
+(`featureSnapshotConfig({ url: "http://localhost:8099/featurehub" })`) reads them.
+
+The server must use a client-evaluated API key (one containing `*`); with a server-evaluated key `/featurehub`
+answers `503`. A request with no query parameters is evaluated as for an empty context. Set
+`FEATUREHUB_SERVE_STRATEGIES` to serve such requests the features with their rollout strategies instead, for
+clients that evaluate locally (`sendContext: false`). That exposes every strategy and its values, so only do it
+for trusted clients.
+
 ## Installation Instructions
 
 ```bash

@@ -5,6 +5,8 @@ import {
   type ClientContext,
   EdgeFeatureHubConfig,
   type FeatureHubConfig,
+  featureSnapshotHandler,
+  FeatureSnapshotStore,
   FHLog,
   Readyness,
   StrategyAttributeCountryName,
@@ -73,6 +75,10 @@ if (process.env["OTEL_USAGE_ENABLED"]) {
 
 fhConfig.addReadinessListener((_ready, _firstTime) => {}, true);
 
+// re-serves this server's features to its own clients as feature snapshots (feature-snapshot-protocol.yaml),
+// at /featurehub. It must be created before the config connects, so it sees the first set of features
+const featureSnapshots = new FeatureSnapshotStore(fhConfig);
+
 fhConfig.init();
 
 // Connect to GA
@@ -93,6 +99,17 @@ app.get("/health/disconnect", (_, res) => {
   fhConfig.closeEdge();
   res.status(200).send("ok");
 });
+
+// the feature snapshot endpoint: the query parameters are the context. A request with none is evaluated as
+// for an empty context, unless FEATUREHUB_SERVE_STRATEGIES is set, when it gets the features with their rollout
+// strategies, for clients that evaluate locally (only serve those to trusted clients). It is registered before
+// the cors middleware below, as it answers its own preflights and exposes its ETag
+const snapshotHandler = featureSnapshotHandler(featureSnapshots, {
+  serveStrategiesWithoutContext: process.env["FEATUREHUB_SERVE_STRATEGIES"] !== undefined,
+  allowOrigin: "*",
+});
+app.get("/featurehub", snapshotHandler);
+app.options("/featurehub", snapshotHandler);
 
 app.use(
   cors({

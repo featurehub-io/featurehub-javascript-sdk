@@ -20,7 +20,7 @@ class TestableInterceptor extends OpenTelemetryFeatureInterceptor {
 }
 
 function makeFeatureState(type: FeatureValueType, locked: boolean = false): FeatureState {
-  return { id: "id1", key: "key", type, l: locked };
+  return { id: "id1", key: "key", version: 1, type, l: locked };
 }
 
 describe("OpenTelemetryFeatureInterceptor", () => {

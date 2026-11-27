@@ -77,7 +77,9 @@ describe("Catch and release should hold and then release feature changes", () =>
 
     await repo.release(false);
     expect(repo.getString("orange")).toBe("lemon");
-    expect(counter).toBe(2);
+    // once, on release: the full set without orange removes nothing (orange never existed), so it is not a
+    // change (it used to count, as an absent l was compared with false)
+    expect(counter).toBe(1);
   });
 
   it("should enable me to turn on catch and no changes should flow and then i can release", async () => {

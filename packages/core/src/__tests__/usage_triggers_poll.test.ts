@@ -48,6 +48,8 @@ describe("usage will trigger polling appropriately", async () => {
     repo = Substitute.for<InternalFeatureRepository>();
     edge = Substitute.for<EdgeService>();
     config = Substitute.for<FeatureHubConfig>();
+    config.getHost().returns("http://localhost/");
+    config.getApiKeys().returns(["always-wonder"]);
 
     const usageProvider = new DefaultUsageProvider();
 

@@ -12,21 +12,51 @@ export type ContextAttribute =
   | number
   | string
   | boolean
+  | Date
   | Array<number>
   | Array<string>
   | Array<boolean>
+  | Array<Date>
   | undefined;
 export type ContextRecord = Record<string, ContextAttribute>;
+
+/**
+ * A date-time as UTC ISO-8601 to the second, YYYY-MM-DDTHH:MM:SSZ: any fraction of a second is dropped
+ * (truncated, not rounded). FeatureHub works in whole seconds (featurehub-protocol.yaml
+ * encoding.evaluation_context.wire_value, rollout-strategies.yaml matchers.DATETIME).
+ */
+export function isoSeconds(date: Date): string {
+  return date.toISOString().substring(0, 19) + "Z";
+}
+
+/**
+ * A single context value as a string: a date-time is UTC ISO-8601 to the second (isoSeconds), so it reads
+ * the same in every SDK. An invalid Date is undefined.
+ */
+export function contextValueToString(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : isoSeconds(value);
+  }
+
+  return String(value);
+}
 
 export function caToString(ca: ContextAttribute, joinSep = ","): string | undefined {
   if (ca === undefined) {
     return undefined;
   }
   if (Array.isArray(ca)) {
-    return (ca as Array<any>).map((c) => c.toString()).join(joinSep);
+    return (ca as Array<unknown>)
+      .map((c) => contextValueToString(c))
+      .filter((c) => c !== undefined)
+      .join(joinSep);
   }
 
-  return ca.toString();
+  return contextValueToString(ca);
 }
 
 export interface ClientContext {

@@ -3,6 +3,7 @@ import { BaseClientContext } from "../context_impl";
 import type { EvaluatedFeature } from "../evaluated_feature";
 import type { FeatureStateHolder } from "../feature_state";
 import {
+  type ConnectionEventListener,
   type PostLoadNewFeatureStateAvailableListener,
   Readyness,
   type ReadynessListener,
@@ -38,6 +39,22 @@ export class TestingContext extends BaseClientContext {
 }
 
 export class FakeInternalRepository implements InternalFeatureRepository {
+  markEnvironmentStale(): void {}
+
+  get connectionFailed(): boolean {
+    return false;
+  }
+
+  get environmentStale(): boolean {
+    return false;
+  }
+
+  addConnectionEventListener(_listener: ConnectionEventListener): number {
+    return 0;
+  }
+
+  removeConnectionEventListener(_listener: number | ConnectionEventListener): void {}
+
   addFeatureUpdateAvailableListener(_callback: (fs: FeatureState) => void): number {
     return 0;
   }
