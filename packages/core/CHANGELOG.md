@@ -1,5 +1,11 @@
 # featurehub-javascript-core-sdk
 
+## 2.1.1
+
+### Patch Changes
+
+- 2aa3908: The streaming client's `EventSource` type spells out its listener type instead of naming the DOM's `EventListener`, so TypeScript projects without the DOM lib (Node services, say) can type check the SDK. The type is unchanged.
+
 ## 2.1.0
 
 ### Minor Changes
